@@ -351,6 +351,8 @@ const analytics: Record<string, string> = {
     'forum.consensus_contested': 'Спорно',
     'forum.moderation': 'Модерация',
     'forum.moderate_warn': 'предупредить',
+    'forum.moderate.hide': 'Скрыть пост',
+    'forum.moderate.remove': 'Удалить пост',
     'forum.heatmap_title': 'Активность по категориям',
     'forum.no_activity': 'Активности пока нет',
 
@@ -394,6 +396,7 @@ const analytics: Record<string, string> = {
     'room.clear': 'Очистить',
     'room.clearView': 'Очистить вид',
     'room.clearHistory': 'Очистить историю',
+    'room.error.generic': 'Вызов не удался. Подробности в консоли.',
     'experimental.title': 'Эксперименты',
     'experimental.subtitle':
         'Запланированные субвозможности дебатов, свёрнутые из отдельных заглушек в один хаб.',
@@ -482,6 +485,14 @@ const analytics: Record<string, string> = {
     'director.run.overrideParticipant': 'Участник',
     'director.run.overrideObjective': 'Инструкция',
     'director.run.overrideSubmit': 'Внедрить',
+    'director.run.overrideType': 'Тип задачи',
+    'director.run.overrideType.INTRODUCE': 'Введение',
+    'director.run.overrideType.CRITIQUE': 'Критика',
+    'director.run.overrideType.RESPOND': 'Ответ',
+    'director.run.overrideType.ANALYZE': 'Анализ',
+    'director.run.overrideType.SUMMARIZE': 'Резюме',
+    'director.run.overrideType.CHALLENGE': 'Возражение',
+    'director.run.overrideType.CUSTOM': 'Произвольно',
     'director.run.log': 'Журнал ходов',
     'director.run.logEmpty': 'Ходы ещё не выполнены.',
     'director.run.turnStatus.running': 'выполняется',
@@ -504,6 +515,65 @@ const analytics: Record<string, string> = {
     'director.objective.summarize': 'Резюме',
     'director.objective.challenge': 'Возражение',
     'director.objective.custom': 'Произвольно',
+
+    // forum (FX-01)
+    'forum.you': 'Вы',
+    'forum.moderation_reason': 'Модерация',
+
+    // synthesis roles (FX-01)
+    'synthesis.role.arch': 'Архитектор',
+    'synthesis.role.llm': 'LLM-инженер',
+    'synthesis.role.economist': 'Экономист',
+    'synthesis.role.security': 'Аналитик безопасности',
+    'synthesis.role.governance': 'Специалист по управлению',
+    'synthesis.role.philosopher': 'Философ',
+    'synthesis.role.engineer': 'Инженер',
+    'synthesis.role.product': 'Продакт-менеджер',
+    'synthesis.custom_role_placeholder': 'id пользовательской роли…',
+
+    // junction (FX-01)
+    'junction.filter.all': 'Все',
+    'junction.filter.pending': 'Ожидает',
+    'junction.filter.validated': 'Подтверждено',
+    'junction.filter.rejected': 'Отклонено',
+    'junction.empty': 'Нет стыков — сначала запустите обнаружение',
+    'junction.counterargument_placeholder': 'Контраргумент / проверка…',
+    'junction.verify': 'Проверить',
+    'junction.bridge': 'Мост',
+    'junction.bridge_hint': 'Выберите стык, чтобы увидеть его междоменный мост.',
+
+    // guardians mottos (FX-01)
+    'guardians.motto_speed': 'Мгновенно — это единственная скорость',
+    'guardians.motto_security': 'Доверяй, но проверяй',
+    'guardians.motto_power': 'Нет задач, которые нельзя решить',
+    'guardians.motto_routing': 'Все дороги ведут к ответу',
+    'guardians.motto_cost': 'Мудрость приходит с ценой',
+    'guardians.motto_local': 'Лучший сервер — твой',
+    'guardians.motto_creativity': 'Вдохновение — точная наука',
+    'guardians.no_providers': 'Нет привязанных провайдеров — следит за всеми',
+
+    // scheduler (FX-01)
+    'scheduler.active': 'Активно',
+    'scheduler.disabled': 'Отключено',
+    'scheduler.how_it_works': 'Как это работает',
+    'scheduler.card.create_title': 'Создание расписания',
+    'scheduler.card.create_desc':
+        'Задача создаётся с name, agentId, frequency (daily/weekly/hourly/custom) и cronExpression.',
+    'scheduler.card.engine_title': 'Cron-движок',
+    'scheduler.card.engine_desc':
+        'Каждую минуту проверяются due schedules. При совпадении задача запускается через trigger().',
+    'scheduler.card.manage_title': 'Управление',
+    'scheduler.card.manage_desc':
+        'Расписания можно включать/отключать, редактировать, удалять. История запусков отслеживается.',
+    'scheduler.demo_title': 'Демо: расписания',
+    'scheduler.active_count': 'активных',
+    'scheduler.disabled_badge': 'ОТКЛЮЧЕНО',
+    'scheduler.type_label': 'Тип',
+    'scheduler.agent_label': 'Агент',
+    'scheduler.next_run_label': 'След. запуск',
+    'scheduler.system': 'система',
+    'scheduler.footer':
+        'Scheduler — core сервис. Использует Dexie для персистенции расписаний. Cron-парсер поддерживает стандартные 5-польные выражения.',
 };
 
 export { analytics };

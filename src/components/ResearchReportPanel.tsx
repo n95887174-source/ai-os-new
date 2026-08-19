@@ -95,7 +95,7 @@ const ResearchReportPanelContent: React.FC = () => {
                     >
                         <BookOpen size={20} color="#a855f7" /> Research Report Generator
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Generate structured research reports with auto-populated sections
                     </p>
                 </div>
@@ -123,7 +123,7 @@ const ResearchReportPanelContent: React.FC = () => {
             {showForm && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -146,8 +146,8 @@ const ResearchReportPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -160,8 +160,8 @@ const ResearchReportPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -173,8 +173,8 @@ const ResearchReportPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -193,8 +193,8 @@ const ResearchReportPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -269,11 +269,11 @@ const ResearchReportPanelContent: React.FC = () => {
                                 />
                                 <div>
                                     <div
-                                        style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}
                                     >
                                         {report.title}
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#64748b' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                         {report.topic} · {report.sections.length} sections ·{' '}
                                         {report.sources} sources
                                     </div>
@@ -285,7 +285,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                         padding: '2px 6px',
                                         borderRadius: 4,
                                         fontSize: 10,
-                                        background: 'rgba(168,85,247,0.1)',
+                                        background: 'var(--purple-tint)',
                                         color: '#a855f7',
                                     }}
                                 >
@@ -306,7 +306,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                             border: 'none',
                                             cursor: 'pointer',
                                             background: 'rgba(59,130,246,0.15)',
-                                            color: '#3b82f6',
+                                            color: 'var(--accent)',
                                             fontSize: 10,
                                             fontWeight: 600,
                                         }}
@@ -328,7 +328,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                         border: 'none',
                                         cursor: 'pointer',
                                         background: 'rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                     }}
                                 >
                                     <Trash2 size={12} />
@@ -353,7 +353,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                         background: 'rgba(0,0,0,0.2)',
                                         borderRadius: 8,
                                         fontSize: 11,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                     }}
                                 >
                                     <span>{report.sections.length} sections</span>
@@ -384,7 +384,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                                 padding: '8px 10px',
                                                 cursor: 'pointer',
                                                 fontSize: 12,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontWeight: 600,
                                             }}
                                         >
@@ -398,7 +398,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                                 style={{
                                                     marginLeft: 'auto',
                                                     fontSize: 10,
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                 }}
                                             >
                                                 {section.wordCount} words
@@ -409,7 +409,7 @@ const ResearchReportPanelContent: React.FC = () => {
                                                 style={{
                                                     padding: '0 10px 8px',
                                                     fontSize: 12,
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     lineHeight: 1.5,
                                                 }}
                                             >
@@ -425,7 +425,7 @@ const ResearchReportPanelContent: React.FC = () => {
             </div>
 
             {reports.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                     <BookOpen size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                     <div style={{ fontSize: 14 }}>No research reports yet</div>
                     <div style={{ fontSize: 12, marginTop: 4 }}>

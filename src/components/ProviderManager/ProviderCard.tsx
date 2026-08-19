@@ -191,7 +191,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                             style={{
                                 marginLeft: 8,
                                 fontSize: '0.65rem',
-                                color: '#f59e0b',
+                                color: 'var(--warning)',
                                 fontWeight: 700,
                             }}
                             title={alerts.map((a) => a.message).join('; ')}
@@ -221,7 +221,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                     </div>
                     {(apiKey.group || apiKey.account || apiKey.accountId) && (
                         <div
-                            style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '0.25rem' }}
+                            style={{ fontSize: '0.65rem', color: 'var(--slate-400)', marginTop: '0.25rem' }}
                         >
                             {apiKey.group && <span style={{ opacity: 0.6 }}>{apiKey.group}/</span>}
                             {apiKey.account || apiKey.accountId}
@@ -244,7 +244,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                                     borderRadius: 4,
                                     fontSize: '0.6rem',
                                     fontWeight: 700,
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     background: 'rgba(239,68,68,0.15)',
                                     border: '1px solid rgba(239,68,68,0.3)',
                                     display: 'inline-flex',
@@ -259,7 +259,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                                         width: 6,
                                         height: 6,
                                         borderRadius: '50%',
-                                        background: '#ef4444',
+                                        background: 'var(--error)',
                                         display: 'inline-block',
                                     }}
                                 />
@@ -301,7 +301,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                                     borderRadius: 4,
                                     fontSize: '0.6rem',
                                     fontWeight: 700,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     background: 'rgba(100,116,139,0.15)',
                                     border: '1px solid rgba(100,116,139,0.3)',
                                     display: 'inline-flex',
@@ -323,8 +323,8 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                                         borderRadius: 4,
                                         fontSize: '0.6rem',
                                         fontWeight: 600,
-                                        color: '#10b981',
-                                        background: 'rgba(16,185,129,0.1)',
+                                        color: 'var(--success)',
+                                        background: 'var(--success-tint)',
                                         border: '1px solid rgba(16,185,129,0.15)',
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -337,7 +337,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
                                             width: 6,
                                             height: 6,
                                             borderRadius: '50%',
-                                            background: '#10b981',
+                                            background: 'var(--success)',
                                             display: 'inline-block',
                                         }}
                                     />

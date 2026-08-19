@@ -70,7 +70,7 @@ const SREHeader: React.FC<Props> = ({
                 >
                     <Bot size={28} color="#8b5cf6" />
                     <h1
-                        style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}
+                        style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--slate-50)' }}
                     >
                         {t('sre.title')}
                     </h1>
@@ -80,7 +80,7 @@ const SREHeader: React.FC<Props> = ({
                             padding: '0.2rem 0.5rem',
                             borderRadius: 6,
                             background: 'rgba(139,92,246,0.15)',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             fontWeight: 700,
                             border: '1px solid rgba(139,92,246,0.2)',
                         }}
@@ -88,7 +88,7 @@ const SREHeader: React.FC<Props> = ({
                         v2.0
                     </span>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-400)', margin: 0 }}>
                     {t('sre.subtitle')}
                 </p>
             </div>
@@ -105,7 +105,7 @@ const SREHeader: React.FC<Props> = ({
                         fontSize: '0.75rem',
                     }}
                 >
-                    <span style={{ color: '#64748b' }}>{t('sre.auto_fix')}</span>
+                    <span style={{ color: 'var(--slate-500)' }}>{t('sre.auto_fix')}</span>
                     <ToggleSwitch enabled={autoFixEnabled} onToggle={onAutoFixToggle} />
                 </div>
                 {(criticalCount > 0 || warningCount > 0) && (
@@ -115,8 +115,8 @@ const SREHeader: React.FC<Props> = ({
                                 style={{
                                     padding: '0.3rem 0.6rem',
                                     borderRadius: 6,
-                                    background: 'rgba(239,68,68,0.1)',
-                                    color: '#ef4444',
+                                    background: 'var(--error-tint)',
+                                    color: 'var(--error)',
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
                                 }}
@@ -129,8 +129,8 @@ const SREHeader: React.FC<Props> = ({
                                 style={{
                                     padding: '0.3rem 0.6rem',
                                     borderRadius: 6,
-                                    background: 'rgba(245,158,11,0.1)',
-                                    color: '#f59e0b',
+                                    background: 'var(--warning-tint)',
+                                    color: 'var(--warning)',
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
                                 }}

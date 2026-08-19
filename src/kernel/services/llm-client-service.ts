@@ -55,6 +55,7 @@ export class LLMClientService implements ILLMClientService {
         if (options?.toolChoice !== undefined) sendMessageOpts.toolChoice = options.toolChoice;
         if (options?.responseFormat !== undefined)
             sendMessageOpts.responseFormat = options.responseFormat;
+        if (options?.cacheScope !== undefined) sendMessageOpts.cacheScope = options.cacheScope;
 
         const hasOpts = Object.keys(sendMessageOpts).length > 0;
         const finalOpts = hasOpts ? sendMessageOpts : undefined;

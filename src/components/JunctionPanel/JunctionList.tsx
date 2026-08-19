@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Junction } from '../../kernel/types/junction-types';
 import JunctionCard from './JunctionCard';
 import JunctionGraph from './JunctionGraph';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
     junctions: Junction[];
@@ -15,6 +16,7 @@ const STATUS_FILTERS = ['all', 'pending', 'validated', 'rejected'] as const;
  * inline graph preview for the selected junction.
  */
 const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
+    const { t } = useTranslation();
     const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]>('all');
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -42,7 +44,7 @@ const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
                                 color: filter === s ? '#fff' : '#94a3b8',
                             }}
                         >
-                            {s}
+                            {t(`junction.filter.${s}`)}
                             <span style={{ opacity: 0.7, marginLeft: 4 }}>
                                 {
                                     junctions.filter((j) => (s === 'all' ? true : j.status === s))
@@ -56,13 +58,13 @@ const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
                 {filtered.length === 0 && (
                     <div
                         style={{
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.78rem',
                             textAlign: 'center',
                             padding: '2rem 0',
                         }}
                     >
-                        No junctions — run detection first
+                        {t('junction.empty')}
                     </div>
                 )}
 
@@ -86,14 +88,14 @@ const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
                                     onChange={(e) =>
                                         setDrafts((d) => ({ ...d, [j.id]: e.target.value }))
                                     }
-                                    placeholder="Counterargument / проверка…"
+                                    placeholder={t('junction.counterargument_placeholder')}
                                     style={{
                                         flex: 1,
                                         padding: '0.35rem 0.6rem',
                                         borderRadius: 6,
                                         border: '1px solid rgba(255,255,255,0.08)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.72rem',
                                     }}
                                 />
@@ -109,14 +111,14 @@ const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
                                         padding: '0.35rem 0.8rem',
                                         borderRadius: 6,
                                         border: 'none',
-                                        background: '#10b981',
+                                        background: 'var(--success)',
                                         color: '#022c22',
                                         cursor: 'pointer',
                                         fontWeight: 700,
                                         fontSize: '0.7rem',
                                     }}
                                 >
-                                    Verify
+                                    {t('junction.verify')}
                                 </button>
                             </div>
                         )}
@@ -139,22 +141,22 @@ const JunctionList: React.FC<Props> = ({ junctions, onChallenge }) => {
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: 0.5,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginBottom: '0.5rem',
                     }}
                 >
-                    Bridge
+                    {t('junction.bridge')}
                 </div>
                 {selected ? (
                     <>
                         <JunctionGraph junction={selected} />
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: '#94a3b8' }}>
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--slate-400)' }}>
                             {selected.rationale}
                         </div>
                     </>
                 ) : (
-                    <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                        Select a junction to view its cross-domain bridge.
+                    <div style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
+                        {t('junction.bridge_hint')}
                     </div>
                 )}
             </div>

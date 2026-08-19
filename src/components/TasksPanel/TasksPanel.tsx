@@ -182,7 +182,7 @@ const TasksPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
                 role="status"
                 aria-label={t('tasks.loading_aria')}
@@ -227,12 +227,12 @@ const TasksPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Play size={28} color="#3b82f6" aria-hidden="true" /> {t('tasks.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('tasks.subtitle')}
                     </p>
                 </div>
@@ -312,25 +312,25 @@ const TasksPanel: React.FC = () => {
                     {
                         label: t('tasks.active_runners'),
                         value: stats.active,
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         icon: <Play size={16} />,
                     },
                     {
                         label: t('tasks.queued'),
                         value: stats.pending,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                         icon: <Clock size={16} />,
                     },
                     {
                         label: t('tasks.completed'),
                         value: stats.completed,
-                        color: '#10b981',
+                        color: 'var(--success)',
                         icon: <CheckCircle2 size={16} />,
                     },
                     {
                         label: t('tasks.exceptions'),
                         value: stats.failed,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         icon: <AlertCircle size={16} />,
                     },
                 ].map((stat) => (
@@ -359,7 +359,7 @@ const TasksPanel: React.FC = () => {
                                 style={{
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
                                 }}
@@ -368,7 +368,7 @@ const TasksPanel: React.FC = () => {
                             </div>
                             <div style={{ color: stat.color }}>{stat.icon}</div>
                         </div>
-                        <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                             {stat.value}
                         </div>
                     </div>
@@ -413,7 +413,7 @@ const TasksPanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -451,7 +451,7 @@ const TasksPanel: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '100%',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             gap: '1rem',
                             padding: '3rem',
                         }}
@@ -462,7 +462,7 @@ const TasksPanel: React.FC = () => {
                         <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>
                             {searchQuery ? t('tasks.empty_search') : t('tasks.empty_none')}
                         </p>
-                        <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                             {searchQuery ? 'Try a different search term' : t('tasks.empty_hint')}
                         </p>
                     </div>
@@ -521,7 +521,7 @@ const TasksPanel: React.FC = () => {
                                                 <span
                                                     style={{
                                                         fontSize: '0.65rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         fontFamily: 'monospace',
                                                     }}
                                                 >
@@ -571,13 +571,13 @@ const TasksPanel: React.FC = () => {
                                         </span>
                                         <span style={taskMetaItem}>
                                             <Clock size={14} aria-hidden="true" /> Priority:{' '}
-                                            <strong style={{ color: '#f8fafc' }}>
+                                            <strong style={{ color: 'var(--slate-50)' }}>
                                                 {task.priority}
                                             </strong>
                                         </span>
                                         <span style={taskMetaItem}>
                                             <Loader2 size={14} aria-hidden="true" /> Steps:{' '}
-                                            <strong style={{ color: '#f8fafc' }}>
+                                            <strong style={{ color: 'var(--slate-50)' }}>
                                                 {task.steps.length}
                                             </strong>
                                         </span>
@@ -632,7 +632,7 @@ const TasksPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.7rem',
                                             fontWeight: 800,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'uppercase',
                                             marginBottom: '0.75rem',
                                             letterSpacing: '0.05em',
@@ -690,7 +690,7 @@ const TasksPanel: React.FC = () => {
                                                                 width: 6,
                                                                 height: 6,
                                                                 borderRadius: '50%',
-                                                                background: '#475569',
+                                                                background: 'var(--slate-600)',
                                                             }}
                                                             aria-hidden="true"
                                                         />
@@ -718,7 +718,7 @@ const TasksPanel: React.FC = () => {
                                                         <div
                                                             style={{
                                                                 fontSize: '0.65rem',
-                                                                color: '#64748b',
+                                                                color: 'var(--slate-500)',
                                                             }}
                                                         >
                                                             {step.duration}
@@ -731,7 +731,7 @@ const TasksPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.75rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     fontStyle: 'italic',
                                                     padding: '0.5rem 0',
                                                 }}

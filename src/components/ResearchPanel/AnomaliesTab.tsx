@@ -49,19 +49,19 @@ export const AnomaliesTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Critical
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--error)' }}>
                                 {data.criticalCount}
                             </div>
                         </div>
@@ -70,19 +70,19 @@ export const AnomaliesTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(245,158,11,0.1)',
+                                background: 'var(--warning-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Warnings
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)' }}>
                                 {data.warningCount}
                             </div>
                         </div>
@@ -91,13 +91,13 @@ export const AnomaliesTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -146,7 +146,7 @@ export const AnomaliesTab: React.FC<Props> = ({ engine, session }) => {
                                             style={{
                                                 fontSize: '0.72rem',
                                                 fontWeight: 600,
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                             }}
                                         >
                                             {a.type.replace(/_/g, ' ')}
@@ -156,7 +156,7 @@ export const AnomaliesTab: React.FC<Props> = ({ engine, session }) => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: 4,
                                             lineHeight: 1.4,
                                         }}

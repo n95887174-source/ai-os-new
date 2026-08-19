@@ -1,5 +1,5 @@
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import { btnNavShape } from '../../styles/common';
+import { Button } from '../Common';
 
 interface WizardNavProps {
     step: number;
@@ -11,18 +11,18 @@ interface WizardNavProps {
 
 const WizardNav: React.FC<WizardNavProps> = ({ step, maxSteps, canNext, onBack, onNext }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
+        <Button
+            variant="ghost"
             onClick={onBack}
             disabled={step === 0}
             className="btn-secondary"
             style={{
-                ...btnNavShape,
                 opacity: step === 0 ? 0.4 : 1,
                 cursor: step === 0 ? 'default' : 'pointer',
             }}
         >
             <ChevronLeft size={18} /> Back
-        </button>
+        </Button>
 
         <div style={{ display: 'flex', gap: 4 }}>
             {Array.from({ length: maxSteps }).map((_, i) => (
@@ -41,19 +41,19 @@ const WizardNav: React.FC<WizardNavProps> = ({ step, maxSteps, canNext, onBack, 
         </div>
 
         {step < maxSteps - 1 ? (
-            <button
+            <Button
+                variant="ghost"
                 onClick={onNext}
                 disabled={!canNext}
                 className="btn-primary"
                 style={{
-                    ...btnNavShape,
                     opacity: !canNext ? 0.4 : 1,
                     cursor: !canNext ? 'default' : 'pointer',
                     background: 'linear-gradient(90deg, #9333ea, #a855f7)',
                 }}
             >
                 Next <ChevronRight size={18} />
-            </button>
+            </Button>
         ) : (
             <div style={{ width: 120 }} />
         )}

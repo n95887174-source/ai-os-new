@@ -48,13 +48,13 @@ const MetricCards: React.FC<Props> = ({ avgLatency, errorRate, costPerRequest, s
             </div>
             <div style={metricCardCenter}>
                 <div style={labelMetricSub}>{t('sre.metric.cost_per_req')}</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                     ${(costPerRequest ?? 0).toFixed(4)}
                 </div>
             </div>
             <div style={metricCardCenter}>
                 <div style={labelMetricSub}>{t('sre.metric.suggestions')}</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#a78bfa' }}>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--purple-muted)' }}>
                     {suggestions}
                 </div>
             </div>

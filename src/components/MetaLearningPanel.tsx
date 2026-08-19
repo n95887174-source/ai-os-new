@@ -46,7 +46,7 @@ const MetaLearningPanelContent: React.FC = () => {
                     >
                         <Brain size={20} color="#a855f7" /> Meta-Learning Engine
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--slate-400)' }}>
                         Self-improving AI that learns from past decisions
                     </p>
                 </div>
@@ -59,8 +59,8 @@ const MetaLearningPanelContent: React.FC = () => {
                         padding: '8px 14px',
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.08)',
-                        background: '#0f172a',
-                        color: '#94a3b8',
+                        background: 'var(--slate-900)',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: 12,
                     }}
@@ -78,9 +78,9 @@ const MetaLearningPanelContent: React.FC = () => {
                 }}
             >
                 {[
-                    { label: 'Observations', value: state.totalObservations, color: '#3b82f6' },
+                    { label: 'Observations', value: state.totalObservations, color: 'var(--accent)' },
                     { label: 'Patterns Found', value: state.patternsFound, color: '#a855f7' },
-                    { label: 'Adjustments', value: state.adjustmentsApplied, color: '#22c55e' },
+                    { label: 'Adjustments', value: state.adjustmentsApplied, color: 'var(--success)' },
                     {
                         label: 'Accuracy',
                         value: `${(state.accuracy * 100).toFixed(0)}%`,
@@ -92,11 +92,11 @@ const MetaLearningPanelContent: React.FC = () => {
                         style={{
                             padding: '14px 16px',
                             borderRadius: 10,
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             border: '1px solid rgba(255,255,255,0.04)',
                         }}
                     >
-                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, color: 'var(--slate-500)', marginBottom: 4 }}>
                             {stat.label}
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: stat.color }}>
@@ -112,7 +112,7 @@ const MetaLearningPanelContent: React.FC = () => {
                         style={{
                             display: 'block',
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: 4,
                         }}
                     >
@@ -130,7 +130,7 @@ const MetaLearningPanelContent: React.FC = () => {
                         }}
                         style={{ width: '100%' }}
                     />
-                    <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600 }}>
+                    <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>
                         {state.learningRate.toFixed(2)}
                     </div>
                 </div>
@@ -139,7 +139,7 @@ const MetaLearningPanelContent: React.FC = () => {
                         style={{
                             display: 'block',
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: 4,
                         }}
                     >
@@ -168,7 +168,7 @@ const MetaLearningPanelContent: React.FC = () => {
                     margin: '0 0 10px',
                     fontSize: 13,
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
@@ -179,7 +179,7 @@ const MetaLearningPanelContent: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {suggestions.length === 0 ? (
                     <div
-                        style={{ padding: 20, textAlign: 'center', color: '#475569', fontSize: 13 }}
+                        style={{ padding: 20, textAlign: 'center', color: 'var(--slate-600)', fontSize: 13 }}
                     >
                         No patterns yet. Route some requests and run debates to build observations.
                     </div>
@@ -190,7 +190,7 @@ const MetaLearningPanelContent: React.FC = () => {
                             style={{
                                 padding: '12px 14px',
                                 borderRadius: 10,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: `1px solid ${p.impact === 'positive' ? 'rgba(34,197,94,0.2)' : p.impact === 'negative' ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.04)'}`,
                             }}
                         >
@@ -212,21 +212,21 @@ const MetaLearningPanelContent: React.FC = () => {
                                 <span
                                     style={{
                                         fontSize: 13,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 600,
                                         flex: 1,
                                     }}
                                 >
                                     {p.description}
                                 </span>
-                                <span style={{ fontSize: 11, color: '#64748b' }}>
+                                <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                     {(p.confidence * 100).toFixed(0)}% confidence
                                 </span>
                             </div>
                             <div
                                 style={{
                                     fontSize: 12,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: 6,
                                     display: 'flex',
                                     gap: 12,

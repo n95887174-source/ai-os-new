@@ -17,7 +17,7 @@ export default function OpenRouterPanel() {
             <p
                 style={{
                     margin: '0 0 24px',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontSize: '0.85rem',
                 }}
             >

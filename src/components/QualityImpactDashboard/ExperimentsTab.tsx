@@ -87,12 +87,12 @@ const ExperimentsTab: React.FC = () => {
                     marginBottom: '16px',
                 }}
             >
-                <div style={{ fontSize: '16px', fontWeight: 600, color: '#e2e8f0' }}>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--slate-200)' }}>
                     {t('quality_impact.experiments_title') ?? 'Experiments'}
                     <span
                         style={{
                             fontSize: '13px',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontWeight: 400,
                             marginLeft: '8px',
                         }}
@@ -141,7 +141,7 @@ const ExperimentsTab: React.FC = () => {
                         style={{
                             fontSize: '14px',
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             marginBottom: '16px',
                         }}
                     >
@@ -160,7 +160,7 @@ const ExperimentsTab: React.FC = () => {
                                 background: 'rgba(15, 23, 42, 0.5)',
                                 border: '1px solid rgba(148, 163, 184, 0.2)',
                                 borderRadius: '8px',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '13px',
                             }}
                         />
@@ -177,7 +177,7 @@ const ExperimentsTab: React.FC = () => {
                                 background: 'rgba(15, 23, 42, 0.5)',
                                 border: '1px solid rgba(148, 163, 184, 0.2)',
                                 borderRadius: '8px',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '13px',
                             }}
                         />
@@ -247,7 +247,7 @@ const ExperimentsTab: React.FC = () => {
                         }
                         style={{
                             padding: '8px 20px',
-                            background: '#3b82f6',
+                            background: 'var(--accent)',
                             border: 'none',
                             borderRadius: '8px',
                             color: '#fff',
@@ -284,7 +284,7 @@ const ExperimentsTab: React.FC = () => {
                                 borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -319,13 +319,13 @@ const ExperimentsTab: React.FC = () => {
                                             'transparent';
                                     }}
                                 >
-                                    <span style={{ fontWeight: 500, color: '#e2e8f0' }}>
+                                    <span style={{ fontWeight: 500, color: 'var(--slate-200)' }}>
                                         {exp.name}
                                     </span>
-                                    <span style={{ color: '#94a3b8' }}>
+                                    <span style={{ color: 'var(--slate-400)' }}>
                                         {exp.techniqueIds.length} techniques
                                     </span>
-                                    <span style={{ color: '#94a3b8' }}>
+                                    <span style={{ color: 'var(--slate-400)' }}>
                                         {exp.sessionsCompleted}/{exp.sessionsPlanned}
                                     </span>
                                     <span>
@@ -355,7 +355,7 @@ const ExperimentsTab: React.FC = () => {
                                                     background: 'rgba(245, 158, 11, 0.15)',
                                                     border: '1px solid rgba(245, 158, 11, 0.3)',
                                                     borderRadius: '6px',
-                                                    color: '#f59e0b',
+                                                    color: 'var(--warning)',
                                                     cursor: 'pointer',
                                                     fontSize: '11px',
                                                     fontWeight: 600,
@@ -374,7 +374,7 @@ const ExperimentsTab: React.FC = () => {
                                                 background: 'rgba(239, 68, 68, 0.15)',
                                                 border: '1px solid rgba(239, 68, 68, 0.3)',
                                                 borderRadius: '6px',
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 cursor: 'pointer',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
@@ -384,7 +384,7 @@ const ExperimentsTab: React.FC = () => {
                                         </button>
                                         <span
                                             style={{
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontSize: '16px',
                                                 marginLeft: '4px',
                                             }}
@@ -400,7 +400,7 @@ const ExperimentsTab: React.FC = () => {
                                             background: 'rgba(15, 23, 42, 0.3)',
                                             borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
                                             fontSize: '13px',
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                         }}
                                     >
                                         <div style={{ marginBottom: '8px' }}>
@@ -416,7 +416,7 @@ const ExperimentsTab: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontWeight: 600,
-                                                        color: '#e2e8f0',
+                                                        color: 'var(--slate-200)',
                                                         marginBottom: '8px',
                                                     }}
                                                 >
@@ -433,7 +433,7 @@ const ExperimentsTab: React.FC = () => {
                                                     <div
                                                         style={{
                                                             fontWeight: 600,
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         Technique
@@ -441,7 +441,7 @@ const ExperimentsTab: React.FC = () => {
                                                     <div
                                                         style={{
                                                             fontWeight: 600,
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         Avg ON
@@ -449,7 +449,7 @@ const ExperimentsTab: React.FC = () => {
                                                     <div
                                                         style={{
                                                             fontWeight: 600,
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         Avg OFF
@@ -457,7 +457,7 @@ const ExperimentsTab: React.FC = () => {
                                                     <div
                                                         style={{
                                                             fontWeight: 600,
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         Sessions
@@ -465,14 +465,14 @@ const ExperimentsTab: React.FC = () => {
                                                     <div
                                                         style={{
                                                             fontWeight: 600,
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         Confidence
                                                     </div>
                                                     {exp.result.techniqueResults.map((r) => (
                                                         <React.Fragment key={r.techniqueId}>
-                                                            <div style={{ color: '#e2e8f0' }}>
+                                                            <div style={{ color: 'var(--slate-200)' }}>
                                                                 {r.techniqueId}
                                                             </div>
                                                             <div style={deltaStyle(r.avgScoreOn)}>
@@ -481,7 +481,7 @@ const ExperimentsTab: React.FC = () => {
                                                             <div style={deltaStyle(r.avgScoreOff)}>
                                                                 {(r.avgScoreOff * 100).toFixed(1)}%
                                                             </div>
-                                                            <div style={{ color: '#94a3b8' }}>
+                                                            <div style={{ color: 'var(--slate-400)' }}>
                                                                 {r.sessionsOn + r.sessionsOff}
                                                             </div>
                                                             <div>

@@ -103,7 +103,7 @@ const DiagnosticPanel: React.FC = () => {
                 <Crosshair size={22} color="#10b981" />
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>System Diagnostics</h2>
             </div>
-            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: '#64748b' }}>
+            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                 System-wide health diagnostics, active issues, and diagnostic history
             </p>
 
@@ -124,7 +124,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             System Health
@@ -134,7 +134,7 @@ const DiagnosticPanel: React.FC = () => {
                         {diagnostic?.health || '—'}
                     </div>
                     {diagnostic && (
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                             Score: {(diagnostic.score * 100).toFixed(0)}%
                         </div>
                     )}
@@ -149,7 +149,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Counts
@@ -163,11 +163,11 @@ const DiagnosticPanel: React.FC = () => {
                             fontSize: '0.75rem',
                         }}
                     >
-                        <span style={{ color: '#64748b' }}>Sessions</span>
-                        <span style={{ color: '#cbd5e1' }}>{diagnostic?.sessionCount ?? 0}</span>
-                        <span style={{ color: '#64748b' }}>Providers</span>
-                        <span style={{ color: '#cbd5e1' }}>{diagnostic?.providerCount ?? 0}</span>
-                        <span style={{ color: '#64748b' }}>Active Issues</span>
+                        <span style={{ color: 'var(--slate-500)' }}>Sessions</span>
+                        <span style={{ color: 'var(--slate-300)' }}>{diagnostic?.sessionCount ?? 0}</span>
+                        <span style={{ color: 'var(--slate-500)' }}>Providers</span>
+                        <span style={{ color: 'var(--slate-300)' }}>{diagnostic?.providerCount ?? 0}</span>
+                        <span style={{ color: 'var(--slate-500)' }}>Active Issues</span>
                         <span
                             style={{
                                 color:
@@ -188,7 +188,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Actions
@@ -205,7 +205,7 @@ const DiagnosticPanel: React.FC = () => {
                             fontSize: '0.8rem',
                             fontWeight: 600,
                             background: 'rgba(16,185,129,0.2)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
@@ -228,7 +228,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Session Lookup
@@ -245,7 +245,7 @@ const DiagnosticPanel: React.FC = () => {
                                 borderRadius: 6,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(148,163,184,0.15)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.75rem',
                                 outline: 'none',
                             }}
@@ -278,7 +278,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Router Provider Health (kernel state)
@@ -319,7 +319,7 @@ const DiagnosticPanel: React.FC = () => {
                                             style={{
                                                 fontWeight: 700,
                                                 fontSize: '0.8rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {p.id}
@@ -342,7 +342,7 @@ const DiagnosticPanel: React.FC = () => {
                                             display: 'flex',
                                             gap: 12,
                                             fontSize: '0.65rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                         }}
                                     >
                                         <span>TTFT: {p.avgTTFT.toFixed(0)}ms</span>
@@ -353,7 +353,7 @@ const DiagnosticPanel: React.FC = () => {
                             );
                         })}
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 6 }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginTop: 6 }}>
                         From router EWMA metrics (kernel state) — may differ from diagnostic scan
                         results
                     </div>
@@ -370,7 +370,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                             }}
                         >
                             Active Issues ({issues.length})
@@ -397,18 +397,18 @@ const DiagnosticPanel: React.FC = () => {
                                     <span
                                         style={{
                                             ...BADGE,
-                                            background: 'rgba(139,92,246,0.1)',
-                                            color: '#a78bfa',
+                                            background: 'var(--purple-tint)',
+                                            color: 'var(--purple-muted)',
                                         }}
                                     >
                                         {issue.type}
                                     </span>
                                     <span
-                                        style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1 }}
+                                        style={{ fontSize: '0.75rem', color: 'var(--slate-300)', flex: 1 }}
                                     >
                                         {issue.message}
                                     </span>
-                                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                         {new Date(issue.timestamp).toLocaleTimeString()}
                                     </span>
                                 </div>
@@ -429,10 +429,10 @@ const DiagnosticPanel: React.FC = () => {
                     }}
                 >
                     <CheckCircle2 size={24} color="#22c55e" style={{ marginBottom: 8 }} />
-                    <div style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
                         All systems operational
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                         No active issues detected
                     </div>
                 </div>
@@ -448,7 +448,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Session Issues ({sessionId.slice(0, 12)})
@@ -475,14 +475,14 @@ const DiagnosticPanel: React.FC = () => {
                                     <span
                                         style={{
                                             ...BADGE,
-                                            background: 'rgba(139,92,246,0.1)',
-                                            color: '#a78bfa',
+                                            background: 'var(--purple-tint)',
+                                            color: 'var(--purple-muted)',
                                         }}
                                     >
                                         {issue.type}
                                     </span>
                                     <span
-                                        style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1 }}
+                                        style={{ fontSize: '0.75rem', color: 'var(--slate-300)', flex: 1 }}
                                     >
                                         {issue.message}
                                     </span>
@@ -503,7 +503,7 @@ const DiagnosticPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             Diagnostic History
@@ -522,7 +522,7 @@ const DiagnosticPanel: React.FC = () => {
                                     fontSize: '0.75rem',
                                 }}
                             >
-                                <span style={{ color: '#64748b', width: 80 }}>
+                                <span style={{ color: 'var(--slate-500)', width: 80 }}>
                                     {new Date(r.timestamp).toLocaleTimeString()}
                                 </span>
                                 <span
@@ -534,11 +534,11 @@ const DiagnosticPanel: React.FC = () => {
                                 >
                                     {r.health}
                                 </span>
-                                <span style={{ color: '#94a3b8' }}>
+                                <span style={{ color: 'var(--slate-400)' }}>
                                     Score: {(r.score * 100).toFixed(0)}%
                                 </span>
-                                <span style={{ color: '#64748b' }}>{r.issueCount} issues</span>
-                                <span style={{ color: '#475569', fontSize: '0.65rem' }}>
+                                <span style={{ color: 'var(--slate-500)' }}>{r.issueCount} issues</span>
+                                <span style={{ color: 'var(--slate-600)', fontSize: '0.65rem' }}>
                                     {r.scope}
                                 </span>
                             </div>

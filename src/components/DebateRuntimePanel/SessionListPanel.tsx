@@ -50,7 +50,7 @@ const SessionListPanel: React.FC<SessionListPanelProps> = ({
                             marginBottom: '0.5rem',
                         }}
                     >
-                        <span style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.85rem' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--slate-200)', fontSize: '0.85rem' }}>
                             {s.topic}
                         </span>
                         <span
@@ -71,7 +71,7 @@ const SessionListPanel: React.FC<SessionListPanelProps> = ({
                             display: 'flex',
                             gap: '1rem',
                             fontSize: '0.75rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <span>{t('debate_runtime.round', { value: s.round })}</span>

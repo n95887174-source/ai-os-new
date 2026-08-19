@@ -67,14 +67,14 @@ const DebtReportSection: React.FC<DebtReportSectionProps> = ({
                     style={{
                         fontSize: '0.78rem',
                         fontWeight: 700,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.03em',
                     }}
                 >
                     Debt Report
                 </span>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                     {debtItems.filter((d) => d.status === 'open').length} open
                 </span>
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 3 }}>
@@ -99,7 +99,7 @@ const DebtReportSection: React.FC<DebtReportSectionProps> = ({
                         <span
                             style={{
                                 fontSize: '0.6rem',
-                                color: '#475569',
+                                color: 'var(--slate-600)',
                                 marginTop: 2,
                                 minWidth: 20,
                             }}
@@ -131,13 +131,13 @@ const DebtReportSection: React.FC<DebtReportSectionProps> = ({
                                     style={{
                                         fontSize: '0.72rem',
                                         fontWeight: 600,
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                     }}
                                 >
                                     {d.id}: {d.title}
                                 </span>
                                 {d.effort && (
-                                    <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                                         ({d.effort})
                                     </span>
                                 )}
@@ -150,7 +150,7 @@ const DebtReportSection: React.FC<DebtReportSectionProps> = ({
                                     }
                                     style={{
                                         marginLeft: 'auto',
-                                        background: 'rgba(139,92,246,0.1)',
+                                        background: 'var(--purple-tint)',
                                         border: '1px solid rgba(139,92,246,0.2)',
                                         color: '#a855f7',
                                         cursor: 'pointer',
@@ -169,7 +169,7 @@ const DebtReportSection: React.FC<DebtReportSectionProps> = ({
                                 <div
                                     style={{
                                         fontSize: '0.68rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: 3,
                                     }}
                                 >

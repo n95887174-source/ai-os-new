@@ -63,11 +63,11 @@ const ConfigHistoryView: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <History size={20} color="#f59e0b" />
                     <h2
-                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}
+                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}
                     >
                         Config History & Rollback
                     </h2>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                         ({snapshots.length} snapshots)
                     </span>
                 </div>
@@ -77,8 +77,8 @@ const ConfigHistoryView: React.FC = () => {
                         padding: '0.5rem 1rem',
                         borderRadius: 8,
                         border: '1px solid rgba(245,158,11,0.3)',
-                        background: 'rgba(245,158,11,0.1)',
-                        color: '#f59e0b',
+                        background: 'var(--warning-tint)',
+                        color: 'var(--warning)',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
                         fontWeight: 700,
@@ -96,7 +96,7 @@ const ConfigHistoryView: React.FC = () => {
                     style={{
                         padding: '0.5rem 1rem',
                         borderRadius: 8,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.2)',
                         color: '#fca5a5',
                         fontSize: '0.8rem',
@@ -140,8 +140,8 @@ const ConfigHistoryView: React.FC = () => {
                                 style={{
                                     padding: '0.4rem',
                                     borderRadius: 8,
-                                    background: 'rgba(245,158,11,0.1)',
-                                    color: '#f59e0b',
+                                    background: 'var(--warning-tint)',
+                                    color: 'var(--warning)',
                                     display: 'flex',
                                     flexShrink: 0,
                                 }}
@@ -153,7 +153,7 @@ const ConfigHistoryView: React.FC = () => {
                                     style={{
                                         fontSize: '0.85rem',
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                     }}
                                 >
                                     {s.label || `Snapshot ${s.id}`}
@@ -161,7 +161,7 @@ const ConfigHistoryView: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: '0.15rem',
                                         fontFamily: 'monospace',
                                     }}
@@ -172,7 +172,7 @@ const ConfigHistoryView: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: '0.1rem',
                                     }}
                                 >
@@ -192,7 +192,7 @@ const ConfigHistoryView: React.FC = () => {
                                         restoring === s.id
                                             ? 'rgba(245,158,11,0.2)'
                                             : 'rgba(245,158,11,0.1)',
-                                    color: '#f59e0b',
+                                    color: 'var(--warning)',
                                     cursor: restoring === s.id ? 'default' : 'pointer',
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
@@ -212,7 +212,7 @@ const ConfigHistoryView: React.FC = () => {
                         </div>
                     ))
                 ) : (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                         <Activity size={32} style={{ opacity: 0.3, marginBottom: '1rem' }} />
                         <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                             No Config History

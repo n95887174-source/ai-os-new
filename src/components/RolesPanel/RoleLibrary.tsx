@@ -24,7 +24,7 @@ const CATEGORY_BADGE: Record<
     code: { bg: 'rgba(59,130,246,0.12)', color: '#60a5fa', label: 'Code' },
     writing: { bg: 'rgba(168,85,247,0.12)', color: '#c084fc', label: 'Writing' },
     analysis: { bg: 'rgba(16,185,129,0.12)', color: '#34d399', label: 'Analysis' },
-    moderation: { bg: 'rgba(245,158,11,0.12)', color: '#fbbf24', label: 'Moderation' },
+    moderation: { bg: 'rgba(245,158,11,0.12)', color: 'var(--warning)', label: 'Moderation' },
     devops: { bg: 'rgba(239,68,68,0.12)', color: '#f87171', label: 'DevOps' },
     design: { bg: 'rgba(236,72,153,0.12)', color: '#f472b6', label: 'Design' },
 };
@@ -180,7 +180,7 @@ const RoleLibrary: React.FC = () => {
                             left: 12,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -194,13 +194,13 @@ const RoleLibrary: React.FC = () => {
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.05)',
                             borderRadius: 10,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
                     />
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>
                     {filteredRoles.length} role{filteredRoles.length !== 1 ? 's' : ''}
                 </div>
             </div>
@@ -215,7 +215,7 @@ const RoleLibrary: React.FC = () => {
                         justifyContent: 'center',
                         gap: 12,
                         padding: '3rem 0',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <Search size={40} style={{ opacity: 0.3 }} />
@@ -277,7 +277,7 @@ const RoleLibrary: React.FC = () => {
                                                     margin: 0,
                                                     fontSize: '1rem',
                                                     fontWeight: 800,
-                                                    color: '#f8fafc',
+                                                    color: 'var(--slate-50)',
                                                 }}
                                             >
                                                 {role.name}
@@ -301,7 +301,7 @@ const RoleLibrary: React.FC = () => {
                                             style={{
                                                 margin: 0,
                                                 fontSize: '0.8rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 lineHeight: 1.5,
                                             }}
                                         >
@@ -320,7 +320,7 @@ const RoleLibrary: React.FC = () => {
                                                 gap: 3,
                                                 fontSize: '0.6rem',
                                                 fontWeight: 700,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 background: 'rgba(255,255,255,0.04)',
                                                 padding: '0.2rem 0.5rem',
                                                 borderRadius: 6,
@@ -337,19 +337,19 @@ const RoleLibrary: React.FC = () => {
                                         display: 'flex',
                                         gap: '0.75rem',
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     <span>
                                         Temp:{' '}
-                                        <strong style={{ color: '#e2e8f0' }}>
+                                        <strong style={{ color: 'var(--slate-200)' }}>
                                             {role.baseTemperature}
                                         </strong>
                                     </span>
                                     {role.capabilities.length > 0 && (
                                         <span>
                                             Tools:{' '}
-                                            <strong style={{ color: '#e2e8f0' }}>
+                                            <strong style={{ color: 'var(--slate-200)' }}>
                                                 {role.capabilities.length}
                                             </strong>
                                         </span>
@@ -357,7 +357,7 @@ const RoleLibrary: React.FC = () => {
                                     {role.recommendedModel && (
                                         <span>
                                             Model:{' '}
-                                            <strong style={{ color: '#e2e8f0' }}>
+                                            <strong style={{ color: 'var(--slate-200)' }}>
                                                 {role.recommendedModel.split(':')[1] ||
                                                     role.recommendedModel}
                                             </strong>

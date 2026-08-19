@@ -38,10 +38,10 @@ const DecisionCard: React.FC<Props> = memo(({ decision: d, keyId }) => {
                           : skipEntry.stage === 'budget'
                             ? 'Budget'
                             : 'Skipped',
-              color: '#f59e0b',
+              color: 'var(--warning)',
               reason: skipEntry.reason,
           }
-        : { label: 'Scored', color: '#3b82f6', reason: 'Scored in routing decision' };
+        : { label: 'Scored', color: 'var(--accent)', reason: 'Scored in routing decision' };
 
     return (
         <div
@@ -76,7 +76,7 @@ const DecisionCard: React.FC<Props> = memo(({ decision: d, keyId }) => {
                         style={{
                             fontFamily: 'monospace',
                             fontSize: '0.75rem',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             whiteSpace: 'nowrap',
                         }}
                     >
@@ -106,7 +106,7 @@ const DecisionCard: React.FC<Props> = memo(({ decision: d, keyId }) => {
                     </span>
                     {d.selected && (
                         <span
-                            style={{ fontSize: '0.7rem', color: '#22c55e', whiteSpace: 'nowrap' }}
+                            style={{ fontSize: '0.7rem', color: 'var(--success)', whiteSpace: 'nowrap' }}
                         >
                             {d.selected}
                         </span>

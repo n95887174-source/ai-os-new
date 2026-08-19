@@ -148,7 +148,7 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
                 style={{
                     ...btnBase,
                     border: '1px solid rgba(16,185,129,0.3)',
-                    background: 'rgba(16,185,129,0.1)',
+                    background: 'var(--success-tint)',
                     color: '#34d399',
                 }}
             >
@@ -159,7 +159,7 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
                 style={{
                     ...btnBase,
                     border: '1px solid rgba(59,130,246,0.3)',
-                    background: 'rgba(59,130,246,0.1)',
+                    background: 'var(--accent-tint)',
                     color: '#60a5fa',
                 }}
             >
@@ -171,7 +171,7 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
                     style={{
                         ...btnBase,
                         border: '1px solid rgba(16,185,129,0.3)',
-                        background: 'rgba(16,185,129,0.1)',
+                        background: 'var(--success-tint)',
                         color: '#34d399',
                     }}
                 >
@@ -183,8 +183,8 @@ const VerdictActionButtons: React.FC<Props> = ({ session, t, onViewAnalysis, onR
                 style={{
                     ...btnBase,
                     border: '1px solid rgba(139,92,246,0.3)',
-                    background: 'rgba(139,92,246,0.1)',
-                    color: '#a78bfa',
+                    background: 'var(--purple-tint)',
+                    color: 'var(--purple-muted)',
                 }}
             >
                 <Download size={16} /> {t('debate.verdict.export')}

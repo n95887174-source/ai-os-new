@@ -41,7 +41,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                     justifyContent: 'center',
                     height: '100%',
                     minHeight: 400,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.85rem',
                 }}
             >
@@ -65,7 +65,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                     justifyContent: 'center',
                     height: '100%',
                     minHeight: 400,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     gap: '0.75rem',
                 }}
             >
@@ -78,7 +78,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 <p
                     style={{
                         fontSize: '0.8rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         textAlign: 'center',
                         maxWidth: 300,
                     }}
@@ -192,7 +192,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                             style={{
                                 fontSize: '0.5rem',
                                 fontWeight: 700,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -229,7 +229,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                             gap: 6,
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             textTransform: 'uppercase',
                         }}
                     >
@@ -277,7 +277,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                         justifyContent: 'space-between',
                         fontSize: '0.75rem',
                         marginBottom: '0.25rem',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                     }}
                 >
                     <span>Connection Density</span>
@@ -297,7 +297,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                         style={{ height: '100%', background: '#a855f7', borderRadius: 2 }}
                     />
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', lineHeight: 1.5 }}>
                     Mapped <strong style={{ color: 'white' }}>{entityCount}</strong> cognitive
                     entities with <strong style={{ color: 'white' }}>{edges.length}</strong>{' '}
                     semantic relationships

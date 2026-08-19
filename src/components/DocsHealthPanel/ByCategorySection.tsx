@@ -21,7 +21,7 @@ export const ByCategorySection: React.FC<ByCategorySectionProps> = ({ report }) 
                     style={{
                         fontSize: '1rem',
                         fontWeight: 700,
-                        color: '#f1f5f9',
+                        color: 'var(--slate-100)',
                         margin: '0 0 1rem',
                     }}
                 >
@@ -41,18 +41,18 @@ export const ByCategorySection: React.FC<ByCategorySectionProps> = ({ report }) 
                         <div
                             style={{
                                 fontSize: '0.85rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 textTransform: 'capitalize',
                             }}
                         >
                             {cat}
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#10b981' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>
                                 {stats.passed}/{stats.total}
                             </span>
                             {stats.failed > 0 && (
-                                <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--error)' }}>
                                     -{stats.failed}
                                 </span>
                             )}
@@ -72,13 +72,13 @@ export const ByCategorySection: React.FC<ByCategorySectionProps> = ({ report }) 
                     style={{
                         fontSize: '1rem',
                         fontWeight: 700,
-                        color: '#f1f5f9',
+                        color: 'var(--slate-100)',
                         margin: '0 0 1rem',
                     }}
                 >
                     {t('docs_health.summary')}
                 </h3>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)', lineHeight: 1.6 }}>
                     {report.summary}
                 </div>
             </div>

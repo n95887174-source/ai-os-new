@@ -143,13 +143,6 @@ export const CORE_SECTIONS: NavSection[] = [
                 lazy: true,
             },
             {
-                id: 'builder',
-                labelKey: 'nav.builder',
-                icon: Icons.box,
-                color: '#f59e0b',
-                lazy: true,
-            },
-            {
                 id: 'debate-live',
                 labelKey: 'nav.debate_live',
                 icon: Icons.radio,

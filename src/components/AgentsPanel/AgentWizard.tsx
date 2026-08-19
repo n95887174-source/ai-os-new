@@ -154,11 +154,11 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                 <Wand2 size={18} color="white" />
               </div>
               <div>
-                <h3 id="wizard-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>{t('agent_wizard.title')}</h3>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>{t('agent_wizard.subtitle')}</p>
+                <h3 id="wizard-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--slate-200)' }}>{t('agent_wizard.title')}</h3>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--slate-500)' }}>{t('agent_wizard.subtitle')}</p>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.5rem' }} aria-label={t('common.close')}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--slate-500)', cursor: 'pointer', padding: '0.5rem' }} aria-label={t('common.close')}>
               <X size={18} />
             </button>
           </div>
@@ -166,7 +166,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
           <div style={{ padding: '20px 24px' }}>
             {/* Input */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate-400)', marginBottom: 6 }}>
                 {t('agent_wizard.prompt_label')}
               </label>
               <textarea
@@ -174,7 +174,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                 onChange={e => setDescription(e.target.value)}
                 placeholder={t('agent_wizard.prompt_placeholder')}
                 rows={3}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(100,116,139,0.25)', background: 'rgba(30,30,50,0.6)', color: '#e2e8f0', fontSize: '0.85rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(100,116,139,0.25)', background: 'rgba(30,30,50,0.6)', color: 'var(--slate-200)', fontSize: '0.85rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
               />
               <button
@@ -189,7 +189,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
 
             {/* Error */}
             {error && (
-              <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '0.8rem', marginBottom: 12 }}>
+              <div style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--error-tint)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--error)', fontSize: '0.8rem', marginBottom: 12 }}>
                 {error}
               </div>
             )}
@@ -204,28 +204,28 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                       <input
                         value={config.name}
                         onChange={e => setConfig({ ...config, name: e.target.value })}
-                        style={{ width: '100%', background: 'none', border: 'none', color: '#e2e8f0', fontSize: '0.95rem', fontWeight: 700, outline: 'none', padding: 0 }}
+                        style={{ width: '100%', background: 'none', border: 'none', color: 'var(--slate-200)', fontSize: '0.95rem', fontWeight: 700, outline: 'none', padding: 0 }}
                       />
-                      <div style={{ fontSize: '0.75rem', color: '#8b5cf6' }}>{config.roleName}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--purple)' }}>{config.roleName}</div>
                     </div>
-                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, background: 'rgba(139,92,246,0.15)', color: '#8b5cf6' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, background: 'rgba(139,92,246,0.15)', color: 'var(--purple)' }}>
                       {config.category}
                     </span>
                   </div>
 
                   <div style={{ marginBottom: 10 }}>
-                    <label style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: 4 }}>System Prompt</label>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--slate-500)', display: 'block', marginBottom: 4 }}>System Prompt</label>
                     <textarea
                       value={config.prompt}
                       onChange={e => setConfig({ ...config, prompt: e.target.value })}
                       rows={3}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(20,20,40,0.5)', color: '#e2e8f0', fontSize: '0.8rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(20,20,40,0.5)', color: 'var(--slate-200)', fontSize: '0.8rem', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: 4 }}>Temperature: {config.temperature.toFixed(1)}</label>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--slate-500)', display: 'block', marginBottom: 4 }}>Temperature: {config.temperature.toFixed(1)}</label>
                       <input
                         type="range" min={0} max={2} step={0.1} value={config.temperature}
                         onChange={e => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
@@ -235,7 +235,7 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: 6 }}>Tools</label>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--slate-500)', display: 'block', marginBottom: 6 }}>Tools</label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                       {TOOL_LIST.map(tool => (
                         <button
@@ -257,13 +257,13 @@ export const AgentWizard: React.FC<AgentWizardProps> = ({ isOpen, onClose, onAge
                     value={refineInstruction}
                     onChange={e => setRefineInstruction(e.target.value)}
                     placeholder="Refine: 'Make it more creative' / 'Add web search tool'"
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(30,30,50,0.5)', color: '#e2e8f0', fontSize: '0.8rem', outline: 'none' }}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(30,30,50,0.5)', color: 'var(--slate-200)', fontSize: '0.8rem', outline: 'none' }}
                     onKeyDown={e => { if (e.key === 'Enter') handleRefine(); }}
                   />
                   <button
                     onClick={handleRefine}
                     disabled={!refineInstruction.trim() || isRefining}
-                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', cursor: isRefining ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem' }}
+                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.3)', background: 'var(--purple-tint)', color: 'var(--purple)', cursor: isRefining ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem' }}
                   >
                     {isRefining ? <Loader2 size={12} className="provider-spin" /> : <RefreshCw size={12} />}
                     Refine

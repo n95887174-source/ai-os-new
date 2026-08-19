@@ -44,8 +44,8 @@ export const CitationsTab: React.FC<Props> = ({ engine, session }) => {
                                 padding: '6px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.72rem',
                                 outline: 'none',
                             }}
@@ -73,7 +73,7 @@ export const CitationsTab: React.FC<Props> = ({ engine, session }) => {
                             alignItems: 'center',
                         }}
                     >
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                             {data.entries.length} entries
                         </div>
                         <button
@@ -103,10 +103,10 @@ export const CitationsTab: React.FC<Props> = ({ engine, session }) => {
                         style={{
                             padding: '12px',
                             borderRadius: 8,
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             border: '1px solid rgba(255,255,255,0.06)',
                             fontSize: '0.65rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             maxHeight: 400,
                             overflow: 'auto',
                             fontFamily: "'JetBrains Mono', monospace",

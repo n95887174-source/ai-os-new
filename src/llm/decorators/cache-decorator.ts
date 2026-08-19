@@ -1,6 +1,12 @@
 import type { ChatMessage, ProviderResponse, SendMessageOptions, StreamMeta } from '../core/types';
 import { BaseDecorator } from '../core/base-decorator';
 
+/** B-20: stable string for scoping the cache key by agent/session/role. */
+function scopeKey(scope?: SendMessageOptions['cacheScope']): string {
+    if (!scope) return '-';
+    return [scope.agentId ?? '-', scope.sessionId ?? '-', scope.role ?? '-'].join('|');
+}
+
 // CONTRACT-C8: This is NOT real semantic embeddings — it's an FNV-1a hash-based
 // 128-dimensional approximation (word-level locality-sensitive fingerprint). Do NOT
 // market this as "semantic" or "embedding". Rename to approximateTextCache if needed.
@@ -138,6 +144,7 @@ export class CacheDecorator extends BaseDecorator {
             responseFormat: options?.responseFormat,
             safetySettings: options?.safetySettings,
             tools: options?.tools ? JSON.stringify(options.tools) : undefined,
+            cacheScope: scopeKey(options?.cacheScope),
         };
         const fullKey = `${apiKeyHash}:${JSON.stringify(params)}`;
         const msgUint8 = new TextEncoder().encode(fullKey);
@@ -187,7 +194,7 @@ export class CacheDecorator extends BaseDecorator {
                 .filter(Boolean)
                 .join('\n');
             const targetEmbed = this.getEmbedding(targetText);
-            const indexKey = `${apiKeyHash}:${model}`;
+            const indexKey = `${apiKeyHash}:${model}:${scopeKey(options?.cacheScope)}`;
             const bucket = this.approximateTextIndex.get(indexKey);
             if (bucket) {
                 for (const [key, entry] of bucket) {
@@ -296,7 +303,7 @@ export class CacheDecorator extends BaseDecorator {
                 }
 
                 this.cache.set(key, entry);
-                const indexKey = `${apiKeyHash}:${model}`;
+                const indexKey = `${apiKeyHash}:${model}:${scopeKey(options?.cacheScope)}`;
                 if (!this.approximateTextIndex.has(indexKey))
                     this.approximateTextIndex.set(indexKey, new Map());
                 this.approximateTextIndex.get(indexKey)!.set(key, entry);
@@ -358,7 +365,7 @@ export class CacheDecorator extends BaseDecorator {
                 .filter(Boolean)
                 .join('\n');
             const targetEmbed = this.getEmbedding(targetText);
-            const indexKey = `${apiKeyHash}:${model}`;
+            const indexKey = `${apiKeyHash}:${model}:${scopeKey(options?.cacheScope)}`;
             const bucket = this.approximateTextIndex.get(indexKey);
             if (bucket) {
                 for (const [key, entry] of bucket) {
@@ -454,7 +461,7 @@ export class CacheDecorator extends BaseDecorator {
             }
 
             this.cache.set(key, entry);
-            const indexKey = `${apiKeyHash}:${model}`;
+            const indexKey = `${apiKeyHash}:${model}:${scopeKey(options?.cacheScope)}`;
             if (!this.approximateTextIndex.has(indexKey))
                 this.approximateTextIndex.set(indexKey, new Map());
             this.approximateTextIndex.get(indexKey)!.set(key, entry);

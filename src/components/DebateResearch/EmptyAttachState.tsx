@@ -15,7 +15,7 @@ const EmptyAttachState: React.FC<EmptyAttachStateProps> = ({ onAttach, t: _t }) 
             justifyContent: 'center',
             gap: '1rem',
             padding: '3rem',
-            color: '#64748b',
+            color: 'var(--slate-500)',
         }}
     >
         <Zap size={48} opacity={0.3} />
@@ -25,7 +25,7 @@ const EmptyAttachState: React.FC<EmptyAttachStateProps> = ({ onAttach, t: _t }) 
         <span
             style={{
                 fontSize: '0.82rem',
-                color: '#475569',
+                color: 'var(--slate-600)',
                 textAlign: 'center',
                 maxWidth: 350,
             }}

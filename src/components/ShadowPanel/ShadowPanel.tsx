@@ -47,11 +47,11 @@ const ShadowPanel: React.FC = () => {
     }, [runDiff]);
 
     return (
-        <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#e2e8f0' }}>
+        <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: 'var(--slate-200)' }}>
             <div
                 style={{
                     fontSize: '0.85rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginBottom: 16,
                     padding: 12,
                     background: 'rgba(59,130,246,0.08)',
@@ -71,7 +71,7 @@ const ShadowPanel: React.FC = () => {
             </div>
 
             {loading && !routerReport && (
-                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                     Computing diff&hellip;
                 </div>
             )}
@@ -80,7 +80,7 @@ const ShadowPanel: React.FC = () => {
                 <RouterDiffView report={routerReport} />
             ) : (
                 !loading && (
-                    <div style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: 24, color: 'var(--slate-500)' }}>
                         No data
                     </div>
                 )
@@ -91,7 +91,7 @@ const ShadowPanel: React.FC = () => {
                     onClick={runDiff}
                     style={{
                         background: 'rgba(139,92,246,0.15)',
-                        color: '#a78bfa',
+                        color: 'var(--purple-muted)',
                         border: '1px solid rgba(139,92,246,0.3)',
                         borderRadius: 8,
                         padding: '0.5rem 1.25rem',

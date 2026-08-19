@@ -12,7 +12,7 @@ const FoodParticle: React.FC<FoodParticleProps> = ({ food: f }) => {
       animate={{ opacity: 1, scale: 1, y: `${f.y}%` }}
       style={{ 
         position: 'absolute', left: `${f.x}%`, top: 0, width: f.size, height: f.size, 
-        background: '#f59e0b', borderRadius: '50%', boxShadow: '0 0 10px #f59e0b', zIndex: 5 
+        background: 'var(--warning)', borderRadius: '50%', boxShadow: '0 0 10px #f59e0b', zIndex: 5 
       }} 
     />
   );

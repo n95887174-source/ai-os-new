@@ -14,7 +14,7 @@ export const chipStyle = (selected: boolean, color: string): React.CSSProperties
     borderRadius: 5,
     border: `1px solid ${selected ? color : 'rgba(255,255,255,0.06)'}`,
     background: selected ? `${color}18` : 'transparent',
-    color: selected ? color : '#64748b',
+    color: selected ? color : 'var(--slate-500)',
     cursor: 'pointer',
     fontSize: '0.72rem',
     fontWeight: 600,
@@ -25,7 +25,7 @@ export const thStyle: React.CSSProperties = {
     padding: '0.35rem 0.55rem',
     fontSize: '0.65rem',
     fontWeight: 700,
-    color: '#64748b',
+    color: 'var(--slate-500)',
     textTransform: 'uppercase',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
@@ -36,7 +36,7 @@ export const thStyle: React.CSSProperties = {
 export const tdStyle: React.CSSProperties = {
     padding: '0.3rem 0.55rem',
     fontSize: '0.72rem',
-    color: '#cbd5e1',
+    color: 'var(--slate-300)',
     textAlign: 'right',
     whiteSpace: 'nowrap',
 };

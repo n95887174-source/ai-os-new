@@ -104,7 +104,7 @@ const RelatedDebates: React.FC<Props> = ({
                         padding: '4px 10px',
                         borderRadius: 6,
                         border: '1px solid rgba(139,92,246,0.3)',
-                        background: 'rgba(139,92,246,0.1)',
+                        background: 'var(--purple-tint)',
                         color: '#a855f7',
                         cursor: injecting ? 'not-allowed' : 'pointer',
                         display: 'flex',

@@ -18,7 +18,7 @@ const ScoreComparison: React.FC<Props> = ({ result }) => (
             style={{
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 marginBottom: 8,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -43,7 +43,7 @@ const ScoreComparison: React.FC<Props> = ({ result }) => (
                             fontSize: '0.75rem',
                         }}
                     >
-                        <span style={{ fontWeight: 700, color: '#e2e8f0', minWidth: 80 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--slate-200)', minWidth: 80 }}>
                             {d.provider}
                         </span>
                         <div
@@ -59,7 +59,7 @@ const ScoreComparison: React.FC<Props> = ({ result }) => (
                                 style={{
                                     width: `${Math.min(d.originalScore * 100, 100)}%`,
                                     height: '100%',
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                     borderRadius: 2,
                                     opacity: 0.6,
                                 }}
@@ -89,7 +89,7 @@ const ScoreComparison: React.FC<Props> = ({ result }) => (
                             <span
                                 style={{
                                     ...PILL,
-                                    background: 'rgba(59,130,246,0.1)',
+                                    background: 'var(--accent-tint)',
                                     color: '#60a5fa',
                                 }}
                             >
@@ -100,8 +100,8 @@ const ScoreComparison: React.FC<Props> = ({ result }) => (
                             <span
                                 style={{
                                     ...PILL,
-                                    background: 'rgba(245,158,11,0.1)',
-                                    color: '#f59e0b',
+                                    background: 'var(--warning-tint)',
+                                    color: 'var(--warning)',
                                 }}
                             >
                                 SIM

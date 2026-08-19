@@ -7,7 +7,7 @@ const AgentHandoffsTab: React.FC<Props> = ({ agent }) => {
     const handoffs = taskHandoffService.getHandoffs(agent.id);
     if (handoffs.length === 0) {
         return (
-            <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>
+            <div style={{ color: 'var(--slate-500)', padding: '2rem', textAlign: 'center' }}>
                 No handoffs for this agent.
             </div>
         );
@@ -59,7 +59,7 @@ const AgentHandoffsTab: React.FC<Props> = ({ agent }) => {
                     <div
                         style={{
                             fontSize: '0.75rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'flex',
                             gap: '1rem',
                         }}

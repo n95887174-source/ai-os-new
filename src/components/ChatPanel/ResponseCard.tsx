@@ -330,7 +330,7 @@ const ResponseCard: React.FC<ResponseCardProps> = memo(
                                     style={{
                                         padding: '0.3rem 0.75rem',
                                         borderRadius: 6,
-                                        background: 'rgba(255,255,255,0.08)',
+                                        background: 'var(--border-subtle)',
                                         border: '1px solid rgba(255,255,255,0.15)',
                                         color: '#fca5a5',
                                         fontSize: '0.75rem',

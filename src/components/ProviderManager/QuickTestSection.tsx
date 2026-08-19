@@ -140,7 +140,7 @@ export const QuickTestSection: React.FC<QuickTestSectionProps> = ({ apiKey }) =>
                 style={{
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     marginBottom: '0.5rem',
                     textTransform: 'uppercase',
                 }}

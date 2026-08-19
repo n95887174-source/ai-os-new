@@ -21,13 +21,13 @@ import {
     textMuted,
     textMutedXs,
     label,
-    buttonGhost,
     iconBtn,
     emptyState,
     flexCenterGap8,
     flexCenterGap12,
     flex1RelativeMargin075,
 } from '../../styles/common';
+import { Button } from '../Common';
 
 const SPEAKER_COLORS: Record<string, string> = {
     pro: '#3b82f6',
@@ -69,7 +69,7 @@ function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, stri
             id: c.id,
             data: {
                 label: (
-                    <div style={{ maxWidth: 260, fontSize: 11, lineHeight: 1.4, color: '#e2e8f0' }}>
+                    <div style={{ maxWidth: 260, fontSize: 11, lineHeight: 1.4, color: 'var(--slate-200)' }}>
                         <div
                             style={{
                                 display: 'flex',
@@ -90,7 +90,7 @@ function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, stri
                             <span style={{ fontWeight: 600, fontSize: 10, color }}>
                                 {c.speaker}
                             </span>
-                            <span style={{ color: '#64748b', fontSize: 9 }}>r{c.round}</span>
+                            <span style={{ color: 'var(--slate-500)', fontSize: 9 }}>r{c.round}</span>
                             <span
                                 style={{
                                     marginLeft: 'auto',
@@ -112,7 +112,7 @@ function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, stri
                                 display: 'flex',
                                 gap: 8,
                                 fontSize: 9,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             <span>↑{c.supportCount}</span>
@@ -123,7 +123,7 @@ function mapGovStateToNodes(state: GovernorState, _roundLayout: Map<number, stri
             },
             position: { x, y },
             style: {
-                background: '#0f172a',
+                background: 'var(--slate-900)',
                 border: `1px solid ${color}44`,
                 borderRadius: 10,
                 padding: '8px 12px',
@@ -178,7 +178,7 @@ function mapGovStateToEdges(state: GovernorState): Edge[] {
                 strokeDasharray: e.type === 'refines' ? '4 2' : undefined,
             },
             labelStyle: { fill: color, fontSize: 9, fontWeight: 600 },
-            labelBgStyle: { fill: '#0f172a', stroke: `${color}33`, strokeWidth: 1 },
+            labelBgStyle: { fill: 'var(--slate-900)', stroke: `${color}33`, strokeWidth: 1 },
             labelBgPadding: [3, 3],
             labelBgBorderRadius: 4,
             markerEnd: { type: MarkerType.ArrowClosed, color, width: 12, height: 12 },
@@ -312,7 +312,7 @@ const ArgumentGraphPanel: React.FC = () => {
                     animated: c.status === 'open',
                     style: { stroke: color, strokeWidth: 2, strokeDasharray: '6 3' },
                     labelStyle: { fill: color, fontSize: 8 },
-                    labelBgStyle: { fill: '#0f172a' },
+                    labelBgStyle: { fill: 'var(--slate-900)' },
                     labelBgPadding: [2, 2],
                     labelBgBorderRadius: 4,
                     markerEnd: { type: MarkerType.ArrowClosed, color },
@@ -356,8 +356,8 @@ const ArgumentGraphPanel: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     height: '100%',
-                    background: '#0f172a',
-                    color: '#f1f5f9',
+                    background: 'var(--slate-900)',
+                    color: 'var(--slate-100)',
                 }}
             >
                 <div
@@ -366,7 +366,7 @@ const ArgumentGraphPanel: React.FC = () => {
                         ...panel,
                         margin: '0.75rem',
                         borderRadius: 8,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                     }}
                 >
                     <span style={{ ...label }}>Argument Graph</span>
@@ -408,8 +408,8 @@ const ArgumentGraphPanel: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
-                background: '#0f172a',
-                color: '#f1f5f9',
+                background: 'var(--slate-900)',
+                color: 'var(--slate-100)',
                 position: 'relative',
             }}
         >
@@ -420,7 +420,7 @@ const ArgumentGraphPanel: React.FC = () => {
                     ...panel,
                     margin: '0.75rem 0.75rem 0',
                     borderRadius: 8,
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                 }}
             >
                 <div style={flexCenterGap12}>
@@ -429,52 +429,55 @@ const ArgumentGraphPanel: React.FC = () => {
                         Round {govState.round} · {allClaims.length} claims
                     </span>
                     <div style={{ display: 'flex', gap: 4, fontSize: 10 }}>
-                        {proCount > 0 && <span style={{ color: '#3b82f6' }}>pro {proCount}</span>}
-                        {conCount > 0 && <span style={{ color: '#ef4444' }}>con {conCount}</span>}
+                        {proCount > 0 && <span style={{ color: 'var(--accent)' }}>pro {proCount}</span>}
+                        {conCount > 0 && <span style={{ color: 'var(--error)' }}>con {conCount}</span>}
                         {neutralCount > 0 && (
-                            <span style={{ color: '#10b981' }}>neutral {neutralCount}</span>
+                            <span style={{ color: 'var(--success)' }}>neutral {neutralCount}</span>
                         )}
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setShowContradictions((v) => !v)}
                         style={{
-                            ...buttonGhost,
                             fontSize: 10,
                             background: showContradictions ? 'rgba(239,68,68,0.1)' : undefined,
                         }}
                     >
                         {showContradictions ? 'Hide' : 'Show'} conflicts
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setShowResolved((v) => !v)}
                         style={{
-                            ...buttonGhost,
                             fontSize: 10,
                             background: showResolved ? 'rgba(16,185,129,0.1)' : undefined,
                         }}
                     >
                         {showResolved ? 'Hide' : 'Show'} resolved
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setInfluenceMode((v) => !v)}
                         style={{
-                            ...buttonGhost,
                             fontSize: 10,
                             background: influenceMode ? 'rgba(139,92,246,0.1)' : undefined,
                             color: influenceMode ? '#a78bfa' : undefined,
                         }}
                     >
                         {influenceMode ? '◈' : '○'} Influence
-                    </button>
+                    </Button>
                     <span
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4,
                             fontSize: 10,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         convergence {Math.round(govState.convergenceScore)}%
@@ -486,7 +489,7 @@ const ArgumentGraphPanel: React.FC = () => {
                             display: 'flex',
                             gap: 8,
                             fontSize: 10,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             alignItems: 'center',
                         }}
                     >
@@ -506,9 +509,9 @@ const ArgumentGraphPanel: React.FC = () => {
                                     }}
                                 />
                                 {speaker}
-                                <span style={{ color: '#10b981' }}>↑{inf.outgoing}</span>
-                                <span style={{ color: '#ef4444' }}>↓{inf.incoming}</span>
-                                <span style={{ color: '#a78bfa', fontWeight: 600 }}>
+                                <span style={{ color: 'var(--success)' }}>↑{inf.outgoing}</span>
+                                <span style={{ color: 'var(--error)' }}>↓{inf.incoming}</span>
+                                <span style={{ color: 'var(--purple-muted)', fontWeight: 600 }}>
                                     {(inf.score * 100).toFixed(0)}%
                                 </span>
                             </span>
@@ -550,14 +553,14 @@ const ArgumentGraphPanel: React.FC = () => {
                             gap: 10,
                         }}
                     >
-                        <span style={{ color: '#3b82f6' }}>● pro</span>
-                        <span style={{ color: '#ef4444' }}>● con</span>
-                        <span style={{ color: '#10b981' }}>● neutral</span>
-                        <span style={{ color: '#64748b' }}>|</span>
-                        <span style={{ color: '#10b981' }}>━ supports</span>
-                        <span style={{ color: '#ef4444' }}>━ challenges</span>
-                        <span style={{ color: '#3b82f6' }}>┅ refines</span>
-                        <span style={{ color: '#ef4444' }}>╌ contradiction</span>
+                        <span style={{ color: 'var(--accent)' }}>● pro</span>
+                        <span style={{ color: 'var(--error)' }}>● con</span>
+                        <span style={{ color: 'var(--success)' }}>● neutral</span>
+                        <span style={{ color: 'var(--slate-500)' }}>|</span>
+                        <span style={{ color: 'var(--success)' }}>━ supports</span>
+                        <span style={{ color: 'var(--error)' }}>━ challenges</span>
+                        <span style={{ color: 'var(--accent)' }}>┅ refines</span>
+                        <span style={{ color: 'var(--error)' }}>╌ contradiction</span>
                     </Panel>
                 </ReactFlow>
             </div>
@@ -577,7 +580,7 @@ const ArgumentGraphPanel: React.FC = () => {
                     onClick={() => setShowDetail(false)}
                 >
                     <div
-                        style={{ ...panel, maxWidth: 560, width: '90%', background: '#1e293b' }}
+                        style={{ ...panel, maxWidth: 560, width: '90%', background: 'var(--slate-800)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div style={{ ...flexBetween, marginBottom: 12 }}>
@@ -617,7 +620,7 @@ const ArgumentGraphPanel: React.FC = () => {
                             </div>
                             <button
                                 onClick={() => setShowDetail(false)}
-                                style={{ ...iconBtn, color: '#94a3b8' }}
+                                style={{ ...iconBtn, color: 'var(--slate-400)' }}
                             >
                                 ✕
                             </button>
@@ -626,13 +629,13 @@ const ArgumentGraphPanel: React.FC = () => {
                             style={{
                                 fontSize: 13,
                                 lineHeight: 1.6,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 marginBottom: 12,
                             }}
                         >
                             {selectedClaim.text}
                         </div>
-                        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#64748b' }}>
+                        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--slate-500)' }}>
                             <span>supports {selectedClaim.supportCount}</span>
                             <span>challenges {selectedClaim.challengeCount}</span>
                             <span>ID: {selectedClaim.id}</span>

@@ -67,12 +67,12 @@ const PoolStatusPanel: React.FC = () => {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <Layers size={28} style={{ color: '#3b82f6' }} />
+                    <Layers size={28} style={{ color: 'var(--accent)' }} />
                     <div>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                             {t('pool_status.title')}
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                             {t('pool_status.subtitle')}
                         </div>
                     </div>
@@ -193,14 +193,14 @@ const PoolStatusPanel: React.FC = () => {
                                             style={{
                                                 fontSize: '1.1rem',
                                                 fontWeight: 800,
-                                                color: '#f8fafc',
+                                                color: 'var(--slate-50)',
                                             }}
                                         >
                                             {t(
                                                 `pool_status.pool.${pool.id === 'free' ? 'free_name' : pool.id}`,
                                             )}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                             {t(
                                                 `pool_status.pool.${pool.id === 'free' ? 'free_name' : pool.id}_desc`,
                                             )}
@@ -233,7 +233,7 @@ const PoolStatusPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.65rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
                                             }}
@@ -267,7 +267,7 @@ const PoolStatusPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.65rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
                                             }}
@@ -288,7 +288,7 @@ const PoolStatusPanel: React.FC = () => {
                                             style={{
                                                 fontSize: '1.2rem',
                                                 fontWeight: 800,
-                                                color: '#f8fafc',
+                                                color: 'var(--slate-50)',
                                             }}
                                         >
                                             {kps.length}
@@ -296,7 +296,7 @@ const PoolStatusPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.65rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
                                             }}
@@ -316,7 +316,7 @@ const PoolStatusPanel: React.FC = () => {
                                                 marginBottom: '0.25rem',
                                             }}
                                         >
-                                            <span style={{ color: '#94a3b8' }}>
+                                            <span style={{ color: 'var(--slate-400)' }}>
                                                 {t('pool_status.quota_burn')}
                                             </span>
                                             <span style={{ color: pctColor(usagePct) }}>
@@ -374,7 +374,7 @@ const PoolStatusPanel: React.FC = () => {
                                                 <span
                                                     style={{
                                                         fontSize: '0.75rem',
-                                                        color: '#cbd5e1',
+                                                        color: 'var(--slate-300)',
                                                         flex: 1,
                                                         minWidth: 0,
                                                         overflow: 'hidden',
@@ -390,7 +390,7 @@ const PoolStatusPanel: React.FC = () => {
                                                         style={{
                                                             width: 40,
                                                             height: 4,
-                                                            background: 'rgba(255,255,255,0.08)',
+                                                            background: 'var(--border-subtle)',
                                                             borderRadius: 2,
                                                             overflow: 'hidden',
                                                         }}
@@ -420,7 +420,7 @@ const PoolStatusPanel: React.FC = () => {
                                                     <span
                                                         style={{
                                                             fontSize: '0.65rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         {k.latency}ms
@@ -433,7 +433,7 @@ const PoolStatusPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.7rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textAlign: 'center',
                                                 padding: '0.3rem',
                                             }}
@@ -445,7 +445,7 @@ const PoolStatusPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.75rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textAlign: 'center',
                                                 padding: '1rem',
                                                 fontStyle: 'italic',
@@ -466,7 +466,7 @@ const PoolStatusPanel: React.FC = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             padding: '0 0.5rem',
                             marginBottom: '0.25rem',
                         }}
@@ -508,7 +508,7 @@ const PoolStatusPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             textTransform: 'capitalize',
                                         }}
                                     >
@@ -531,7 +531,7 @@ const PoolStatusPanel: React.FC = () => {
                                                 borderRadius: 6,
                                                 background: 'rgba(255,255,255,0.05)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 fontSize: '0.7rem',
                                             }}
                                         >
@@ -556,7 +556,7 @@ const PoolStatusPanel: React.FC = () => {
                                     <span
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             minWidth: 60,
                                             textAlign: 'right',
                                         }}
@@ -585,7 +585,7 @@ const PoolStatusPanel: React.FC = () => {
                                                     ? 'rgba(59,130,246,0.2)'
                                                     : 'rgba(255,255,255,0.05)',
                                             border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                             cursor: 'pointer',
                                             fontSize: '0.7rem',
                                             display: 'flex',
@@ -604,7 +604,7 @@ const PoolStatusPanel: React.FC = () => {
                                             right: '1rem',
                                             padding: '1rem',
                                             borderRadius: 12,
-                                            background: '#1e293b',
+                                            background: 'var(--slate-800)',
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             zIndex: 10,
                                             minWidth: 220,
@@ -614,7 +614,7 @@ const PoolStatusPanel: React.FC = () => {
                                             style={{
                                                 fontSize: '0.8rem',
                                                 fontWeight: 700,
-                                                color: '#f8fafc',
+                                                color: 'var(--slate-50)',
                                                 marginBottom: '0.75rem',
                                             }}
                                         >
@@ -627,7 +627,7 @@ const PoolStatusPanel: React.FC = () => {
                                                 gap: '0.5rem',
                                             }}
                                         >
-                                            <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                            <label style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                                                 Requests / Day
                                             </label>
                                             <input
@@ -644,11 +644,11 @@ const PoolStatusPanel: React.FC = () => {
                                                     borderRadius: 6,
                                                     background: 'rgba(0,0,0,0.3)',
                                                     border: '1px solid rgba(255,255,255,0.1)',
-                                                    color: '#f8fafc',
+                                                    color: 'var(--slate-50)',
                                                     fontSize: '0.75rem',
                                                 }}
                                             />
-                                            <label style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                            <label style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                                                 Tokens / Day
                                             </label>
                                             <input
@@ -665,7 +665,7 @@ const PoolStatusPanel: React.FC = () => {
                                                     borderRadius: 6,
                                                     background: 'rgba(0,0,0,0.3)',
                                                     border: '1px solid rgba(255,255,255,0.1)',
-                                                    color: '#f8fafc',
+                                                    color: 'var(--slate-50)',
                                                     fontSize: '0.75rem',
                                                 }}
                                             />
@@ -675,7 +675,7 @@ const PoolStatusPanel: React.FC = () => {
                                                     marginTop: '0.5rem',
                                                     padding: '0.4rem 0.8rem',
                                                     borderRadius: 8,
-                                                    background: '#3b82f6',
+                                                    background: 'var(--accent)',
                                                     border: 'none',
                                                     color: '#fff',
                                                     cursor: 'pointer',
@@ -693,7 +693,7 @@ const PoolStatusPanel: React.FC = () => {
                                             style={{
                                                 marginTop: '0.75rem',
                                                 fontSize: '0.65rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 borderTop: '1px solid rgba(255,255,255,0.05)',
                                                 paddingTop: '0.5rem',
                                             }}
@@ -703,7 +703,7 @@ const PoolStatusPanel: React.FC = () => {
                                                     <div
                                                         style={{
                                                             marginBottom: '0.3rem',
-                                                            color: '#94a3b8',
+                                                            color: 'var(--slate-400)',
                                                         }}
                                                     >
                                                         {t('pool_status.key_usage')}

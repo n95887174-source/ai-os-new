@@ -23,7 +23,7 @@ const RecommendationsPanel: React.FC<Props> = ({ recommendations }) => (
             }}
         >
             <AlertTriangle size={13} color="#f59e0b" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--warning)' }}>
                 Recommendations
             </span>
         </div>
@@ -32,7 +32,7 @@ const RecommendationsPanel: React.FC<Props> = ({ recommendations }) => (
                 margin: 0,
                 paddingLeft: '1rem',
                 fontSize: '0.7rem',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 lineHeight: 1.6,
             }}
         >

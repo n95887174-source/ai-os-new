@@ -1,6 +1,7 @@
 // dashboard.* — English translations
 const dashboard: Record<string, string> = {
     'dashboard.system_online': 'System Online',
+    'dashboard.workspace': 'Workspace',
     'dashboard.mission_control': 'Mission Control',
     'dashboard.subtitle': 'Real-time system overview and key performance indicators',
     'dashboard.active_llms': 'Active LLMs',

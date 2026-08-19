@@ -127,13 +127,13 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                         <div
                                             style={{
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.9rem',
                                             }}
                                         >
                                             {tpl.name}
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                             {tpl.recommendedRoles.length} roles · {tpl.domain}
                                         </div>
                                     </div>
@@ -166,7 +166,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginTop: 6,
                                 }}
                             >
@@ -197,7 +197,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                             <div
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginTop: 6,
                                 }}
                             >
@@ -279,7 +279,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                             style={{
                                 textAlign: 'center',
                                 padding: 30,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.85rem',
                             }}
                         >
@@ -327,7 +327,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                                 <div
                                                     style={{
                                                         fontWeight: 600,
-                                                        color: '#e2e8f0',
+                                                        color: 'var(--slate-200)',
                                                         fontSize: '0.9rem',
                                                     }}
                                                 >
@@ -336,7 +336,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                                 <div
                                                     style={{
                                                         fontSize: '0.7rem',
-                                                        color: '#94a3b8',
+                                                        color: 'var(--slate-400)',
                                                     }}
                                                 >
                                                     {tm.roleIds.length} members
@@ -349,8 +349,8 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                                 padding: '4px 8px',
                                                 borderRadius: 6,
                                                 border: 'none',
-                                                background: 'rgba(239,68,68,0.1)',
-                                                color: '#ef4444',
+                                                background: 'var(--error-tint)',
+                                                color: 'var(--error)',
                                                 cursor: 'pointer',
                                             }}
                                         >
@@ -360,7 +360,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: 6,
                                         }}
                                     >
@@ -427,7 +427,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                                 borderRadius: 6,
                                                 border: 'none',
                                                 background: 'rgba(139,92,246,0.12)',
-                                                color: '#a78bfa',
+                                                color: 'var(--purple-muted)',
                                                 cursor: 'pointer',
                                                 fontSize: '0.65rem',
                                                 fontWeight: 600,
@@ -474,7 +474,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ teamSvc, teams, setTeams, roles, te
                                                 borderRadius: 6,
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 background: 'rgba(0,0,0,0.2)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.75rem',
                                             }}
                                         />

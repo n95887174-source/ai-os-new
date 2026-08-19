@@ -48,7 +48,7 @@ const SuggestionsPanel: React.FC<Props> = ({ suggestions, showSuggestions, onTog
                         <ChevronRight size={12} color="#64748b" />
                     )}
                     <Lightbulb size={13} color="#f59e0b" />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--warning)' }}>
                         Suggestions ({suggestions.length})
                     </span>
                 </div>
@@ -69,12 +69,12 @@ const SuggestionsPanel: React.FC<Props> = ({ suggestions, showSuggestions, onTog
                                 style={{
                                     fontSize: '0.65rem',
                                     fontWeight: 600,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 {s.agent}:
                             </span>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{s.text}</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>{s.text}</span>
                         </div>
                     ))}
             </div>

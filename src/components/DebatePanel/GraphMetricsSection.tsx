@@ -28,7 +28,7 @@ const GraphMetricsSection: React.FC<GraphMetricsSectionProps> = ({ session, t })
                     {
                         label: t('debate.max_depth'),
                         value: String(session.graphMetrics.maxDepth),
-                        color: '#a78bfa',
+                        color: 'var(--purple-muted)',
                     },
                     {
                         label: t('debate.avg_depth'),
@@ -53,7 +53,7 @@ const GraphMetricsSection: React.FC<GraphMetricsSectionProps> = ({ session, t })
                     {
                         label: t('debate.refinement_density'),
                         value: `${(session.graphMetrics.refinementDensity * 100).toFixed(0)}%`,
-                        color: '#38bdf8',
+                        color: 'var(--info)',
                     },
                 ].map((m) => (
                     <div
@@ -77,7 +77,7 @@ const GraphMetricsSection: React.FC<GraphMetricsSectionProps> = ({ session, t })
                     gap: '0.5rem',
                     marginTop: '0.5rem',
                     fontSize: '0.7rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 {session.graphMetrics.maxDepth >= 4 && (

@@ -28,7 +28,7 @@ const Sparkline: React.FC<{ data: number[]; color: string; height?: number }> = 
                 style={{
                     height,
                     fontSize: '0.65rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     display: 'flex',
                     alignItems: 'center',
                 }}
@@ -170,10 +170,10 @@ const ProviderDashboard: React.FC = () => {
                 }}
             >
                 <Activity size={20} color="#8b5cf6" aria-hidden="true" />
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     {t('provider_dashboard.title')}
                 </h2>
-                <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#64748b' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                     Last updated: {Math.round((now - lastUpdated) / 1000)}s ago
                 </span>
             </div>
@@ -190,31 +190,31 @@ const ProviderDashboard: React.FC = () => {
                         icon: <Globe size={18} />,
                         label: t('provider_dashboard.providers'),
                         value: providers.length.toString(),
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                     },
                     {
                         icon: <CheckCircle2 size={18} />,
                         label: t('provider_dashboard.active_keys'),
                         value: `${activeKeys}/${totalKeys}`,
-                        color: '#22c55e',
+                        color: 'var(--success)',
                     },
                     {
                         icon: <Clock size={18} />,
                         label: t('provider_dashboard.avg_latency'),
                         value: `${avgLatency.toFixed(0)}ms`,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                     },
                     {
                         icon: <TrendingUp size={18} />,
                         label: t('provider_dashboard.total_requests'),
                         value: totalRequests.toLocaleString(),
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                     },
                     {
                         icon: <DollarSign size={18} />,
                         label: t('provider_dashboard.estimated_cost'),
                         value: `$${totalCost.toFixed(4)}`,
-                        color: '#10b981',
+                        color: 'var(--success)',
                     },
                 ].map((card) => (
                     <div
@@ -241,7 +241,7 @@ const ProviderDashboard: React.FC = () => {
                             {card.icon}
                             {card.label}
                         </div>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--slate-200)' }}>
                             {card.value}
                         </div>
                     </div>
@@ -284,7 +284,7 @@ const ProviderDashboard: React.FC = () => {
                                 <span
                                     style={{
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         textTransform: 'capitalize',
                                     }}
@@ -319,26 +319,26 @@ const ProviderDashboard: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textAlign: 'right',
                                         whiteSpace: 'nowrap',
                                     }}
                                 >
                                     <div>
                                         TTFT{' '}
-                                        <span style={{ color: '#94a3b8' }}>
+                                        <span style={{ color: 'var(--slate-400)' }}>
                                             {p.avgTTFT.toFixed(0)}ms
                                         </span>
                                     </div>
                                     <div>
                                         TPS{' '}
-                                        <span style={{ color: '#94a3b8' }}>
+                                        <span style={{ color: 'var(--slate-400)' }}>
                                             {p.avgTPS.toFixed(1)}
                                         </span>
                                     </div>
                                     <div>
                                         Rel{' '}
-                                        <span style={{ color: '#94a3b8' }}>
+                                        <span style={{ color: 'var(--slate-400)' }}>
                                             {(p.reliability * 100).toFixed(0)}%
                                         </span>
                                     </div>
@@ -350,16 +350,16 @@ const ProviderDashboard: React.FC = () => {
                                     gridTemplateColumns: '1fr 1fr',
                                     gap: '0.35rem',
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 <div>
                                     Requests:{' '}
-                                    <span style={{ color: '#e2e8f0' }}>{p.totalRequests}</span>
+                                    <span style={{ color: 'var(--slate-200)' }}>{p.totalRequests}</span>
                                 </div>
                                 <div>
                                     Selection:{' '}
-                                    <span style={{ color: '#e2e8f0' }}>
+                                    <span style={{ color: 'var(--slate-200)' }}>
                                         {(p.selectionRate * 100).toFixed(0)}%
                                     </span>
                                 </div>
@@ -381,7 +381,7 @@ const ProviderDashboard: React.FC = () => {
                                 {p.matchingKeys.length > 0 && (
                                     <div>
                                         Keys:{' '}
-                                        <span style={{ color: '#e2e8f0' }}>
+                                        <span style={{ color: 'var(--slate-200)' }}>
                                             {p.matchingKeys.length}
                                         </span>
                                     </div>
@@ -397,14 +397,14 @@ const ProviderDashboard: React.FC = () => {
                                             marginTop: '0.15rem',
                                         }}
                                     >
-                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                                            P50 <span style={{ color: '#10b981' }}>{p.p50}ms</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
+                                            P50 <span style={{ color: 'var(--success)' }}>{p.p50}ms</span>
                                         </span>
-                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                                            P95 <span style={{ color: '#f59e0b' }}>{p.p95}ms</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
+                                            P95 <span style={{ color: 'var(--warning)' }}>{p.p95}ms</span>
                                         </span>
-                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                                            P99 <span style={{ color: '#ef4444' }}>{p.p99}ms</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
+                                            P99 <span style={{ color: 'var(--error)' }}>{p.p99}ms</span>
                                         </span>
                                     </div>
                                 )}
@@ -425,7 +425,7 @@ const ProviderDashboard: React.FC = () => {
                                                 borderRadius: 6,
                                                 fontSize: '0.6rem',
                                                 fontWeight: 600,
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 background: '#ef444420',
                                             }}
                                         >
@@ -455,7 +455,7 @@ const ProviderDashboard: React.FC = () => {
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             fontSize: '0.6rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         <span>Quota</span>
@@ -509,7 +509,7 @@ const ProviderDashboard: React.FC = () => {
                         }}
                     >
                         <Zap size={16} color="#8b5cf6" />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {t('provider_dashboard.recent_events')}
                         </span>
                     </div>
@@ -569,7 +569,7 @@ const ProviderDashboard: React.FC = () => {
                                     </span>
                                     <span
                                         style={{
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             maxWidth: 180,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -581,7 +581,7 @@ const ProviderDashboard: React.FC = () => {
                                     <span
                                         style={{
                                             marginLeft: 'auto',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.6rem',
                                         }}
                                     >
@@ -612,7 +612,7 @@ const ProviderDashboard: React.FC = () => {
                         }}
                     >
                         <Shield size={16} color="#3b82f6" />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {t('provider_dashboard.recent_decisions')}
                         </span>
                     </div>
@@ -639,20 +639,20 @@ const ProviderDashboard: React.FC = () => {
                                 }}
                             >
                                 <ProviderIcon provider={d.selected} size={10} />
-                                <span style={{ color: '#e2e8f0', fontWeight: 500 }}>
+                                <span style={{ color: 'var(--slate-200)', fontWeight: 500 }}>
                                     {d.selected}
                                 </span>
                                 {d.secondBest && (
                                     <>
-                                        <span style={{ color: '#64748b' }}>→</span>
+                                        <span style={{ color: 'var(--slate-500)' }}>→</span>
                                         <ProviderIcon provider={d.secondBest} size={10} />
-                                        <span style={{ color: '#64748b' }}>{d.secondBest}</span>
+                                        <span style={{ color: 'var(--slate-500)' }}>{d.secondBest}</span>
                                     </>
                                 )}
                                 <span
                                     style={{
                                         marginLeft: 'auto',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.6rem',
                                     }}
                                 >

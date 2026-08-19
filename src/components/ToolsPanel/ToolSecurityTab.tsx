@@ -23,13 +23,13 @@ export const ToolSecurityTab: React.FC<ToolSecurityTabProps> = ({ t }) => (
                     style={{
                         margin: '0 0 0.4rem 0',
                         fontSize: '1rem',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         fontWeight: 800,
                     }}
                 >
                     {t('tools.security_heading')}
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--slate-300)', lineHeight: 1.6 }}>
                     This tool runs in a strict sandboxed OS environment. File system access and
                     unapproved network calls are automatically intercepted and blocked by the event
                     bus kernel.
@@ -42,7 +42,7 @@ export const ToolSecurityTab: React.FC<ToolSecurityTabProps> = ({ t }) => (
                 style={{
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textTransform: 'uppercase',
                     marginBottom: '1rem',
                     display: 'block',
@@ -65,14 +65,14 @@ export const ToolSecurityTab: React.FC<ToolSecurityTabProps> = ({ t }) => (
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <Key size={16} color="#f59e0b" aria-hidden="true" />
-                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                             API_KEY_VAULT
                         </span>
                     </div>
                     <span
                         style={{
                             fontSize: '0.75rem',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             background: 'rgba(16,185,129,0.15)',
                             padding: '4px 8px',
                             borderRadius: 6,
@@ -96,14 +96,14 @@ export const ToolSecurityTab: React.FC<ToolSecurityTabProps> = ({ t }) => (
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <Globe size={16} color="#3b82f6" aria-hidden="true" />
-                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                             {t('tools.network_label')}
                         </span>
                     </div>
                     <span
                         style={{
                             fontSize: '0.75rem',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             background: 'rgba(239,68,68,0.15)',
                             padding: '4px 8px',
                             borderRadius: 6,

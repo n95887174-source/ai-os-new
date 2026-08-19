@@ -36,12 +36,12 @@ function t(key: string): string {
 }
 
 const PROVIDERS = [
-    { name: 'groq', label: 'Groq', color: '#22c55e' },
+    { name: 'groq', label: 'Groq', color: 'var(--success)' },
     { name: 'openrouter', label: 'OpenRouter', color: '#a855f7' },
     { name: 'gemini', label: 'Gemini', color: '#ec4899' },
-    { name: 'nvidia', label: 'NVIDIA', color: '#ef4444' },
-    { name: 'openai', label: 'OpenAI', color: '#3b82f6' },
-    { name: 'anthropic', label: 'Anthropic', color: '#f59e0b' },
+    { name: 'nvidia', label: 'NVIDIA', color: 'var(--error)' },
+    { name: 'openai', label: 'OpenAI', color: 'var(--accent)' },
+    { name: 'anthropic', label: 'Anthropic', color: 'var(--warning)' },
 ];
 
 function estimateCost(tokens: number, _provider: string): string {
@@ -172,13 +172,13 @@ const ModelComparePanel: React.FC = () => {
                     style={{
                         fontSize: '1.5rem',
                         fontWeight: 700,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginBottom: '0.25rem',
                     }}
                 >
                     {t('playground.title')}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                     {t('playground.subtitle')}
                 </div>
             </div>
@@ -193,7 +193,7 @@ const ModelComparePanel: React.FC = () => {
                 }}
             >
                 <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--slate-400)', marginBottom: '0.5rem' }}>
                         {t('playground.select_providers')}
                     </div>
                     <div
@@ -215,7 +215,7 @@ const ModelComparePanel: React.FC = () => {
                                         borderRadius: 20,
                                         border: `1px solid ${isSel ? `${p.color}66` : 'rgba(255,255,255,0.1)'}`,
                                         background: isSel ? `${p.color}22` : 'transparent',
-                                        color: isSel ? p.color : '#94a3b8',
+                                        color: isSel ? p.color : 'var(--slate-400)',
                                         cursor: 'pointer',
                                         fontSize: '0.8rem',
                                         fontWeight: 600,
@@ -238,7 +238,7 @@ const ModelComparePanel: React.FC = () => {
                                 padding: '0.25rem 0.7rem',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.08)',
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                                 color: '#60a5fa',
                                 cursor: 'pointer',
                                 fontSize: '0.72rem',
@@ -253,7 +253,7 @@ const ModelComparePanel: React.FC = () => {
                                 padding: '0.25rem 0.7rem',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.08)',
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 color: '#f87171',
                                 cursor: 'pointer',
                                 fontSize: '0.72rem',
@@ -277,7 +277,7 @@ const ModelComparePanel: React.FC = () => {
                             borderRadius: 12,
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                             resize: 'vertical',
@@ -335,7 +335,7 @@ const ModelComparePanel: React.FC = () => {
                                 style={{
                                     padding: '0.4rem',
                                     borderRadius: 8,
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     border: '1px solid rgba(239,68,68,0.2)',
                                     color: '#f87171',
                                     cursor: 'pointer',
@@ -355,7 +355,7 @@ const ModelComparePanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '3rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                     }}
                 >
@@ -423,7 +423,7 @@ const ModelComparePanel: React.FC = () => {
                                 <div
                                     style={{
                                         padding: '1rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.8rem',
                                     }}
                                 >
@@ -459,7 +459,7 @@ const ModelComparePanel: React.FC = () => {
                                         padding: '0.75rem',
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.2)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.82rem',
                                         lineHeight: 1.7,
                                         whiteSpace: 'pre-wrap',
@@ -479,7 +479,7 @@ const ModelComparePanel: React.FC = () => {
                                         display: 'flex',
                                         gap: '1rem',
                                         fontSize: '0.72rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

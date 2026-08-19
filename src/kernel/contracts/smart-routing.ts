@@ -56,6 +56,11 @@ export interface RoutingDecision {
     timestamp: number;
 }
 
+/**
+ * B-21: `ISmartRoutingService` is a WHAT-IF routing simulator, NOT the authoritative
+ * routing store. Live provider selection is owned by `RouterService` (`getRankedProviders`).
+ * Rules managed here are simulation-only and are never consulted during execution.
+ */
 export interface ISmartRoutingService {
     getConfig(): SmartRoutingConfig;
     updateConfig(config: Partial<SmartRoutingConfig>): void;

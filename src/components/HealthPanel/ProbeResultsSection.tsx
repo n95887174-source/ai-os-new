@@ -47,16 +47,16 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                 }}
             >
                 <Activity size={16} color="#3b82f6" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)' }}>
                     {t('health.probe_title')}
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#64748b' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                     {t('health.probe_ready', {
                         ready: Array.from(probeResults.values()).filter((r) => r.status === 'ready')
                             .length,
                         total: probeResults.size,
                     })}
-                    <span style={{ marginLeft: 8, color: '#475569' }}>
+                    <span style={{ marginLeft: 8, color: 'var(--slate-600)' }}>
                         {t('health.probe_active_table', {
                             count: keys.filter((k) => k.status === 'active').length,
                         })}
@@ -102,7 +102,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 />
                                 <span
                                     style={{
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 600,
                                         minWidth: 90,
                                         flexShrink: 0,
@@ -125,7 +125,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 {r.latency > 0 && (
                                     <span
                                         style={{
-                                            color: '#475569',
+                                            color: 'var(--slate-600)',
                                             fontSize: '0.72rem',
                                             minWidth: 40,
                                             flexShrink: 0,
@@ -137,7 +137,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 {preview ? (
                                     <span
                                         style={{
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontSize: '0.75rem',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -151,7 +151,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 ) : r.error ? (
                                     <span
                                         style={{
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             fontSize: '0.72rem',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -165,7 +165,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 ) : (
                                     <span
                                         style={{
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.72rem',
                                             fontStyle: 'italic',
                                             flex: 1,
@@ -177,7 +177,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                 )}
                                 <span
                                     style={{
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         fontSize: '0.65rem',
                                         flexShrink: 0,
                                         marginLeft: 4,
@@ -195,7 +195,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                         border: '1px solid rgba(59,130,246,0.15)',
                                         borderTop: 'none',
                                         fontSize: '0.82rem',
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                         whiteSpace: 'pre-wrap',
                                         wordBreak: 'break-word',
                                         maxHeight: 200,
@@ -206,7 +206,7 @@ export const ProbeResultsSection: React.FC<ProbeResultsSectionProps> = ({
                                     {r.responseContent || (
                                         <span
                                             style={{
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontStyle: 'italic',
                                             }}
                                         >

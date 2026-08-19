@@ -147,7 +147,7 @@ export const ToolCard: React.FC<ToolCardProps> = memo(
                         fontWeight: 800,
                         fontSize: '1.15rem',
                         marginBottom: '0.5rem',
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         letterSpacing: '-0.01em',
                     }}
                 >
@@ -156,7 +156,7 @@ export const ToolCard: React.FC<ToolCardProps> = memo(
                 <div
                     style={{
                         fontSize: '0.85rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         lineHeight: 1.6,
                         flex: 1,
                         display: '-webkit-box',
@@ -198,7 +198,7 @@ export const ToolCard: React.FC<ToolCardProps> = memo(
                             style={{
                                 fontSize: '0.7rem',
                                 background: 'rgba(255,255,255,0.05)',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 padding: '0.3rem 0.6rem',
                                 borderRadius: 8,
                                 textTransform: 'uppercase',

@@ -88,6 +88,19 @@ const governance: Record<string, string> = {
     'policy.target_label': 'Цель',
     'policy.title': 'Название',
     'policy.value_label': 'Подпись значения',
+    'policy.show_violations': 'Показать нарушения',
+    'policy.type_latency': 'Задержка',
+    'policy.type_privacy': 'Конфиденциальность',
+    'policy.type_cost': 'Стоимость',
+    'policy.type_safety': 'Безопасность',
+    'policy.type_rate_limit': 'Лимит запросов',
+    'policy.type_content': 'Контент',
+    'policy.type_custom': 'Пользовательский',
+    'policy.action_block': 'Блокировать',
+    'policy.action_warn': 'Предупреждать',
+    'policy.action_log': 'Лог',
+    'policy.action_throttle': 'Ограничить',
+    'policy.action_mask': 'Маскировать',
 };
 
 export { governance };

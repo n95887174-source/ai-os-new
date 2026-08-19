@@ -300,7 +300,7 @@ const AgentIdentityEditor: React.FC<{
                 style={{
                     marginTop: '0.8rem',
                     alignSelf: 'flex-start',
-                    background: '#3b82f6',
+                    background: 'var(--accent)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 6,
@@ -312,7 +312,7 @@ const AgentIdentityEditor: React.FC<{
                 {t('agents.identity.save')}
             </button>
             {saved && (
-                <span style={{ color: '#10b981', fontSize: '0.78rem' }}>
+                <span style={{ color: 'var(--success)', fontSize: '0.78rem' }}>
                     {t('agents.identity.saved')}
                 </span>
             )}

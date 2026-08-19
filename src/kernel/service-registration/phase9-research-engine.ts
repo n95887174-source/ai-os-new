@@ -6,18 +6,20 @@
 import type { Phase } from './helpers';
 import { ResearchEngineService } from '../services/research-engine-service';
 import { GeminiAugmentedResearchService } from '../services/gemini-research-service';
-import { googleGenAIService } from '../instances';
+import type { GoogleGenAIService } from '../services/google-genai-service';
 
 export const registerPhase9: Phase = ({ register }) => {
     register('researchEngine', (c) => {
         const eventBus = c.get<{ emit: (event: string, data?: unknown) => void }>('eventBus');
-        return new ResearchEngineService({ eventBus });
+        const sourceAdapterRegistry = c.get('sourceAdapterRegistry');
+        return new ResearchEngineService({ eventBus, sourceAdapterRegistry });
     });
 
     register('geminiResearchService', (c) => {
         const researchEngine = c.get<ResearchEngineService>('researchEngine');
+        const googleGenAI = c.get<GoogleGenAIService>('googleGenAIService');
         return new GeminiAugmentedResearchService({
-            googleGenAI: googleGenAIService,
+            googleGenAI,
             researchEngine,
         });
     });

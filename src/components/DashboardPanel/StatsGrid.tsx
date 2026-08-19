@@ -43,7 +43,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
             value: todayRequests.toString(),
             hint: t('dashboard.today_sessions', { count: tracesCount }),
             icon: <Activity size={22} />,
-            color: '#3b82f6',
+            color: 'var(--accent)',
         },
         {
             label: t('dashboard.rps'),
@@ -57,7 +57,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
             value: activeDebates.toString(),
             hint: t('dashboard.active_debates_hint'),
             icon: <MessageCircle size={22} />,
-            color: '#8b5cf6',
+            color: 'var(--purple)',
         },
         {
             label: t('dashboard.token_burn'),
@@ -71,7 +71,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
             value: `$${estimatedCost.toFixed(4)}`,
             hint: t('dashboard.calculated_cost_hint'),
             icon: <DollarSign size={22} />,
-            color: '#f59e0b',
+            color: 'var(--warning)',
         },
     ];
 
@@ -138,7 +138,7 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                         style={{
                             fontSize: '2rem',
                             fontWeight: 800,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             letterSpacing: '-0.02em',
                             marginBottom: '0.25rem',
                             lineHeight: 1,
@@ -146,10 +146,10 @@ const StatsGrid: React.FC<StatsGridProps> = ({
                     >
                         {stat.value}
                     </div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate-400)' }}>
                         {stat.label}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
                         {stat.hint}
                     </div>
                 </motion.div>

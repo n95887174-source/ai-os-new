@@ -34,13 +34,13 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 <div
                     style={{
                         fontWeight: 700,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '1.1rem',
                     }}
                 >
                     {team.name || 'Unnamed Team'}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', marginTop: 2 }}>
                     {team.description || 'No description'}
                 </div>
             </div>
@@ -54,11 +54,11 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
             }}
         >
             <div style={{ padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b' }}>Domain</div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)' }}>Domain</div>
                 <div
                     style={{
                         fontSize: '0.85rem',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginTop: 2,
                         textTransform: 'capitalize',
                     }}
@@ -68,7 +68,7 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 </div>
             </div>
             <div style={{ padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)' }}>
                     Strategy
                 </div>
                 <div
@@ -83,16 +83,16 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 </div>
             </div>
             <div style={{ padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b' }}>Roles</div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', marginTop: 2 }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)' }}>Roles</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', marginTop: 2 }}>
                     {team.roleIds?.length || 0} selected
                 </div>
             </div>
             <div style={{ padding: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)' }}>
                     Max Rounds
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', marginTop: 2 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', marginTop: 2 }}>
                     {team.executionConfig?.maxRounds || 3}
                 </div>
             </div>
@@ -102,7 +102,7 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 style={{
                     fontSize: '0.65rem',
                     fontWeight: 700,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginBottom: 6,
                 }}
             >
@@ -115,7 +115,7 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                     </span>
                 ))}
                 {(team.roleIds?.length || 0) === 0 && (
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>No roles selected</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>No roles selected</span>
                 )}
             </div>
         </div>
@@ -124,7 +124,7 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 style={{
                     fontSize: '0.7rem',
                     fontWeight: 700,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     display: 'block',
                     marginBottom: 4,
                 }}
@@ -138,7 +138,7 @@ const ReviewStep: React.FC<TeamState> = ({ team, setTeam }) => (
                 style={{ ...inputBase, maxWidth: 400 }}
             />
             {!team.name?.trim() && (
-                <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: 4 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--error)', marginTop: 4 }}>
                     Name is required to create the team
                 </div>
             )}

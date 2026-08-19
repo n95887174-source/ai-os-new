@@ -36,10 +36,10 @@ function ABTestPanel({ abTest, profiles, actions }: Props) {
             <div style={flexColGap6}>
                 <div style={flexBetween}>
                     <div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                             A/B Test Running
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
                             {abTest.controlProfile} vs {abTest.experimentProfile} &middot;{' '}
                             {abTest.splitPercent}% experiment
                         </div>
@@ -49,9 +49,9 @@ function ABTestPanel({ abTest, profiles, actions }: Props) {
                         style={{
                             padding: '0.5rem 1rem',
                             borderRadius: 8,
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             fontWeight: 700,
                             fontSize: '0.8rem',
@@ -66,14 +66,14 @@ function ABTestPanel({ abTest, profiles, actions }: Props) {
 
                 <div style={grid4}>
                     {[
-                        { label: 'Requests (C)', value: cm.requests.toString(), color: '#3b82f6' },
-                        { label: 'Requests (E)', value: em.requests.toString(), color: '#8b5cf6' },
+                        { label: 'Requests (C)', value: cm.requests.toString(), color: 'var(--accent)' },
+                        { label: 'Requests (E)', value: em.requests.toString(), color: 'var(--purple)' },
                         {
                             label: 'Started',
                             value: new Date(abTest.startedAt).toLocaleDateString(),
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         },
-                        { label: 'Split', value: `${abTest.splitPercent}%`, color: '#f59e0b' },
+                        { label: 'Split', value: `${abTest.splitPercent}%`, color: 'var(--warning)' },
                     ].map((card) => (
                         <div
                             key={card.label}
@@ -129,8 +129,8 @@ function ABTestPanel({ abTest, profiles, actions }: Props) {
     return (
         <div style={flexColGap6}>
             <div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>A/B Test</div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>A/B Test</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
                     Compare two weight profiles to measure routing performance
                 </div>
             </div>
@@ -201,7 +201,7 @@ function ABTestPanel({ abTest, profiles, actions }: Props) {
                                     style={{
                                         fontSize: '0.85rem',
                                         fontWeight: 800,
-                                        color: '#f59e0b',
+                                        color: 'var(--warning)',
                                         minWidth: 40,
                                         textAlign: 'right',
                                     }}

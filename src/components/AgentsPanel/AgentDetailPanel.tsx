@@ -113,7 +113,7 @@ export const AgentDetailPanel: React.FC<AgentDetailPanelProps> = ({
                         title="Delete Agent"
                         aria-label="Delete agent"
                         style={{
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             borderColor: 'rgba(239,68,68,0.2)',
                         }}
                     >

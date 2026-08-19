@@ -23,7 +23,7 @@ const PressureAlerts: React.FC<Props> = ({ alerts, onAck }) => {
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     }}
                 >
                     {t('pressure_map.active_alerts', { count: active.length })}
@@ -54,7 +54,7 @@ const PressureAlerts: React.FC<Props> = ({ alerts, onAck }) => {
                                 >
                                     {a.scope}
                                 </span>
-                                <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--slate-300)' }}>
                                     {a.message}
                                 </span>
                             </div>
@@ -65,7 +65,7 @@ const PressureAlerts: React.FC<Props> = ({ alerts, onAck }) => {
                                     border: 'none',
                                     borderRadius: 6,
                                     padding: '4px 8px',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                     fontSize: '0.7rem',
                                 }}

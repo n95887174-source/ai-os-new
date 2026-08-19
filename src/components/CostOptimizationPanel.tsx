@@ -90,19 +90,19 @@ const CostOptimizationPanel: React.FC = () => {
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <DollarSign size={28} style={{ color: '#10b981' }} />
+                    <DollarSign size={28} style={{ color: 'var(--success)' }} />
                     <div>
                         <h2
                             style={{
                                 margin: 0,
                                 fontSize: '1.5rem',
                                 fontWeight: 700,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                             }}
                         >
                             {t('cost_opt.title')}
                         </h2>
-                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                             {t('cost_opt.subtitle')}
                         </p>
                     </div>
@@ -115,7 +115,7 @@ const CostOptimizationPanel: React.FC = () => {
                         borderRadius: 8,
                         background: 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                     }}
@@ -129,31 +129,31 @@ const CostOptimizationPanel: React.FC = () => {
             {summary && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                     <div style={statCard}>
-                        <DollarSign size={24} style={{ color: '#10b981', flexShrink: 0 }} />
+                        <DollarSign size={24} style={{ color: 'var(--success)', flexShrink: 0 }} />
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                 {t('cost_opt.total_spend')}
                             </div>
-                            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#e2e8f0' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                                 ${summary.totalSpend.toFixed(4)}
                             </div>
                         </div>
                     </div>
                     <div style={statCard}>
-                        <TrendingUp size={24} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                        <TrendingUp size={24} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                 {t('cost_opt.total_requests')}
                             </div>
-                            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#e2e8f0' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                                 {summary.totalRequests}
                             </div>
                         </div>
                     </div>
                     <div style={statCard}>
-                        <TrendingDown size={24} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                        <TrendingDown size={24} style={{ color: 'var(--warning)', flexShrink: 0 }} />
                         <div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                 {t('cost_opt.potential_savings')}
                             </div>
                             <div
@@ -176,7 +176,7 @@ const CostOptimizationPanel: React.FC = () => {
                         style={{
                             margin: '0 0 8px',
                             fontSize: '0.9rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 600,
                         }}
                     >
@@ -221,7 +221,7 @@ const CostOptimizationPanel: React.FC = () => {
                                                 style={{
                                                     fontSize: '0.9rem',
                                                     fontWeight: 600,
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                 }}
                                             >
                                                 {rec.title}
@@ -229,7 +229,7 @@ const CostOptimizationPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.8rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     marginTop: 2,
                                                 }}
                                             >
@@ -239,7 +239,7 @@ const CostOptimizationPanel: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontSize: '0.78rem',
-                                                        color: '#10b981',
+                                                        color: 'var(--success)',
                                                         marginTop: 4,
                                                         fontWeight: 600,
                                                     }}
@@ -251,7 +251,7 @@ const CostOptimizationPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.75rem',
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     marginTop: 4,
                                                     fontStyle: 'italic',
                                                 }}
@@ -267,7 +267,7 @@ const CostOptimizationPanel: React.FC = () => {
                                             background: 'none',
                                             border: 'none',
                                             cursor: 'pointer',
-                                            color: '#475569',
+                                            color: 'var(--slate-600)',
                                             flexShrink: 0,
                                         }}
                                         title={t('cost_opt.dismiss')}
@@ -287,7 +287,7 @@ const CostOptimizationPanel: React.FC = () => {
                         style={{
                             margin: '0 0 8px',
                             fontSize: '0.9rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 600,
                         }}
                     >
@@ -305,10 +305,10 @@ const CostOptimizationPanel: React.FC = () => {
                                     background: 'rgba(255,255,255,0.02)',
                                     borderRadius: 8,
                                     fontSize: '0.8rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
-                                <span style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>
                                     {p.provider}
                                 </span>
                                 <span>{p.requests} req</span>
@@ -327,7 +327,7 @@ const CostOptimizationPanel: React.FC = () => {
             )}
 
             {summary && summary.providerCosts.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                     <DollarSign size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
                     <p>{t('cost_opt.no_data')}</p>
                 </div>

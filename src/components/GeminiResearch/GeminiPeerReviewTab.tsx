@@ -95,10 +95,10 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                         }}
                     >
                         {[
-                            { label: 'Originality', value: data.originality, color: '#8b5cf6' },
-                            { label: 'Methodology', value: data.methodology, color: '#3b82f6' },
+                            { label: 'Originality', value: data.originality, color: 'var(--purple)' },
+                            { label: 'Methodology', value: data.methodology, color: 'var(--accent)' },
                             { label: 'Clarity', value: data.clarity, color: '#06b6d4' },
-                            { label: 'Significance', value: data.significance, color: '#22c55e' },
+                            { label: 'Significance', value: data.significance, color: 'var(--success)' },
                             { label: 'Overall', value: data.overall, color: '#f97316' },
                         ].map((s) => (
                             <div
@@ -108,7 +108,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                         marginBottom: 4,
                                     }}
@@ -156,7 +156,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                             style={{ color: recommendationColor(data.recommendation) }}
                         />
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                 Recommendation
                             </div>
                             <div
@@ -175,12 +175,12 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                                 marginLeft: 'auto',
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                             }}
                         >
                             {copied ? (
-                                <Check size={14} style={{ color: '#22c55e' }} />
+                                <Check size={14} style={{ color: 'var(--success)' }} />
                             ) : (
                                 <Copy size={14} />
                             )}
@@ -202,7 +202,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                             style={{
                                 margin: 0,
                                 fontSize: '0.85rem',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 lineHeight: 1.6,
                             }}
                         >
@@ -216,7 +216,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                                 style={{
                                     margin: '0 0 12px',
                                     fontSize: '0.85rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     fontWeight: 600,
                                 }}
                             >
@@ -253,7 +253,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                                                         padding: '1px 6px',
                                                         borderRadius: 4,
                                                         background: 'rgba(255,255,255,0.06)',
-                                                        color: '#94a3b8',
+                                                        color: 'var(--slate-400)',
                                                     }}
                                                 >
                                                     {c.section}
@@ -284,7 +284,7 @@ export const GeminiPeerReviewTab: React.FC<Props> = ({ service, sessionId }) => 
                                                 {c.severity}
                                             </span>
                                         </div>
-                                        <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-300)' }}>
                                             {c.comment}
                                         </div>
                                     </div>

@@ -257,7 +257,7 @@ const RolesPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <motion.div
@@ -431,7 +431,7 @@ const RolesPanel: React.FC = () => {
                                     style={{
                                         fontSize: '0.7rem',
                                         fontWeight: 700,
-                                        color: '#f59e0b',
+                                        color: 'var(--warning)',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
                                     }}
@@ -456,13 +456,13 @@ const RolesPanel: React.FC = () => {
                                         <span
                                             style={{
                                                 fontSize: '0.7rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 flex: 1,
                                             }}
                                         >
                                             {c.name}
                                         </span>
-                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                             {c.daysInactive} days inactive
                                         </span>
                                     </div>
@@ -539,14 +539,14 @@ const RolesPanel: React.FC = () => {
                                 justifyContent: 'center',
                                 gap: 16,
                                 height: '100%',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             <Search size={48} style={{ opacity: 0.3 }} aria-hidden="true" />
                             <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>
                                 {searchQuery ? t('roles.empty_search') : t('roles.empty_none')}
                             </p>
-                            <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                                 {searchQuery
                                     ? t('roles.empty_search_desc')
                                     : t('roles.empty_none_desc')}

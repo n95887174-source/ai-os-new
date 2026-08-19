@@ -22,7 +22,7 @@ export const HealingPlanSection: React.FC<HealingPlanSectionProps> = ({ plan }) 
                 style={{
                     fontSize: '1rem',
                     fontWeight: 700,
-                    color: '#fbbf24',
+                    color: 'var(--warning)',
                     margin: '0 0 1rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -41,19 +41,19 @@ export const HealingPlanSection: React.FC<HealingPlanSectionProps> = ({ plan }) 
             >
                 <div>
                     <div style={textSecondaryXs}>{t('docs_health.total_tasks')}</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {plan.totalTasks}
                     </div>
                 </div>
                 <div>
                     <div style={textSecondaryXs}>{t('docs_health.completed_tasks')}</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--success)' }}>
                         {plan.completedTasks}
                     </div>
                 </div>
                 <div>
                     <div style={textSecondaryXs}>{t('docs_health.failed_tasks')}</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ef4444' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--error)' }}>
                         {plan.failedTasks}
                     </div>
                 </div>
@@ -77,7 +77,7 @@ export const HealingPlanSection: React.FC<HealingPlanSectionProps> = ({ plan }) 
                             marginBottom: '0.5rem',
                         }}
                     >
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate-100)' }}>
                             {task.docFile}
                         </div>
                         <span
@@ -103,7 +103,7 @@ export const HealingPlanSection: React.FC<HealingPlanSectionProps> = ({ plan }) 
                             {task.status}
                         </span>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)' }}>
                         {task.failedItems.length} {t('docs_health.broken')} —{' '}
                         {task.suggestedFixes.length} {t('docs_health.fixes')}
                     </div>

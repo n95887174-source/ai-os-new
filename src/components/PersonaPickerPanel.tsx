@@ -136,11 +136,11 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
             >
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         Persona Library
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {PERSONA_DEFINITIONS.length} personas — historical, fictional, and
                         contemporary figures
                     </p>
@@ -152,7 +152,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                         borderRadius: 8,
                         border: 'none',
                         background: 'rgba(139,92,246,0.15)',
-                        color: '#a78bfa',
+                        color: 'var(--purple-muted)',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
                         fontWeight: 700,
@@ -182,7 +182,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -198,7 +198,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -215,7 +215,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         outline: 'none',
                     }}
@@ -238,7 +238,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(255,255,255,0.05)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         outline: 'none',
                     }}
@@ -297,13 +297,13 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         <div
                                             style={{
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.9rem',
                                             }}
                                         >
                                             {p.name}
                                         </div>
-                                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                             {p.field}
                                         </div>
                                     </div>
@@ -313,7 +313,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.78rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginTop: 8,
                                     lineHeight: 1.4,
                                 }}
@@ -352,7 +352,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                             padding: '4px 8px',
                                             borderRadius: 6,
                                             border: 'none',
-                                            background: 'rgba(16,185,129,0.1)',
+                                            background: 'var(--success-tint)',
                                             color: '#34d399',
                                             cursor: 'pointer',
                                             fontSize: '0.65rem',
@@ -374,7 +374,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                             padding: '4px 8px',
                                             borderRadius: 6,
                                             border: 'none',
-                                            background: 'rgba(239,68,68,0.1)',
+                                            background: 'var(--error-tint)',
                                             color: '#f87171',
                                             cursor: 'pointer',
                                             fontSize: '0.65rem',
@@ -399,7 +399,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                     style={{
                         textAlign: 'center',
                         padding: 40,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                     }}
                 >
@@ -446,7 +446,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                     <div
                         onClick={(e) => e.stopPropagation()}
                         style={{
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             borderRadius: 16,
                             border: '1px solid rgba(255,255,255,0.1)',
                             maxWidth: 600,
@@ -468,10 +468,10 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <span style={{ fontSize: '2.5rem' }}>{selected.icon}</span>
                                 <div>
-                                    <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#e2e8f0' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--slate-200)' }}>
                                         {selected.name}
                                     </h3>
-                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                                         {selected.field}
                                     </span>
                                 </div>
@@ -483,7 +483,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                     borderRadius: 6,
                                     border: 'none',
                                     background: 'rgba(255,255,255,0.05)',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                 }}
                             >
@@ -522,7 +522,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         style={{
                                             fontSize: '0.65rem',
                                             fontWeight: 700,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'uppercase',
                                             marginBottom: 4,
                                             display: 'flex',
@@ -535,7 +535,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                     <p
                                         style={{
                                             fontSize: '0.85rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             lineHeight: 1.6,
                                             margin: 0,
                                         }}
@@ -551,7 +551,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         style={{
                                             fontSize: '0.65rem',
                                             fontWeight: 700,
-                                            color: '#f59e0b',
+                                            color: 'var(--warning)',
                                             textTransform: 'uppercase',
                                             marginBottom: 8,
                                             display: 'flex',
@@ -571,7 +571,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                                 borderRadius: 8,
                                                 borderLeft: '3px solid rgba(245,158,11,0.3)',
                                                 fontSize: '0.85rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontStyle: 'italic',
                                                 lineHeight: 1.4,
                                             }}
@@ -588,7 +588,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         style={{
                                             fontSize: '0.65rem',
                                             fontWeight: 700,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'uppercase',
                                             marginBottom: 6,
                                             display: 'flex',
@@ -627,7 +627,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                     <p
                                         style={{
                                             fontSize: '0.85rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             lineHeight: 1.5,
                                             margin: 0,
                                         }}
@@ -642,7 +642,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                         marginBottom: 4,
                                     }}
@@ -655,7 +655,7 @@ const PersonaPickerPanel: React.FC<PersonaPickerPanelProps> = ({
                                         background: 'rgba(0,0,0,0.3)',
                                         borderRadius: 8,
                                         fontSize: '0.75rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         lineHeight: 1.5,
                                         fontFamily: '"JetBrains Mono", monospace',
                                         maxHeight: 150,

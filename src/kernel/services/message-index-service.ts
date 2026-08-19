@@ -1,6 +1,13 @@
-import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import type { IEventBus } from '../types/interfaces';
 import type { ILogger } from '../contracts/logger';
+
+let _messageIndexEventBus: IEventBus | null = null;
+
+/** Inject the event bus (called once at bootstrap). */
+export function setMessageIndexEventBus(bus: IEventBus): void {
+    _messageIndexEventBus = bus;
+}
 
 export interface IndexedMessage {
     id: string;
@@ -41,10 +48,10 @@ export class MessageIndexService {
     private messages: IndexedMessage[] = [];
     private byRequestId = new Map<string, IndexedMessage>();
     private listeners = new Set<() => void>();
-    private unsubStreamEnd: (() => void) | null = null;
-    private unsubSend: (() => void) | null = null;
-    private unsubChatRewound: (() => void) | null = null;
-    private unsubClearData: (() => void) | null = null;
+    private unsubStreamEnd: (() => void) | null | undefined = null;
+    private unsubSend: (() => void) | null | undefined = null;
+    private unsubChatRewound: (() => void) | null | undefined = null;
+    private unsubClearData: (() => void) | null | undefined = null;
     private currentSessionId: string | null = null;
     private sessionUserBuffer = new Map<string, { content: string; timestamp: number }>();
     private _initialized = false;
@@ -64,7 +71,7 @@ export class MessageIndexService {
         for (const m of this.messages) {
             if (m.requestId) this.byRequestId.set(`${m.requestId}-${m.role}`, m);
         }
-        this.unsubStreamEnd = eventBus.on(
+        this.unsubStreamEnd = _messageIndexEventBus?.on(
             EVENTS.STREAM_END,
             (data: {
                 requestId: string;
@@ -77,7 +84,7 @@ export class MessageIndexService {
                 this.handleStreamEnd(data);
             },
         );
-        this.unsubSend = eventBus.on(EVENTS.SEND_MESSAGE, (data: unknown) => {
+        this.unsubSend = _messageIndexEventBus?.on(EVENTS.SEND_MESSAGE, (data: unknown) => {
             const d = data as {
                 requestId?: string;
                 messages?: Array<{ role: string; content: string }>;
@@ -85,7 +92,7 @@ export class MessageIndexService {
             };
             this.handleUserSend(d);
         });
-        this.unsubChatRewound = eventBus.on(EVENTS.CHAT_REWOUND, (raw: unknown) => {
+        this.unsubChatRewound = _messageIndexEventBus?.on(EVENTS.CHAT_REWOUND, (raw: unknown) => {
             const data = raw as { sessionId: string; messageId: string; truncatedCount: number };
             this.messages = this.messages.filter((m) => m.sessionId !== data.sessionId);
             for (const [k, v] of this.byRequestId) {
@@ -94,7 +101,7 @@ export class MessageIndexService {
             this.notify();
             this.persistDebounced();
         });
-        this.unsubClearData = eventBus.on(EVENTS.CLEAR_DATA, () => {
+        this.unsubClearData = _messageIndexEventBus?.on(EVENTS.CLEAR_DATA, () => {
             this.clear();
         });
     }

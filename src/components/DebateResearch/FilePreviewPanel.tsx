@@ -56,7 +56,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                 }}
             >
                 <span
-                    style={{ color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ color: 'var(--slate-500)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                     onClick={onClose}
                 >
                     root
@@ -116,7 +116,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             padding: 2,
                         }}
@@ -158,7 +158,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 <div
                                     style={{
                                         fontSize: '0.6rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontWeight: 600,
                                         marginBottom: 2,
                                     }}
@@ -168,7 +168,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 <div
                                     style={{
                                         fontSize: '0.72rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         background: 'rgba(0,0,0,0.2)',
                                         borderRadius: 4,
                                         padding: '0.3rem 0.5rem',
@@ -194,7 +194,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                         }}
                     >
                         <Target size={10} color="#64748b" />
-                        <span style={{ color: '#64748b' }}>Go to line:</span>
+                        <span style={{ color: 'var(--slate-500)' }}>Go to line:</span>
                         <input
                             type="number"
                             min={1}
@@ -209,7 +209,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 borderRadius: 3,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.06)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.65rem',
                             }}
                         />
@@ -226,7 +226,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                         >
                             Go
                         </button>
-                        <span style={{ marginLeft: 'auto', color: '#64748b', fontSize: '0.6rem' }}>
+                        <span style={{ marginLeft: 'auto', color: 'var(--slate-500)', fontSize: '0.6rem' }}>
                             {previewContent ? `${previewContent.split('\n').length} lines` : ''}
                             {allFiles.find((f) => f.path === selectedPath)?.size &&
                                 ` · ${formatSize(allFiles.find((f) => f.path === selectedPath)!.size!)}`}
@@ -236,7 +236,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 2,
                             }}
@@ -264,7 +264,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 style={{
                                     padding: '2rem',
                                     textAlign: 'center',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     width: '100%',
                                 }}
                             >
@@ -275,7 +275,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 style={{
                                     padding: '2rem',
                                     textAlign: 'center',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     fontSize: '0.78rem',
                                     width: '100%',
                                 }}
@@ -300,7 +300,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                                 style={{
                                     padding: '2rem',
                                     textAlign: 'center',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: '0.75rem',
                                     width: '100%',
                                 }}

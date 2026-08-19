@@ -1,6 +1,5 @@
-import { estimateTokenCount } from '../../../llm/utils/token-counter';
 import { getPrompt } from '../prompt-store';
-import { DEBATE_MODEL_PRIORITY, getAllModelsForProvider } from './debate-query-engine';
+import { DEBATE_MODEL_PRIORITY } from './debate-query-engine';
 import { rootLogger } from '../logger-service';
 import { sanitizePromptVar } from '../../../shared/utils/sanitize';
 import { EVENTS } from '../../events/event-names';
@@ -11,16 +10,13 @@ import { isValidDebateResponse } from './debate-llm-validation';
 import {
     getHeapMB,
     logMemory,
-    getDebateTimeoutMs,
-    getBaseBackoffMs,
-    getMaxBackoffMs,
     getMaxRetries,
     MAX_DUPLICATE_REJECTIONS,
     getModelTimeout,
-    backoffWait,
 } from './debate-llm-backoff';
 import { stripSpeakerPrefix, isCrossAgentDuplicate } from './debate-llm-utils';
-import { sessionRToMMap, sessionCausalGraphMap } from './debate-llm-session-maps';
+import { enrichSuccessfulDebateResponse } from './debate-llm-enrichment';
+import { handleDebateCallError, type DebateCallErrorState } from './debate-llm-error-handler';
 import type { LlmCallerDeps } from './debate-llm-caller-deps';
 
 export type { LlmCallerDeps } from './debate-llm-caller-deps';
@@ -28,6 +24,114 @@ export { cleanupSessionMaps } from './debate-llm-session-maps';
 export { estimateConfidence } from './debate-llm-utils';
 
 const LOGGER = rootLogger.child('DebateLlmCaller');
+
+/**
+ * B-11: assemble the per-call prompt context (participant display-name map,
+ * role-alternating history, prior arguments, and the rich system prompt) so the
+ * `debateCallLlm` retry loop stays focused on Resolve → Call → Classify →
+ * Retry/Failover orchestration. Pure — reads memory + builds the system content
+ * via the existing `buildDebateSystemContent` helper; no retry/abort side effects.
+ */
+type DebateCallContext = {
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+    currentName: string;
+    systemContent: string;
+    entanglementConstraint: Awaited<
+        ReturnType<typeof buildDebateSystemContent>
+    >['entanglementConstraint'];
+    recentSteps: ReturnType<ReturnType<LlmCallerDeps['getMemory']>['getRecentSteps']>;
+};
+
+async function buildDebateCallContext(args: {
+    session: IDebateSession;
+    participant: ParticipantConfig;
+    sessionId: string;
+    deps: LlmCallerDeps;
+    isQ: (id: string) => boolean;
+    controller: AbortController;
+}): Promise<DebateCallContext> {
+    const { session, participant, sessionId, deps, isQ, controller } = args;
+
+    // Build participant display name map — uses human-readable labels from
+    // topology nodes, never raw internal nodeIds like "agent-database".
+    const topologyLabelById = new Map<string, string>(
+        session.topology.nodes.map((n) => [n.id, n.label || n.id]),
+    );
+    const participantNameMap = new Map<string, string>(
+        session.participants.map((p) => {
+            const label = topologyLabelById.get(p.nodeId) ?? topologyLabelById.get(p.agentId);
+            return [
+                p.agentId,
+                label && label !== p.agentId ? label : p.role || `Agent ${p.agentId.slice(0, 8)}`,
+            ];
+        }),
+    );
+    const currentName = participantNameMap.get(participant.agentId) || participant.agentId;
+
+    const recentSteps = deps.getMemory(sessionId).getRecentSteps(2);
+    const historyMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> =
+        recentSteps.map((s, i) => ({
+            // HIGH-4.1e: Alternate user/assistant roles to prevent 4-agent debate
+            // collapsing to 2-party format. Each agent gets its own label in the
+            // content prefix, and roles alternate to help the LLM distinguish speakers.
+            role:
+                s.agentId === participant.agentId
+                    ? ('assistant' as const)
+                    : i % 2 === 0
+                      ? ('user' as const)
+                      : ('assistant' as const),
+            content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${sanitizePromptVar(s.content).slice(0, 800)}`,
+        }));
+
+    const mem = deps.getMemory(sessionId);
+
+    // Convert memory steps to DebateArguments for the rich prompt builder
+    // Limit to last 50 steps to prevent unbounded memory growth (~50KB per 10 agents × 5 rounds)
+    const allSteps = mem.getAllSteps().slice(-50);
+    const previousArguments: DebateArgument[] = allSteps.map((s, i) => ({
+        id: `${sessionId}-${s.agentId}-${i}`,
+        agentId: s.agentId,
+        agentName: participantNameMap.get(s.agentId) || s.agentId,
+        content: s.content,
+        confidence: s.confidence,
+        timestamp: s.timestamp,
+        round: s.round ?? 1,
+        position: (session.participants.find((p) => p.agentId === s.agentId)?.role ||
+            'neutral') as DebateArgument['position'],
+        role: (session.participants.find((p) => p.agentId === s.agentId)?.role ||
+            'neutral') as DebateArgument['role'],
+        source: 'llm' as const,
+    }));
+
+    // Build participants list for prompt builder
+    const allDebateParticipants: DebateParticipant[] = session.participants.map((p) => ({
+        id: p.agentId,
+        agentId: p.agentId,
+        name: participantNameMap.get(p.agentId) || p.agentId,
+        role: (p.role || 'neutral') as DebateParticipant['role'],
+        systemPrompt: p.systemPrompt,
+    }));
+
+    const { systemContent, entanglementConstraint } = await buildDebateSystemContent({
+        deps,
+        session,
+        participant,
+        sessionId,
+        isQ,
+        currentName,
+        previousArguments,
+        allDebateParticipants,
+        mem,
+        controller,
+    });
+
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: systemContent },
+        ...historyMessages,
+    ];
+
+    return { messages, currentName, systemContent, entanglementConstraint, recentSteps };
+}
 
 export async function debateCallLlm(
     sessionId: string,
@@ -201,89 +305,22 @@ export async function debateCallLlm(
                 const adapter = adapterRegistry.getAdapter(resolvedKey.provider);
                 if (!adapter) throw new Error(`No adapter for provider: ${resolvedKey.provider}`);
 
-                // Build participant display name map — uses human-readable labels from
-                // topology nodes, never raw internal nodeIds like "agent-database".
-                const topologyLabelById = new Map<string, string>(
-                    session.topology.nodes.map((n) => [n.id, n.label || n.id]),
-                );
-                const participantNameMap: Map<string, string> = new Map<string, string>(
-                    session.participants.map((p) => {
-                        const label =
-                            topologyLabelById.get(p.nodeId) ?? topologyLabelById.get(p.agentId);
-                        return [
-                            p.agentId,
-                            label && label !== p.agentId
-                                ? label
-                                : p.role || `Agent ${p.agentId.slice(0, 8)}`,
-                        ];
-                    }),
-                );
-                const currentName =
-                    participantNameMap.get(participant.agentId) || participant.agentId;
-
-                const recentSteps = deps.getMemory(sessionId).getRecentSteps(2);
-                const historyMessages: Array<{
-                    role: 'system' | 'user' | 'assistant';
-                    content: string;
-                }> = recentSteps.map((s, i) => ({
-                    // HIGH-4.1e: Alternate user/assistant roles to prevent 4-agent debate
-                    // collapsing to 2-party format. Each agent gets its own label in the
-                    // content prefix, and roles alternate to help the LLM distinguish speakers.
-                    role:
-                        s.agentId === participant.agentId
-                            ? ('assistant' as const)
-                            : i % 2 === 0
-                              ? ('user' as const)
-                              : ('assistant' as const),
-                    content: `[${participantNameMap.get(s.agentId) || s.agentId} (${s.agentId === participant.agentId ? 'self' : 'opponent'})]: ${sanitizePromptVar(s.content).slice(0, 800)}`,
-                }));
-
-                const mem = deps.getMemory(sessionId);
-
-                // Convert memory steps to DebateArguments for the rich prompt builder
-                // Limit to last 50 steps to prevent unbounded memory growth (~50KB per 10 agents × 5 rounds)
-                const allSteps = mem.getAllSteps().slice(-50);
-                const previousArguments: DebateArgument[] = allSteps.map((s, i) => ({
-                    id: `${sessionId}-${s.agentId}-${i}`,
-                    agentId: s.agentId,
-                    agentName: participantNameMap.get(s.agentId) || s.agentId,
-                    content: s.content,
-                    confidence: s.confidence,
-                    timestamp: s.timestamp,
-                    round: s.round ?? 1,
-                    position: (session.participants.find((p) => p.agentId === s.agentId)?.role ||
-                        'neutral') as DebateArgument['position'],
-                    role: (session.participants.find((p) => p.agentId === s.agentId)?.role ||
-                        'neutral') as DebateArgument['role'],
-                    source: 'llm' as const,
-                }));
-
-                // Build participants list for prompt builder
-                const allDebateParticipants: DebateParticipant[] = session.participants.map(
-                    (p) => ({
-                        id: p.agentId,
-                        agentId: p.agentId,
-                        name: participantNameMap.get(p.agentId) || p.agentId,
-                        role: (p.role || 'neutral') as DebateParticipant['role'],
-                        systemPrompt: p.systemPrompt,
-                    }),
-                );
-
-                const { systemContent, entanglementConstraint } = await buildDebateSystemContent({
-                    deps,
+                // B-11: assemble the per-call prompt context in a dedicated helper so
+                // this retry loop stays focused on Resolve → Call → Classify → Retry/Failover.
+                const {
+                    messages,
+                    currentName,
+                    systemContent,
+                    entanglementConstraint,
+                    recentSteps,
+                } = await buildDebateCallContext({
                     session,
                     participant,
                     sessionId,
+                    deps,
                     isQ,
-                    currentName,
-                    previousArguments,
-                    allDebateParticipants,
-                    mem,
                     controller,
                 });
-
-                const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> =
-                    [{ role: 'system', content: systemContent }, ...historyMessages];
 
                 const gov = deps.getExecutionGovernor?.();
                 let govOp:
@@ -353,6 +390,13 @@ export async function debateCallLlm(
                                 });
                             },
                             controller.signal,
+                            {
+                                cacheScope: {
+                                    agentId: participant.agentId,
+                                    sessionId: session.id,
+                                    role: participant.role,
+                                },
+                            },
                         );
                         response = { content: streamed };
                     } else {
@@ -361,6 +405,13 @@ export async function debateCallLlm(
                             modelId,
                             resolvedKey.key,
                             controller.signal,
+                            {
+                                cacheScope: {
+                                    agentId: participant.agentId,
+                                    sessionId: session.id,
+                                    role: participant.role,
+                                },
+                            },
                         );
                         // Non-streaming adapter (e.g. mock): emit the full response as a
                         // single chunk to preserve the existing live feedback behaviour.
@@ -524,122 +575,23 @@ export async function debateCallLlm(
                     model: modelId,
                 });
 
-                const estimatedTokens = estimateTokenCount(content);
-                try {
-                    keyService.recordUsage(resolvedKey.id, 0, estimatedTokens, modelId, {
-                        task: 'debate',
-                        round: session.round,
-                    });
-                } catch {
-                    LOGGER.warn('DebateEngine', 'Failed to record reasoning trace');
-                }
-
-                // P0.2: Shadow Opponent — self-critique + strengthen
-                if (isQ('shadow-opponent') && deps.shadowOpponent) {
-                    try {
-                        const shadowResult = await deps.shadowOpponent.strengthenArgument(
-                            content,
-                            systemContent,
-                            participant.agentId,
-                            currentName,
-                            adapter,
-                            modelId,
-                            resolvedKey.key,
-                            controller.signal,
-                            session.language,
-                        );
-                        if (
-                            shadowResult &&
-                            shadowResult.strengthenedContent.length > content.length * 0.5
-                        ) {
-                            LOGGER.debug(
-                                'DebateLlmCaller',
-                                'Shadow opponent strengthened argument',
-                                {
-                                    agentId: participant.agentId,
-                                    originalLen: content.length,
-                                    strengthenedLen: shadowResult.strengthenedContent.length,
-                                    latencyMs: shadowResult.latencyMs,
-                                },
-                            );
-                            content = shadowResult.strengthenedContent;
-                        }
-                    } catch {
-                        LOGGER.warn('DebateLlmCaller', 'Shadow opponent failed — using original', {
-                            agentId: participant.agentId,
-                        });
-                    }
-                    deps.qualityCollector?.record({
-                        id: `${sessionId}-shadow-${participant.agentId}-${Date.now()}`,
-                        sessionId,
-                        techniqueId: 'shadow-opponent',
-                        timestamp: Date.now(),
-                        eventType: 'SERVICE_EXECUTED',
-                        round: session.round,
-                        agentId: participant.agentId,
-                        payload: {
-                            serviceName: 'shadowOpponent.strengthenArgument',
-                            calls: 1,
-                            totalLatencyMs: 0,
-                        },
-                    });
-                }
-
-                // P1.26: Record this argument for future redundancy checks
-                if (isQ('redundancy') && deps.similarityMonitor) {
-                    try {
-                        deps.similarityMonitor.recordArgument(
-                            participant.agentId,
-                            session.round,
-                            content,
-                        );
-                    } catch {
-                        LOGGER.warn('DebateLlmCaller', 'Redundancy record error', { sessionId });
-                    }
-                }
-
-                // P1.16: Record this argument for persona drift tracking
-                if (isQ('stance-drift') && deps.driftDetector) {
-                    try {
-                        deps.driftDetector.recordArgument(
-                            participant.agentId,
-                            session.round,
-                            content,
-                        );
-                    } catch {
-                        LOGGER.warn('DebateLlmCaller', 'Drift record error', { sessionId });
-                    }
-                }
-
-                // P2.5: Ingest argument into RToM graph for theory-of-mind tracking
-                if (isQ('rtom')) {
-                    try {
-                        const rtom = sessionRToMMap.get(sessionId);
-                        if (rtom && resolvedKey) {
-                            rtom.ingestArgument(
-                                participant.agentId,
-                                currentName,
-                                content,
-                                session.round,
-                                participant.role || 'neutral',
-                            );
-                        }
-                    } catch {
-                        LOGGER.warn('DebateLlmCaller', 'RToM ingest error', { sessionId });
-                    }
-                }
-
-                // P0.16: Ingest response into causal graph for subsequent loop detection
-                if (isQ('causal-graph')) {
-                    try {
-                        const cg = sessionCausalGraphMap.get(sessionId);
-                        if (cg) {
-                            cg.ingestClaim(sessionId, participant.agentId, content, session.round);
-                        }
-                    } catch {
-                        LOGGER.warn('DebateLlmCaller', 'Causal graph ingest error', { sessionId });
-                    }
-                }
+                // B-11: post-success enrichment (recordUsage + shadow-opponent +
+                // redundancy + drift + RToM + causal-graph) extracted to keep this
+                // retry loop focused on Resolve → Call → Classify → Retry/Failover.
+                content = await enrichSuccessfulDebateResponse({
+                    sessionId,
+                    session,
+                    participant,
+                    deps,
+                    content,
+                    systemContent,
+                    currentName,
+                    modelId,
+                    resolvedKey,
+                    adapter,
+                    controller,
+                    isQ,
+                });
 
                 clearTimeout(timeout);
                 deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
@@ -653,481 +605,35 @@ export async function debateCallLlm(
                     externalSignal.removeEventListener('abort', onExternalAbort);
                 }
                 cleanupGov?.();
-                const error = String(e);
-                const isAbortError = e instanceof DOMException && e.name === 'AbortError';
-                const abortReason = isAbortError
-                    ? controller.signal.reason instanceof Error
-                        ? controller.signal.reason.message
-                        : 'Aborted'
-                    : '';
-                // G-01: The ExecutionGovernor aborts its op with Error('OperationTimedOut')
-                // when the op's budget expires. onGovAbort now forwards that exact reason
-                // onto the caller's controller, so the caller can classify a governor
-                // budget expiry as a RETRYABLE timeout instead of a no-retry user abort.
-                // (Previously onGovAbort hardcoded 'CancelledByGovernor', which made the
-                // agent silently lose its turn — the op below kept the gov op 'running'
-                // until the governor's own 35s timer fired with no chance to failover.)
-                const isTimeout =
-                    (isAbortError &&
-                        (abortReason.includes('RequestTimedOut') ||
-                            abortReason.includes('TimedOut') ||
-                            abortReason.includes('PreflightTimedOut'))) ||
-                    (isAbortError && abortReason.includes('OperationTimedOut')) ||
-                    // G-02: The streaming adapters' SSE idle timer (~30s of no data chunks
-                    // in openrouter/cloudflare/openai-compatible) fires INDEPENDENTLY of the
-                    // caller's controller.signal — so controller.signal.reason is not set,
-                    // abortReason falls back to 'Aborted', isTimeout misses it, and the
-                    // error is thrown as a no-retry user abort (agent silently loses its
-                    // turn — same failure mode as G-01). The SSE idle IS a genuine timeout,
-                    // so classify it as retryable by matching the error message.
-                    (isAbortError && error.includes('SSE idle timeout'));
-                // Fast-fail: if all providers are dead, skip retry loop entirely
-                if (error.includes('All LLM providers unavailable')) {
-                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                    throw new Error(error, { cause: e });
-                }
-
-                if (isAbortError && isTimeout) {
-                    const elapsed =
-                        startedAt !== undefined ? (performance.now() - startedAt).toFixed(0) : '?';
-                    LOGGER.warn('DebateLlmCaller', `Request timed out after ${elapsed}ms`, {
-                        provider: resolvedKey?.provider ?? 'unknown',
-                        model: modelId,
-                        timeoutMs: modelTimeout ?? 0,
-                        elapsedMs:
-                            startedAt !== undefined
-                                ? Math.round(performance.now() - startedAt)
-                                : -1,
-                        agentId: participant.agentId,
-                        sessionId,
-                    });
-                }
-
-                // Non-timeout aborts (CancelledByUser, SessionPaused, CancelledByGovernor):
-                // surface immediately without retry
-                if (isAbortError && !isTimeout) {
-                    deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                    const reason = abortReason || 'Aborted';
-                    throw new Error(`Debate LLM call ${reason}`, { cause: e });
-                }
-
-                // Try fallback models for the same provider before marking it as failed
-                if (resolvedKey) {
-                    const errSc = (e as { statusCode?: number }).statusCode;
-                    const errStr = String(e);
-                    const isRateLimit = errSc === 429 || /[^\d]413[^\d]/.test(errStr); // 413 from Groq = TPM exceeded
-                    const isPaymentRequired = errSc === 402;
-                    // Gemini returns HTTP 400 INVALID_ARGUMENT "API key not valid" for bad
-                    // keys (not 401/403 like most providers) — classify as auth failure so
-                    // the key is dropped from routing instead of re-tried every turn.
-                    const isAuthError =
-                        errSc === 401 ||
-                        errSc === 403 ||
-                        errStr.includes('API key not valid') ||
-                        errStr.includes('INVALID_ARGUMENT') ||
-                        errStr.includes('Authentication failed') ||
-                        errStr.includes('Invalid API Key');
-
-                    triedModels.add(modelId);
-                    triedKeys.add(resolvedKey.id);
-
-                    if (isPaymentRequired) {
-                        // 402 is permanent auth failure — mark immediately and move on
-                        LOGGER.warn(
-                            'DebateLlmCaller',
-                            `Provider payment required (402): ${resolvedKey.provider}`,
-                            {
-                                agentId: participant.agentId,
-                                model: modelId,
-                            },
-                        );
-                        const kss = deps.getKeyStateStore?.();
-                        if (kss) {
-                            try {
-                                kss.update(resolvedKey.id, { flags: { authFailed: true } });
-                            } catch {
-                                /* best-effort */
-                            }
-                        }
-                        session.markProviderFailed(resolvedKey.provider);
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    if (isAuthError) {
-                        // Auth failure (401/403/400-API-key-not-valid) is permanent for the
-                        // key — mark authFailed so routing excludes it, and mark the provider
-                        // failed for this session. Otherwise the same bad key is re-picked and
-                        // re-fails every turn.
-                        LOGGER.warn(
-                            'DebateLlmCaller',
-                            `Provider auth error: ${resolvedKey.provider}`,
-                            {
-                                agentId: participant.agentId,
-                                model: modelId,
-                                errSc,
-                            },
-                        );
-                        const kss = deps.getKeyStateStore?.();
-                        if (kss) {
-                            try {
-                                kss.update(resolvedKey.id, { flags: { authFailed: true } });
-                            } catch {
-                                /* best-effort */
-                            }
-                        }
-                        session.markProviderFailed(resolvedKey.provider);
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    // 413 Payload Too Large — model context window exceeded (common on Groq
-                    // llama-3.1-8b-instant free tier ~4K context). Mark the model at session
-                    // level so ALL agents skip it, but DON'T mark the provider as failed
-                    // (different models on the same provider may work fine).
-                    if (errSc === 413) {
-                        // Groq returns 413 for TPM rate limits ("rate_limit_exceeded",
-                        // "tokens per minute") IN ADDITION to context overflow. TPM is
-                        // transient (refills ~60s) — don't permanently kill a good model;
-                        // context overflow is permanent → mark the model failed so ALL
-                        // agents skip it.
-                        const isTpmRateLimit =
-                            errStr.includes('rate_limit_exceeded') ||
-                            errStr.includes('tokens per minute');
-                        if (isTpmRateLimit) {
-                            LOGGER.warn(
-                                'DebateLlmCaller',
-                                `Model 413 TPM rate limited (transient): ${modelId}`,
-                                {
-                                    agentId: participant.agentId,
-                                    provider: resolvedKey.provider,
-                                    sessionId,
-                                },
-                            );
-                            // Fall through to the transient rate-limit backoff below —
-                            // the model stays available for later rounds.
-                        } else {
-                            session.markModelFailed(modelId);
-                            LOGGER.warn(
-                                'DebateLlmCaller',
-                                `Model 413 (context exceeded): ${modelId}`,
-                                {
-                                    agentId: participant.agentId,
-                                    provider: resolvedKey.provider,
-                                    sessionId,
-                                },
-                            );
-                            deps.sessionAbortControllers
-                                .get(sessionId)
-                                ?.delete(participant.agentId);
-                            continue;
-                        }
-                    }
-
-                    // 404 model_not_found — the model doesn't exist on this provider/API
-                    // (e.g. gemini-3.1-flash 404s via the v1beta generateContent API).
-                    // Mark the model failed at session level so ALL agents skip it instead
-                    // of burning a turn on it every round.
-                    if (
-                        errSc === 404 ||
-                        errStr.includes('model_not_found') ||
-                        errStr.includes('is not found for API version') ||
-                        errStr.includes('not supported for generateContent')
-                    ) {
-                        session.markModelFailed(modelId);
-                        LOGGER.warn('DebateLlmCaller', `Model 404 (not found): ${modelId}`, {
-                            agentId: participant.agentId,
-                            provider: resolvedKey.provider,
-                            sessionId,
-                        });
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    // DEATH SPIRAL GUARD: HALF-OPEN circuit breaker means the entire provider
-                    // is degraded — only 1 concurrent test request allowed. Don't waste time
-                    // trying model fallbacks or alt keys for the same provider; skip it now.
-                    if (error.includes('HALF-OPEN')) {
-                        LOGGER.warn(
-                            'DebateLlmCaller',
-                            `Provider circuit HALF-OPEN — skipping: ${resolvedKey.provider}`,
-                            {
-                                agentId: participant.agentId,
-                                model: modelId,
-                            },
-                        );
-                        session.markProviderFailed(resolvedKey.provider);
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    // Try same-provider model fallback (e.g., 70B → 8B)
-                    const allProviderModels = getAllModelsForProvider(resolvedKey);
-                    const untried = allProviderModels.filter((m) => !triedModels.has(m));
-                    if (untried.length > 0 && !isTimeout) {
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    // Try alternative keys for same provider.
-                    // CRITICAL: do NOT call triedModels.clear() here. Same model on a
-                    // different key produces the same content (especially for cross-agent
-                    // duplicate cases where the model is generating the same boilerplate
-                    // regardless of API key). The dedup memory must survive key switches
-                    // — clearing it allows brute-force to re-pick a tried model and
-                    // re-trigger the same duplicate, looping forever.
-                    // The resolver consults rejectedCombos to skip bad (provider,model)
-                    // pairs, so the alt key's resolveProvider will fall through to a
-                    // different model on the same provider, or to Step 6 brute-force
-                    // for a fresh provider.
-                    const allKeys = keyService.getKeys();
-                    const altKey = allKeys.find(
-                        (k) =>
-                            k.provider === resolvedKey!.provider &&
-                            !triedKeys.has(k.id) &&
-                            k.status === 'active' &&
-                            !deps.providerResolver.isKeyAuthFailed(k.id),
-                    );
-                    if (altKey) {
-                        deps.eventBus.emit(EVENTS.DEBATE_AGENT_FALLBACK, {
-                            sessionId,
-                            agentId: participant.agentId,
-                            fromProvider: resolvedKey!.provider,
-                            toProvider: altKey.provider,
-                        });
-                        // Intentionally NOT clearing triedModels/rejectedCombos here —
-                        // see comment above. The resolver uses these to pick a fresh
-                        // model on the alt key, or escalate to Step 6 if the entire
-                        // provider is exhausted.
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-
-                    // 429 is transient — don't permanently mark the provider as failed.
-                    // The circuit breaker handles backoff timing; providerCanBeUsed will
-                    // skip it while the circuit is open and allow retry when it closes.
-                    if (isRateLimit) {
-                        const rateBackoff = Math.min(
-                            getBaseBackoffMs() * Math.pow(2, retries),
-                            getMaxBackoffMs(),
-                        );
-                        // Add ±25% jitter to prevent thundering herd
-                        const jitter = rateBackoff * (0.75 + Math.random() * 0.5);
-                        LOGGER.warn(
-                            'DebateLlmCaller',
-                            `Provider rate-limited (429): ${resolvedKey.provider}`,
-                            {
-                                agentId: participant.agentId,
-                                model: modelId,
-                                backoffMs: Math.round(jitter),
-                            },
-                        );
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        let _rlOnAbort: (() => void) | undefined;
-                        await new Promise<void>((resolve, reject) => {
-                            const timer = setTimeout(resolve, jitter);
-                            _rlOnAbort = () => {
-                                clearTimeout(timer);
-                                reject(new Error('Debate cancelled during backoff'));
-                            };
-                            if (externalSignal)
-                                externalSignal.addEventListener('abort', _rlOnAbort, {
-                                    once: true,
-                                });
-                        });
-                        if (externalSignal && _rlOnAbort)
-                            externalSignal.removeEventListener('abort', _rlOnAbort);
-                        continue;
-                    }
-
-                    // When resolveProvider returned null ("No available API keys"), the
-                    // previous resolvedKey is stale — the provider itself isn't the problem,
-                    // all its models are just exhausted. Don't mark it as failed; just retry.
-                    // But guard against infinite spin: if all providers are truly exhausted
-                    // for this agent, break out after MAX_NO_PROVIDER_SPIN attempts.
-                    if (
-                        error.includes('No available API keys') ||
-                        error.includes('All LLM providers unavailable')
-                    ) {
-                        noProviderSpinCount++;
-                        // Mark ALL keys of this provider as tried so unused keys don't
-                        // keep getting resolved by Step 1 only to fail at model selection
-                        // (e.g. 3rd groq key with all models globally rejected via * wildcards).
-                        if (resolvedKey) {
-                            const allKeys = keyService.getKeys();
-                            for (const k of allKeys) {
-                                if (k.provider === resolvedKey.provider) triedKeys.add(k.id);
-                            }
-                        }
-                        if (noProviderSpinCount >= 5) {
-                            deps.sessionAbortControllers
-                                .get(sessionId)
-                                ?.delete(participant.agentId);
-                            throw new Error(
-                                'No available API keys after retries — debate cannot proceed for this agent',
-                                { cause: e },
-                            );
-                        }
-                        // When all models are exhausted via rejectedCombos wildcards
-                        // (e.g. cross-agent duplicate on the only working model),
-                        // clear the content-rejection state so the working model can
-                        // be retried. Without this, a single-provider setup with
-                        // cross-agent duplicates would never retry the only working
-                        // combo — every resolveProvider() would return null because
-                        // every model's wildcard entry blocks it.
-                        // The noProviderSpinCount guard (max 5) prevents infinite spin.
-                        const wildcards = Array.from(rejectedCombos).filter((c) =>
-                            c.endsWith('|*'),
-                        );
-                        for (const c of wildcards) {
-                            const model = c.split('|')[1];
-                            triedModels.delete(model!);
-                            rejectedCombos.delete(c);
-                        }
-                        // Also clear triedKeys — all provider keys were added above
-                        // (line ~2424), so without this, resolveProvider still returns
-                        // null even after clearing wildcards, because every key is in
-                        // triedKeys. Clearing allows retrying the same keys with now-
-                        // unblocked models on the next iteration.
-                        triedKeys.clear();
-                        await backoffWait(noProviderSpinCount, externalSignal);
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-                    if (!resolvedKey) {
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-                    // Content-level failures (validation, entanglement, consecutive
-                    // duplicates) reflect model output quality — not provider availability.
-                    // Don't mark the entire provider as failed; retry with a different
-                    // model/provider instead.
-                    if (
-                        error.includes('Response validation failed') ||
-                        error.includes('Entanglement validation failed') ||
-                        error.includes('Cross-agent duplicate produced')
-                    ) {
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        continue;
-                    }
-                    session.markProviderFailed(resolvedKey.provider);
-                    LOGGER.warn('DebateLlmCaller', `Provider failed: ${resolvedKey.provider}`, {
-                        agentId: participant.agentId,
-                        model: modelId,
-                        error: String(e).slice(0, 100),
-                        failedProviders: Array.from(
-                            (session as { _failedProviders?: Set<string> })._failedProviders ?? [],
-                        ),
-                    });
-                    // Fast-fail: check if ALL providers are now dead — no point retrying
-                    const allKeysAfter = keyService.getKeys();
-                    const anyWorkingAfter = allKeysAfter.some(
-                        (k) =>
-                            k.status === 'active' &&
-                            !session.hasProviderFailed(k.provider) &&
-                            !deps.providerResolver.isKeyAuthFailed(k.id),
-                    );
-                    if (!anyWorkingAfter) {
-                        LOGGER.error('DebateLlmCaller', 'ALL providers dead — aborting', {
-                            failedProviders: Array.from(
-                                (session as { _failedProviders?: Set<string> })._failedProviders ??
-                                    [],
-                            ),
-                        });
-                        deps.deadLetterQueue
-                            ?.push({
-                                event: 'debate:all_providers_dead',
-                                payload: {
-                                    sessionId,
-                                    agentId: participant.agentId,
-                                    provider: resolvedKey?.provider,
-                                },
-                                error: String(e).slice(0, 500),
-                                context: {
-                                    failedProviders: Array.from(
-                                        (session as { _failedProviders?: Set<string> })
-                                            ._failedProviders ?? [],
-                                    ),
-                                },
-                                retryCount: retries,
-                            })
-                            .catch((err) =>
-                                LOGGER.error('DebateLlmCaller', 'DLQ push failed', err),
-                            );
-                        throw new Error('All LLM providers unavailable — debate cannot proceed', {
-                            cause: e,
-                        });
-                    }
-                }
-
-                if (isTimeout) {
-                    deps.eventBus.emit(EVENTS.DEBATE_AGENT_TIMEOUT, {
-                        sessionId,
-                        agentId: participant.agentId,
-                        timeoutMs: getDebateTimeoutMs(),
-                    });
-                    retries++;
-                    if (retries >= getMaxRetries()) {
-                        deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                        if (resolvedKey)
-                            keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
-                                failed: true,
-                                error: 'LLM call timed out',
-                                task: 'debate',
-                                round: session.round,
-                            });
-                        deps.deadLetterQueue
-                            ?.push({
-                                event: 'debate:llm_timeout',
-                                payload: {
-                                    sessionId,
-                                    agentId: participant.agentId,
-                                    model: modelId,
-                                    provider: resolvedKey?.provider,
-                                },
-                                error: 'LLM call timed out',
-                                context: { retries },
-                                retryCount: retries,
-                            })
-                            .catch((err) =>
-                                LOGGER.error('DebateLlmCaller', 'DLQ push failed', err),
-                            );
-                        throw new Error('LLM call timed out', { cause: e });
-                    }
-                    await backoffWait(retries, externalSignal);
-                    continue;
-                }
-
-                const count = deps.providerResolver.incrementLlmFailureCount(failKey);
-
-                if (count <= getMaxRetries()) {
-                    await backoffWait(count, externalSignal);
-                    continue;
-                }
-
-                deps.sessionAbortControllers.get(sessionId)?.delete(participant.agentId);
-                if (resolvedKey)
-                    keyService.recordUsage(resolvedKey.id, 0, 0, modelId, {
-                        failed: true,
-                        error,
-                        task: 'debate',
-                        round: session.round,
-                    });
-                deps.deadLetterQueue
-                    ?.push({
-                        event: 'debate:llm_failure',
-                        payload: {
-                            sessionId,
-                            agentId: participant.agentId,
-                            provider: resolvedKey?.provider,
-                            model: modelId,
-                        },
-                        error: String(error).slice(0, 500),
-                        context: { retries, round: session.round },
-                        retryCount: count,
-                    })
-                    .catch((err) => LOGGER.error('DebateLlmCaller', 'DLQ push failed', err));
-                throw new Error(error, { cause: e });
+                // B-11: the entire classification / failover block extracted into a
+                // typed `DebateCallErrorHandler` (debate-llm-error-handler.ts) over an
+                // explicit loop-state object. Behavior is preserved exactly: every
+                // `continue` / `throw` branch maps to `{ kind: 'continue' }` /
+                // `{ kind: 'throw', error }`, the handler mutates `retries` /
+                // `noProviderSpinCount` and we copy them back out before continuing.
+                const errorState: DebateCallErrorState = {
+                    sessionId,
+                    session,
+                    participant,
+                    deps,
+                    resolvedKey,
+                    modelId,
+                    controller,
+                    externalSignal,
+                    startedAt,
+                    modelTimeout,
+                    retries,
+                    triedModels,
+                    triedKeys,
+                    rejectedCombos,
+                    noProviderSpinCount,
+                    failKey,
+                };
+                const r = await handleDebateCallError(e, errorState);
+                retries = errorState.retries;
+                noProviderSpinCount = errorState.noProviderSpinCount;
+                if (r.kind === 'throw') throw r.error;
+                continue;
             }
         }
 

@@ -143,10 +143,10 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                             {team.icon || '👥'}
                         </div>
                         <div>
-                            <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1.1rem' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '1.1rem' }}>
                                 {team.name}
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)', marginTop: 2 }}>
                                 {team.description}
                             </div>
                             <div
@@ -177,7 +177,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     borderRadius: 8,
                                     border: 'none',
                                     background: 'rgba(139,92,246,0.15)',
-                                    color: '#a78bfa',
+                                    color: 'var(--purple-muted)',
                                     cursor: 'pointer',
                                     fontSize: '0.75rem',
                                     fontWeight: 600,
@@ -216,7 +216,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                 borderRadius: 8,
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 background: 'transparent',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 fontSize: '0.75rem',
                             }}
@@ -257,7 +257,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                     }}
                                 >
@@ -267,7 +267,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '1.5rem',
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         marginTop: 4,
                                     }}
                                 >
@@ -279,7 +279,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                     }}
                                 >
@@ -306,7 +306,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                     }}
                                 >
@@ -316,7 +316,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '1.5rem',
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         marginTop: 4,
                                     }}
                                 >
@@ -330,7 +330,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                     }}
                                 >
@@ -340,7 +340,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '1.5rem',
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         marginTop: 4,
                                     }}
                                 >
@@ -356,7 +356,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                     style={{
                                         fontSize: '0.75rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: 8,
                                     }}
                                 >
@@ -383,7 +383,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                     <div
                                                         style={{
                                                             fontSize: '0.7rem',
-                                                            color: '#94a3b8',
+                                                            color: 'var(--slate-400)',
                                                             minWidth: 120,
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
@@ -415,7 +415,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                     <div
                                                         style={{
                                                             fontSize: '0.7rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                             minWidth: 50,
                                                             textAlign: 'right',
                                                         }}
@@ -434,7 +434,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                 style={{
                                     textAlign: 'center',
                                     padding: 30,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.85rem',
                                 }}
                             >
@@ -453,7 +453,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                 style={{
                                     textAlign: 'center',
                                     padding: 30,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.85rem',
                                 }}
                             >
@@ -488,14 +488,14 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                 {exec.status === 'completed' ? (
                                                     <CheckCircle2 size={14} color="#10b981" />
                                                 ) : exec.status === 'failed' ? (
-                                                    <span style={{ color: '#ef4444' }}>❌</span>
+                                                    <span style={{ color: 'var(--error)' }}>❌</span>
                                                 ) : (
                                                     <Clock size={14} color="#f59e0b" />
                                                 )}
                                                 <span
                                                     style={{
                                                         fontWeight: 600,
-                                                        color: '#e2e8f0',
+                                                        color: 'var(--slate-200)',
                                                         fontSize: '0.8rem',
                                                     }}
                                                 >
@@ -504,7 +504,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                 <span
                                                     style={{
                                                         fontSize: '0.65rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                     }}
                                                 >
                                                     {new Date(exec.startedAt).toLocaleTimeString()}
@@ -514,7 +514,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                 <div
                                                     style={{
                                                         fontSize: '0.65rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         display: 'flex',
                                                         gap: 8,
                                                     }}
@@ -530,7 +530,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                         <div
                                             style={{
                                                 fontSize: '0.72rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 whiteSpace: 'pre-wrap',
                                                 maxHeight: 40,
                                                 overflow: 'hidden',
@@ -560,7 +560,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                 {/* Compatibility Tab */}
                 {activeTab === 'compatibility' && (
                     <div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
                             How this team relates to other teams based on domain overlap and shared
                             roles.
                         </div>
@@ -571,7 +571,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                 style={{
                                     textAlign: 'center',
                                     padding: 30,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.85rem',
                                 }}
                             >
@@ -613,7 +613,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                         <span
                                                             style={{
                                                                 fontSize: '0.72rem',
-                                                                color: '#94a3b8',
+                                                                color: 'var(--slate-400)',
                                                                 fontWeight: isDirectMatch
                                                                     ? 600
                                                                     : 400,
@@ -623,7 +623,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                         </span>
                                                         <span
                                                             style={{
-                                                                color: '#64748b',
+                                                                color: 'var(--slate-500)',
                                                                 fontSize: '0.6rem',
                                                             }}
                                                         >
@@ -632,7 +632,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                         <span
                                                             style={{
                                                                 fontSize: '0.72rem',
-                                                                color: '#94a3b8',
+                                                                color: 'var(--slate-400)',
                                                                 fontWeight: isDirectMatch
                                                                     ? 600
                                                                     : 400,
@@ -675,7 +675,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                         <div
                                                             style={{
                                                                 fontSize: '0.65rem',
-                                                                color: '#64748b',
+                                                                color: 'var(--slate-500)',
                                                                 minWidth: 30,
                                                                 textAlign: 'right',
                                                             }}
@@ -688,7 +688,7 @@ const TeamDetailsPanel: React.FC<TeamDetailsPanelProps> = ({
                                                     <div
                                                         style={{
                                                             fontSize: '0.62rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                             marginTop: 4,
                                                             fontStyle: 'italic',
                                                         }}

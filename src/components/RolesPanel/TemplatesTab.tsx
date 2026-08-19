@@ -22,13 +22,13 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ templates }) => (
                     borderTop: `3px solid ${CATEGORY_COLORS[tpl.category] || '#64748b'}`,
                 }}
             >
-                <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.9rem' }}>
+                <div style={{ fontWeight: 600, color: 'var(--slate-200)', fontSize: '0.9rem' }}>
                     {tpl.name}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 6 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)', marginTop: 6 }}>
                     {tpl.description}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 8 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: 8 }}>
                     {tpl.roles.length} roles · {tpl.minSize}–{tpl.maxSize} people
                 </div>
                 {tpl.tags.length > 0 && (

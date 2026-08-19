@@ -45,7 +45,7 @@ const NarrativeSection: React.FC<Props> = ({ narrative }) => (
                 conf {(narrative.confidence * 100).toFixed(0)}%
             </span>
         </div>
-        <p style={{ fontSize: '0.8rem', color: '#e2e8f0', margin: '0 0 8px 0', lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--slate-200)', margin: '0 0 8px 0', lineHeight: 1.5 }}>
             {narrative.summary}
         </p>
         {narrative.causalChain.map((step, i) => (
@@ -53,7 +53,7 @@ const NarrativeSection: React.FC<Props> = ({ narrative }) => (
                 key={`${step}-${i}`}
                 style={{
                     fontSize: '0.7rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     padding: '2px 0',
                     paddingLeft: 12,
                     borderLeft: '2px solid rgba(96,165,250,0.2)',

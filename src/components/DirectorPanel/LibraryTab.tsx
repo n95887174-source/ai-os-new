@@ -72,7 +72,7 @@ const LibraryTab: React.FC<{
             <h3 style={{ marginTop: 0 }}>{t('director.library.heading')}</h3>
             <ScenarioLibraryFilters value={filter} onChange={setFilter} />
             {loading && <p style={{ opacity: 0.7 }}>{t('director.library.loading')}</p>}
-            {error && <p style={{ color: '#ef4444' }}>{error}</p>}
+            {error && <p style={{ color: 'var(--error)' }}>{error}</p>}
             {!loading && !error && scenarios.length === 0 && (
                 <p style={{ opacity: 0.75 }}>{t('director.library.empty')}</p>
             )}

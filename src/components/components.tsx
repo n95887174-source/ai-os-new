@@ -24,7 +24,7 @@ export const StatCard: React.FC<{
                 style={{
                     fontSize: '0.7rem',
                     fontWeight: 600,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                 }}
@@ -78,8 +78,8 @@ export const FallacyCard: React.FC<{
                     {severity}
                 </span>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: 2 }}>{description}</div>
-            <div style={{ marginTop: 4, color: '#94a3b8', fontSize: '0.7rem' }}>count: {count}</div>
+            <div style={{ color: 'var(--slate-400)', fontSize: '0.75rem', marginTop: 2 }}>{description}</div>
+            <div style={{ marginTop: 4, color: 'var(--slate-400)', fontSize: '0.7rem' }}>count: {count}</div>
         </div>
     );
 };
@@ -112,11 +112,11 @@ export const PersuasionCard: React.FC<{ p: PersuasionScore }> = ({ p }) => {
                 <span style={{ fontSize: '1.1rem', fontWeight: 700, color }}>
                     {arrow} {(p.delta * 100).toFixed(0)}%
                 </span>
-                <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+                <span style={{ color: 'var(--slate-400)', fontSize: '0.7rem' }}>
                     {p.initialConfidence.toFixed(2)} → {p.finalConfidence.toFixed(2)}
                 </span>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>
+            <div style={{ color: 'var(--slate-400)', fontSize: '0.7rem' }}>
                 rounds: {p.roundsParticipated}
             </div>
         </div>
@@ -167,7 +167,7 @@ export const ToneChart: React.FC<{ points: TonePoint[] }> = ({ points }) => {
                 style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontSize: '0.7rem',
                 }}
             >

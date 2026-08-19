@@ -12,7 +12,7 @@ const CARDS = [
         label: 'Total Sessions',
         key: 'totalSessions' as const,
         icon: MessageSquare,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         border: 'rgba(59,130,246,0.3)',
         bg: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(0,0,0,0) 100%)',
     },
@@ -20,7 +20,7 @@ const CARDS = [
         label: 'Total Prompts Executed',
         key: 'totalMessages' as const,
         icon: History,
-        color: '#10b981',
+        color: 'var(--success)',
         border: 'rgba(16,185,129,0.3)',
         bg: 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(0,0,0,0) 100%)',
     },
@@ -36,7 +36,7 @@ const CARDS = [
         label: 'Avg Turns / Session',
         key: 'avgMessages' as const,
         icon: BarChart3,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         border: 'rgba(245,158,11,0.3)',
         bg: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(0,0,0,0) 100%)',
     },
@@ -75,7 +75,7 @@ const AdminStatsCards: React.FC<StatsCardsProps> = (stats) => (
                             style={{
                                 fontSize: '0.8rem',
                                 fontWeight: 800,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -92,7 +92,7 @@ const AdminStatsCards: React.FC<StatsCardsProps> = (stats) => (
                             <Icon size={28} color={card.color} />
                         </div>
                     </div>
-                    <div style={{ fontSize: '2.25rem', fontWeight: 800, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                         {stats[card.key]}
                     </div>
                 </div>

@@ -75,12 +75,12 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                         <button
                             type="button"
                             style={{
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 border: '1px solid rgba(239,68,68,0.3)',
                                 padding: '0.4rem 0.75rem',
                                 borderRadius: 8,
                                 fontSize: '0.75rem',
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 cursor: 'pointer',
                             }}
                             onClick={() => {
@@ -97,7 +97,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                 <div
                     style={{
                         fontSize: '0.85rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         textAlign: 'center',
                         padding: '2rem',
                         fontStyle: 'italic',
@@ -119,7 +119,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                     style={{
                         fontSize: '1rem',
                         fontWeight: 700,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         marginBottom: '1rem',
                     }}
                 >
@@ -140,7 +140,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                     />
                     {!webhookForm.name && (
                         <span
-                            style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '-0.5rem' }}
+                            style={{ fontSize: '0.65rem', color: 'var(--error)', marginTop: '-0.5rem' }}
                         >
                             {t('settings.webhooks_name_required')}
                         </span>
@@ -159,7 +159,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                     />
                     {!webhookForm.url && (
                         <span
-                            style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '-0.5rem' }}
+                            style={{ fontSize: '0.65rem', color: 'var(--error)', marginTop: '-0.5rem' }}
                         >
                             {t('settings.webhooks_url_required')}
                         </span>
@@ -228,7 +228,7 @@ const AlertsTab: React.FC<AlertsTabProps> = ({
                             alignSelf: 'flex-start',
                             padding: '0.6rem 1.5rem',
                             borderRadius: 8,
-                            background: '#3b82f6',
+                            background: 'var(--accent)',
                             border: 'none',
                             color: 'white',
                             fontWeight: 700,

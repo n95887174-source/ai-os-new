@@ -27,22 +27,22 @@ const card: React.CSSProperties = {
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
     pending: {
         icon: <Clock size={14} />,
-        color: '#64748b',
+        color: 'var(--slate-500)',
         bg: 'rgba(100,116,139,0.1)',
     },
     running: {
         icon: <Loader2 size={14} className="animate-spin" />,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         bg: 'rgba(59,130,246,0.1)',
     },
     completed: {
         icon: <CheckCircle2 size={14} />,
-        color: '#10b981',
+        color: 'var(--success)',
         bg: 'rgba(16,185,129,0.1)',
     },
     failed: {
         icon: <XCircle size={14} />,
-        color: '#ef4444',
+        color: 'var(--error)',
         bg: 'rgba(239,68,68,0.1)',
     },
 };
@@ -108,7 +108,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                         <div
                             style={{
                                 fontWeight: 600,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.8rem',
                             }}
                         >
@@ -143,7 +143,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                     padding: '3px 6px',
                                     borderRadius: 4,
                                     border: 'none',
-                                    background: 'rgba(16,185,129,0.1)',
+                                    background: 'var(--success-tint)',
                                     color: '#34d399',
                                     cursor: 'pointer',
                                     fontSize: '0.65rem',
@@ -162,7 +162,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                     borderRadius: 4,
                                     border: 'none',
                                     background: 'rgba(255,255,255,0.05)',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                     fontSize: '0.65rem',
                                     display: 'flex',
@@ -183,7 +183,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                             background: 'rgba(0,0,0,0.2)',
                             borderRadius: 6,
                             fontSize: '0.72rem',
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             whiteSpace: 'pre-wrap',
                             maxHeight: 200,
                             overflowY: 'auto',
@@ -200,7 +200,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                         style={{
                             marginTop: 6,
                             padding: '4px 8px',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             borderRadius: 4,
                             fontSize: '0.7rem',
                             color: '#f87171',
@@ -236,7 +236,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                     <div
                                         style={{
                                             textAlign: 'center',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.6rem',
                                             padding: '2px 0',
                                         }}
@@ -258,7 +258,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                     <div
                                         style={{
                                             textAlign: 'center',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.6rem',
                                             padding: '2px 0',
                                         }}
@@ -286,7 +286,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                 display: 'flex',
                                 justifyContent: 'space-around',
                                 padding: '4px 0',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.6rem',
                             }}
                         >
@@ -314,7 +314,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                                     <div
                                         style={{
                                             textAlign: 'center',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.6rem',
                                             padding: '2px 0',
                                         }}
@@ -364,7 +364,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                     <div
                         style={{
                             fontWeight: 700,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -386,7 +386,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontWeight: 400,
                             }}
                         >
@@ -397,7 +397,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                     <div
                         style={{
                             fontSize: '0.7rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'capitalize',
                             display: 'flex',
                             alignItems: 'center',
@@ -456,30 +456,30 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                         gap: 16,
                         flexWrap: 'wrap',
                         fontSize: '0.7rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>
                         Duration:{' '}
-                        <strong style={{ color: '#94a3b8' }}>
+                        <strong style={{ color: 'var(--slate-400)' }}>
                             {execution.metrics.totalDuration}ms
                         </strong>
                     </span>
                     <span>
                         Tokens:{' '}
-                        <strong style={{ color: '#94a3b8' }}>
+                        <strong style={{ color: 'var(--slate-400)' }}>
                             {execution.metrics.totalTokens}
                         </strong>
                     </span>
                     <span>
                         Cost:{' '}
-                        <strong style={{ color: '#94a3b8' }}>
+                        <strong style={{ color: 'var(--slate-400)' }}>
                             ${(execution.metrics.totalCost || 0).toFixed(6)}
                         </strong>
                     </span>
                     <span>
                         Success rate:{' '}
-                        <strong style={{ color: '#94a3b8' }}>
+                        <strong style={{ color: 'var(--slate-400)' }}>
                             {(execution.metrics.successRate * 100).toFixed(0)}%
                         </strong>
                     </span>
@@ -503,7 +503,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                             gap: 6,
                             fontSize: '0.8rem',
                             fontWeight: 600,
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             userSelect: 'none',
                         }}
                     >
@@ -515,7 +515,7 @@ const TeamPipeline: React.FC<TeamPipelineProps> = ({ execution, strategy, onReRu
                             style={{
                                 padding: '8px 14px 12px',
                                 fontSize: '0.75rem',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 whiteSpace: 'pre-wrap',
                                 lineHeight: 1.5,
                                 background: 'rgba(0,0,0,0.15)',

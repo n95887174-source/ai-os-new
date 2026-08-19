@@ -139,7 +139,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                         flex: 1,
                         fontSize: '0.82rem',
                         fontWeight: 600,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -163,7 +163,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                 <span
                     style={{
                         fontSize: '0.62rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         whiteSpace: 'nowrap',
                         display: 'flex',
                         alignItems: 'center',
@@ -188,7 +188,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                         style={{
                             margin: '0 0 0.6rem',
                             fontSize: '0.78rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             lineHeight: 1.5,
                         }}
                     >
@@ -203,7 +203,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                             gap: 3,
                             marginBottom: '0.6rem',
                             fontSize: '0.72rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         {h.sourceFile && (
@@ -247,7 +247,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                                 <span
                                     style={{
                                         fontWeight: 600,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.7rem',
                                     }}
                                 >
@@ -293,7 +293,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                     cursor: 'pointer',
                                                     padding: 0,
                                                     fontSize: '0.65rem',
@@ -326,7 +326,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                                                 borderRadius: 3,
                                                 background: 'rgba(0,0,0,0.3)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.68rem',
                                                 outline: 'none',
                                             }}
@@ -336,7 +336,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                                             style={{
                                                 background: 'none',
                                                 border: 'none',
-                                                color: '#10b981',
+                                                color: 'var(--success)',
                                                 cursor: 'pointer',
                                                 padding: 1,
                                             }}
@@ -398,7 +398,7 @@ const HypothesisCard: React.FC<HypothesisCardProps> = ({
                                 borderRadius: 5,
                                 border: 'none',
                                 background: 'rgba(239,68,68,0.08)',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 cursor: 'pointer',
                                 fontWeight: 600,
                                 fontSize: '0.68rem',

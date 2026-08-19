@@ -13,19 +13,19 @@ export const SEVERITY_CONFIG: Record<
 > = {
     critical: {
         icon: <AlertTriangle size={16} />,
-        color: '#ef4444',
+        color: 'var(--error)',
         bg: 'rgba(239,68,68,0.1)',
         border: 'rgba(239,68,68,0.3)',
     },
     warning: {
         icon: <Zap size={16} />,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         bg: 'rgba(245,158,11,0.1)',
         border: 'rgba(245,158,11,0.3)',
     },
     info: {
         icon: <Activity size={16} />,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         bg: 'rgba(59,130,246,0.1)',
         border: 'rgba(59,130,246,0.3)',
     },

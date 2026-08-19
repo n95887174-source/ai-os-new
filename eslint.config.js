@@ -5,6 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import { mandatoryLifecycleRule } from './eslint/rule-mandatory-lifecycle.mjs';
+import { noRawStyleColorRule } from './eslint/rule-no-raw-style-color.mjs';
 
 export default defineConfig([
     globalIgnores(['dist', 'audit', 'docs', 'e2e', 'coverage', 'prompt-vault']),
@@ -76,6 +77,20 @@ export default defineConfig([
                     ],
                 },
             ],
+        },
+    },
+    {
+        // FA-02 guard: forbid raw color literals in JSX inline styles.
+        files: ['src/components/**', 'src/styles/**'],
+        plugins: {
+            'fa-02': {
+                rules: {
+                    'no-raw-style-color': noRawStyleColorRule,
+                },
+            },
+        },
+        rules: {
+            'fa-02/no-raw-style-color': 'warn',
         },
     },
     {

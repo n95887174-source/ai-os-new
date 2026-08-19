@@ -29,7 +29,7 @@ const searchInput: React.CSSProperties = {
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: 13,
     outline: 'none',
 };
@@ -57,7 +57,7 @@ const detailSection: React.CSSProperties = {
 
 const label: React.CSSProperties = {
     fontSize: 11,
-    color: '#64748b',
+    color: 'var(--slate-500)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     marginBottom: 4,
@@ -89,7 +89,7 @@ const emptyState: React.CSSProperties = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#64748b',
+    color: 'var(--slate-500)',
     gap: 16,
 };
 
@@ -220,7 +220,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
     }, [active, linkInput]);
 
     return (
-        <div style={{ display: 'flex', height: '100%', background: '#0f172a', color: '#e2e8f0' }}>
+        <div style={{ display: 'flex', height: '100%', background: 'var(--slate-900)', color: 'var(--slate-200)' }}>
             <div style={sidebar}>
                 <div style={{ padding: '12px 16px' }}>
                     <input
@@ -232,11 +232,11 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
                     {!isLoaded ? (
-                        <div style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                        <div style={{ textAlign: 'center', padding: 32, color: 'var(--slate-500)' }}>
                             {t('common.loading')}
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                        <div style={{ textAlign: 'center', padding: 32, color: 'var(--slate-500)' }}>
                             {t('common.no_results')}
                         </div>
                     ) : (
@@ -245,7 +245,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.5px',
                                         padding: '8px 4px 4px',
@@ -299,7 +299,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: 12,
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -314,14 +314,14 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                                 gap: 8,
                                             }}
                                         >
-                                            <span style={{ fontSize: 11, color: '#64748b' }}>
+                                            <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                                 {s.history.length} msgs ·{' '}
                                                 {new Date(
                                                     s.updatedAt ?? s.createdAt,
                                                 ).toLocaleDateString()}
                                             </span>
                                             {s.folder && (
-                                                <span style={{ fontSize: 11, color: '#8b5cf6' }}>
+                                                <span style={{ fontSize: 11, color: 'var(--purple)' }}>
                                                     📁 {s.folder}
                                                 </span>
                                             )}
@@ -408,28 +408,28 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                         {active.isPinned ? 'Unpin' : '📌 Pin'}
                                     </button>
                                     <button
-                                        style={{ ...btn, background: '#3b82f6' }}
+                                        style={{ ...btn, background: 'var(--accent)' }}
                                         onClick={() => navigate(`/chat?session=${active.id}`)}
                                     >
                                         Open in Chat
                                     </button>
                                     {active.isArchived ? (
                                         <button
-                                            style={{ ...btn, background: '#64748b' }}
+                                            style={{ ...btn, background: 'var(--slate-500)' }}
                                             onClick={() => unarchiveSession(active.id)}
                                         >
                                             Unarchive
                                         </button>
                                     ) : (
                                         <button
-                                            style={{ ...btn, background: '#64748b' }}
+                                            style={{ ...btn, background: 'var(--slate-500)' }}
                                             onClick={() => archiveSession(active.id)}
                                         >
                                             Archive
                                         </button>
                                     )}
                                     <button
-                                        style={{ ...btn, background: '#ef4444' }}
+                                        style={{ ...btn, background: 'var(--error)' }}
                                         onClick={() => {
                                             if (window.confirm(`Delete "${active.title}"?`))
                                                 deleteSession(active.id);
@@ -452,36 +452,36 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                 }}
                             >
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Messages:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Messages:</span>{' '}
                                     {active.history.length}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Pinned:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Pinned:</span>{' '}
                                     {active.isPinned ? 'Yes' : 'No'}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Created:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Created:</span>{' '}
                                     {new Date(active.createdAt).toLocaleString()}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Updated:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Updated:</span>{' '}
                                     {new Date(active.updatedAt).toLocaleString()}
                                 </div>
                                 {active.currentProvider && (
                                     <div>
-                                        <span style={{ color: '#64748b' }}>Provider:</span>{' '}
+                                        <span style={{ color: 'var(--slate-500)' }}>Provider:</span>{' '}
                                         {active.currentProvider}
                                     </div>
                                 )}
                                 {active.currentModel && (
                                     <div>
-                                        <span style={{ color: '#64748b' }}>Model:</span>{' '}
+                                        <span style={{ color: 'var(--slate-500)' }}>Model:</span>{' '}
                                         {active.currentModel}
                                     </div>
                                 )}
                                 {active.summary && (
                                     <div style={{ gridColumn: '1 / -1' }}>
-                                        <span style={{ color: '#64748b' }}>Summary:</span>{' '}
+                                        <span style={{ color: 'var(--slate-500)' }}>Summary:</span>{' '}
                                         {active.summary}
                                     </div>
                                 )}
@@ -530,7 +530,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#3b82f6' }}
+                                    style={{ ...btn, background: 'var(--accent)' }}
                                     onClick={handleAddTag}
                                 >
                                     Add
@@ -554,7 +554,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#3b82f6' }}
+                                    style={{ ...btn, background: 'var(--accent)' }}
                                     onClick={handleSetFolder}
                                 >
                                     Set
@@ -568,12 +568,12 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                 links.map((l) => (
                                     <div
                                         key={l.id}
-                                        style={{ fontSize: 12, padding: '4px 0', color: '#94a3b8' }}
+                                        style={{ fontSize: 12, padding: '4px 0', color: 'var(--slate-400)' }}
                                     >
                                         <span style={{ color: '#60a5fa' }}>
                                             {l.toId.slice(0, 12)}...
                                         </span>
-                                        <span style={{ color: '#64748b', marginLeft: 8 }}>
+                                        <span style={{ color: 'var(--slate-500)', marginLeft: 8 }}>
                                             {l.linkType}
                                         </span>
                                         {l.context && (
@@ -582,7 +582,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                     </div>
                                 ))
                             ) : (
-                                <div style={{ fontSize: 13, color: '#64748b' }}>
+                                <div style={{ fontSize: 13, color: 'var(--slate-500)' }}>
                                     No linked sessions
                                 </div>
                             )}
@@ -597,7 +597,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#8b5cf6' }}
+                                    style={{ ...btn, background: 'var(--purple)' }}
                                     onClick={handleLink}
                                 >
                                     Link Debate
@@ -639,14 +639,14 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                             >
                                                 {e.role}
                                             </span>
-                                            <span style={{ fontSize: 10, color: '#64748b' }}>
+                                            <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                                                 {new Date(e.timestamp).toLocaleString()}
                                             </span>
                                         </div>
                                         <div
                                             style={{
                                                 fontSize: 12,
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -657,7 +657,7 @@ export const ChatSessionsManagerPanel: React.FC = () => {
                                     </div>
                                 ))}
                             {active.history.length === 0 && (
-                                <div style={{ fontSize: 13, color: '#64748b' }}>
+                                <div style={{ fontSize: 13, color: 'var(--slate-500)' }}>
                                     No messages yet
                                 </div>
                             )}

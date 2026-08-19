@@ -40,7 +40,7 @@ export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPrevi
                 >
                     {note.type}
                 </span>
-                {note.author && <span style={{ color: '#94a3b8' }}>{note.author}</span>}
+                {note.author && <span style={{ color: 'var(--slate-400)' }}>{note.author}</span>}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
                 <span style={textMutedXs}>{new Date(note.timestamp).toLocaleString()}</span>
@@ -49,7 +49,7 @@ export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPrevi
                     style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         padding: 2,
                     }}
@@ -67,8 +67,8 @@ export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPrevi
                         style={{
                             padding: '0.1rem 0.4rem',
                             borderRadius: 8,
-                            background: 'rgba(245,158,11,0.1)',
-                            color: '#fbbf24',
+                            background: 'var(--warning-tint)',
+                            color: 'var(--warning)',
                             fontSize: '0.65rem',
                         }}
                     >
@@ -91,7 +91,7 @@ export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPrevi
                             borderRadius: 6,
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             fontSize: '0.7rem',
                             cursor: 'pointer',
                         }}
@@ -102,7 +102,7 @@ export const NoteCard: React.FC<NoteCardProps> = memo(({ note, onDelete, onPrevi
                             <FileText size={10} />
                         )}
                         <span>{f.name}</span>
-                        <span style={{ color: '#64748b' }}>{(f.size / 1024).toFixed(0)}KB</span>
+                        <span style={{ color: 'var(--slate-500)' }}>{(f.size / 1024).toFixed(0)}KB</span>
                     </button>
                 ))}
             </div>

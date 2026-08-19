@@ -201,10 +201,10 @@ export function GoogleChatTab({ model }: GoogleChatTabProps) {
                 <div
                     style={{
                         padding: '8px 16px',
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         borderTop: '1px solid rgba(239,68,68,0.3)',
                         fontSize: 12,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     }}
                 >
                     {error}
@@ -265,7 +265,7 @@ export function GoogleChatTab({ model }: GoogleChatTabProps) {
                                 padding: '10px 16px',
                                 borderRadius: 8,
                                 border: 'none',
-                                background: '#ef4444',
+                                background: 'var(--error)',
                                 color: '#fff',
                                 cursor: 'pointer',
                             }}

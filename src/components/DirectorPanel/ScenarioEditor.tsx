@@ -112,9 +112,9 @@ const ScenarioEditor: React.FC<{
                 />
             </div>
 
-            {error && <p style={{ color: '#ef4444', margin: '0 0 0.5rem' }}>{error}</p>}
+            {error && <p style={{ color: 'var(--error)', margin: '0 0 0.5rem' }}>{error}</p>}
             {saved && (
-                <p style={{ color: '#10b981', margin: '0 0 0.5rem' }}>
+                <p style={{ color: 'var(--success)', margin: '0 0 0.5rem' }}>
                     {t('director.configure.saved')}
                 </p>
             )}

@@ -14,7 +14,7 @@ const EmptyStateSection: React.FC<Props> = ({ onAttach }) => (
             justifyContent: 'center',
             gap: '0.75rem',
             padding: '3rem',
-            color: '#64748b',
+            color: 'var(--slate-500)',
         }}
     >
         <Code size={48} opacity={0.3} />
@@ -24,7 +24,7 @@ const EmptyStateSection: React.FC<Props> = ({ onAttach }) => (
         <span
             style={{
                 fontSize: '0.8rem',
-                color: '#475569',
+                color: 'var(--slate-600)',
                 textAlign: 'center',
                 maxWidth: 350,
             }}
@@ -44,7 +44,7 @@ const EmptyStateSection: React.FC<Props> = ({ onAttach }) => (
                 gap: 8,
                 marginTop: '0.25rem',
                 border: 'none',
-                background: '#8b5cf6',
+                background: 'var(--purple)',
                 color: '#fff',
                 cursor: 'pointer',
             }}

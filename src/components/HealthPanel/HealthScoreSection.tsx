@@ -65,7 +65,7 @@ export const HealthScoreSection: React.FC<HealthScoreSectionProps> = ({
             >
                 <HeartPulse size={20} color="#10b981" aria-hidden="true" />
                 <h3 style={h3White}>{t('health.health_score_title') || 'Health Score Overview'}</h3>
-                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                     KeyState Projection — recovery +5/min
                 </span>
             </div>
@@ -159,7 +159,7 @@ export const HealthScoreSection: React.FC<HealthScoreSectionProps> = ({
                                     flexDirection: 'column',
                                     gap: '0.15rem',
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 {healthyAgo !== null && (

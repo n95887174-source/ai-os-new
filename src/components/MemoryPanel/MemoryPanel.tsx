@@ -364,7 +364,7 @@ const MemoryPanel: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     fontWeight: 600,
                                     whiteSpace: 'nowrap',
                                 }}
@@ -384,7 +384,7 @@ const MemoryPanel: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     minWidth: 24,
                                     textAlign: 'right',
                                 }}

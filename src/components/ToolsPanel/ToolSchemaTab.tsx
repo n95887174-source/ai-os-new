@@ -12,7 +12,7 @@ export const ToolSchemaTab: React.FC<ToolSchemaTabProps> = ({ tool, t }) => (
                 style={{
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textTransform: 'uppercase',
                     marginBottom: '0.75rem',
                     display: 'block',
@@ -23,7 +23,7 @@ export const ToolSchemaTab: React.FC<ToolSchemaTabProps> = ({ tool, t }) => (
             </label>
             <div
                 style={{
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     borderRadius: 12,
                     border: '1px solid rgba(255,255,255,0.05)',
                     padding: '1.5rem',
@@ -37,7 +37,7 @@ export const ToolSchemaTab: React.FC<ToolSchemaTabProps> = ({ tool, t }) => (
                     style={{
                         margin: 0,
                         fontSize: '0.85rem',
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         fontFamily: '"JetBrains Mono", monospace',
                         lineHeight: 1.6,
                     }}
@@ -65,7 +65,7 @@ export const ToolSchemaTab: React.FC<ToolSchemaTabProps> = ({ tool, t }) => (
             <p
                 style={{
                     fontSize: '0.85rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     marginTop: '1rem',
                     lineHeight: 1.6,
                     padding: '1rem',

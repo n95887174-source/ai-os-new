@@ -20,7 +20,7 @@ const WhatIfCard: React.FC<Props> = ({ scenario, improvement, details, impact })
     >
         <div style={flexAlignCenterGap2Mb03}>
             <TrendingUp size={14} color={impact === 'high' ? '#ef4444' : '#f59e0b'} />
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                 {scenario}
             </span>
             <span
@@ -41,14 +41,14 @@ const WhatIfCard: React.FC<Props> = ({ scenario, improvement, details, impact })
         <div
             style={{
                 fontSize: '0.8rem',
-                color: '#10b981',
+                color: 'var(--success)',
                 fontWeight: 600,
                 marginBottom: '0.25rem',
             }}
         >
             {improvement}
         </div>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', lineHeight: 1.5 }}>{details}</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', lineHeight: 1.5 }}>{details}</div>
     </div>
 );
 

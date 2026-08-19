@@ -135,7 +135,7 @@ export const SocratesMascot: React.FC<Props> = ({ hidden }) => {
                         transition={{ duration: 0.3 }}
                         style={{
                             background: 'rgba(30,27,75,0.9)',
-                            color: '#fbbf24',
+                            color: 'var(--warning)',
                             padding: '8px 14px',
                             borderRadius: 12,
                             fontSize: '0.7rem',

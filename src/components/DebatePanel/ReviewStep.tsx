@@ -14,8 +14,8 @@ import {
     h3StepTitle,
     iconCircleGreen,
     pageSubtitleMuted,
-    btnNavShape,
 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface ReviewStepProps {
     topic: string;
@@ -95,7 +95,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginBottom: 4,
@@ -103,7 +103,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 >
                     Thesis
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 500 }}>
                     {topic}
                 </div>
             </div>
@@ -111,7 +111,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginBottom: 4,
@@ -119,7 +119,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 >
                     Strategy
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 500 }}>
                     {strategyName(strategy)}
                 </div>
             </div>
@@ -127,7 +127,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginBottom: 4,
@@ -135,7 +135,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 >
                     Rounds
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 500 }}>
                     {maxRounds}
                 </div>
             </div>
@@ -143,7 +143,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginBottom: 4,
@@ -151,7 +151,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 >
                     Temperature
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 500 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 500 }}>
                     {TEMP_LABELS[debateTemperature]}
                 </div>
             </div>
@@ -159,7 +159,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginBottom: 4,
@@ -170,7 +170,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                 <div
                     style={{
                         fontSize: '0.8rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: 4,
@@ -184,7 +184,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
                                 style={{
                                     padding: '2px 8px',
                                     borderRadius: 6,
-                                    background: 'rgba(168,85,247,0.1)',
+                                    background: 'var(--purple-tint)',
                                     color: '#c084fc',
                                     fontSize: '0.75rem',
                                 }}
@@ -229,10 +229,10 @@ const ReviewStep: React.FC<ReviewStepProps> = ({
         </div>
 
         <div style={textCenter}>
-            <button onClick={onToggleAuto} className="btn-secondary" style={btnNavShape}>
+            <Button variant="ghost" onClick={onToggleAuto} className="btn-secondary">
                 <Zap size={18} color="#f59e0b" />
                 {showAuto ? 'Hide Auto-Debate' : 'Auto-Debate'}
-            </button>
+            </Button>
         </div>
 
         {showAuto && (

@@ -32,7 +32,7 @@ const RolesTab: React.FC<RolesTabProps> = ({ roles }) => (
                     <div
                         style={{
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.9rem',
                         }}
                     >
@@ -43,7 +43,7 @@ const RolesTab: React.FC<RolesTabProps> = ({ roles }) => (
                 <div
                     style={{
                         fontSize: '0.78rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginTop: 6,
                         lineHeight: 1.4,
                     }}

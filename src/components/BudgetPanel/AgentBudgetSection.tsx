@@ -21,7 +21,7 @@ export const AgentBudgetSection: React.FC<AgentBudgetSectionProps> = ({ agents, 
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
                 <Users size={18} color="#3b82f6" />
-                <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>
+                <span style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '1rem' }}>
                     {t('budget.agents_section')}
                 </span>
             </div>
@@ -42,8 +42,8 @@ export const AgentBudgetSection: React.FC<AgentBudgetSectionProps> = ({ agents, 
                                 fontSize: '0.8rem',
                             }}
                         >
-                            <span style={{ color: '#e2e8f0' }}>{a.name || a.agentId}</span>
-                            <span style={{ color: '#94a3b8' }}>
+                            <span style={{ color: 'var(--slate-200)' }}>{a.name || a.agentId}</span>
+                            <span style={{ color: 'var(--slate-400)' }}>
                                 {fmtUSD(a.spent, lang)} / {fmtUSD(a.budget, lang)}
                             </span>
                         </div>

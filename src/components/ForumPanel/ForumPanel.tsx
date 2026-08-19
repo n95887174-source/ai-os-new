@@ -8,12 +8,7 @@ import TopicList from './TopicList';
 import TopicView from './TopicView';
 import ModerationQueue from './ModerationQueue';
 import ForumHeatmap from './ForumHeatmap';
-
-const currentAuthor: ForumAuthor = {
-    kind: 'human',
-    id: 'local-user',
-    displayName: 'Вы',
-};
+import { Button } from '../../components/Common';
 
 /**
  * ForumPanel — async persistent threads UI: topic list + thread view +
@@ -26,6 +21,12 @@ const ForumPanel: React.FC = () => {
     const [thread, setThread] = React.useState<{ topic: Topic; posts: Post[] } | null>(null);
     const [consensus, setConsensus] = React.useState<string | null>(null);
     const [heatmap, setHeatmap] = React.useState<Array<{ category: string; count: number }>>([]);
+
+    const currentAuthor: ForumAuthor = {
+        kind: 'human',
+        id: 'local-user',
+        displayName: t('forum.you'),
+    };
 
     const [page, setPage] = React.useState(0);
 
@@ -72,7 +73,11 @@ const ForumPanel: React.FC = () => {
 
     const handleModerate = async (postId: string, action: string): Promise<void> => {
         if (!selectedId) return;
-        await forumService.moderatePost(postId, action as 'hide' | 'remove' | 'warn', 'модерация');
+        await forumService.moderatePost(
+            postId,
+            action as 'hide' | 'remove' | 'warn',
+            t('forum.moderation_reason'),
+        );
         await openThread(selectedId);
     };
 
@@ -103,24 +108,19 @@ const ForumPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <MessagesSquare size={18} color="#8b5cf6" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('forum.title')}
                     </span>
                 </div>
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => void refreshTopics()}
                     title={t('forum.refresh')}
-                    style={{
-                        padding: '0.45rem 0.8rem',
-                        borderRadius: 7,
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'transparent',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                    }}
+                    aria-label={t('forum.refresh')}
                 >
                     ↻
-                </button>
+                </Button>
             </div>
 
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
@@ -143,7 +143,7 @@ const ForumPanel: React.FC = () => {
                         onPageChange={setPage}
                     />
                     <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 6 }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginBottom: 6 }}>
                             {t('forum.heatmap_title')}
                         </div>
                         <ForumHeatmap categories={heatmap} />

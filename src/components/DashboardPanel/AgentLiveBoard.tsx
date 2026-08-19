@@ -388,7 +388,7 @@ const AgentLiveBoard: React.FC = () => {
                                         width: 28,
                                         height: 28,
                                         borderRadius: 6,
-                                        background: 'rgba(59,130,246,0.1)',
+                                        background: 'var(--accent-tint)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',

@@ -60,6 +60,7 @@ const DebateRuntimePanel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [actionLoading] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const isMountedRef = useRef(true);
 
     const currentThinking = useDebateLiveStore((s) => s.currentThinking);
@@ -139,7 +140,10 @@ const DebateRuntimePanel: React.FC = () => {
                 refreshSessions();
                 refreshCognitive();
             }),
-            eventBus.on(EVENTS.DEBATE_SESSION_CANCELLED, refreshSessions),
+            eventBus.on(EVENTS.DEBATE_SESSION_CANCELLED, () => {
+                setCancelling(false);
+                refreshSessions();
+            }),
             eventBus.on(EVENTS.DEBATE_PHASE_CHANGED, refreshSessions),
             eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(
                 DebateRuntimeEvents.AGENT_CHUNK,
@@ -337,11 +341,19 @@ const DebateRuntimePanel: React.FC = () => {
 
     return (
         <div style={debateRuntimeRoot}>
-            {creating && (
+            {(creating || cancelling) && (
                 <div style={debateRuntimeOverlay}>
                     <Loader2 size={40} className="animate-spin" color="#a855f7" />
-                    <div style={debateRuntimeOverlayTitle}>{t('debate_runtime.creating')}</div>
-                    <div style={debateRuntimeOverlayDesc}>{t('debate_runtime.creating_desc')}</div>
+                    <div style={debateRuntimeOverlayTitle}>
+                        {t(cancelling ? 'debate_runtime.cancelling' : 'debate_runtime.creating')}
+                    </div>
+                    <div style={debateRuntimeOverlayDesc}>
+                        {t(
+                            cancelling
+                                ? 'debate_runtime.cancelling_desc'
+                                : 'debate_runtime.creating_desc',
+                        )}
+                    </div>
                 </div>
             )}
             <div style={flexBetween}>
@@ -421,6 +433,7 @@ const DebateRuntimePanel: React.FC = () => {
                             refreshSessions();
                         }}
                         onCancel={() => {
+                            setCancelling(true);
                             debateEngine.cancelSession(selected.id);
                             refreshSessions();
                         }}

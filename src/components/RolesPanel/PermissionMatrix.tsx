@@ -264,13 +264,13 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             style={{
                                 fontSize: '0.95rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 margin: 0,
                             }}
                         >
                             Permission Matrix
                         </h3>
-                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--slate-400)', margin: 0 }}>
                             {roles.length} roles × {ALL_PERMISSIONS.length} permissions — drag to
                             select range
                         </p>
@@ -286,7 +286,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             padding: '0.3rem 0.6rem',
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             border: '1px solid rgba(59,130,246,0.3)',
                             borderRadius: 6,
                             color: '#60a5fa',
@@ -304,10 +304,10 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             padding: '0.3rem 0.6rem',
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            background: 'rgba(16,185,129,0.1)',
+                            background: 'var(--success-tint)',
                             border: '1px solid rgba(16,185,129,0.3)',
                             borderRadius: 6,
-                            color: '#10b981',
+                            color: 'var(--success)',
                             cursor: 'pointer',
                         }}
                     >
@@ -322,10 +322,10 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             padding: '0.3rem 0.6rem',
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.3)',
                             borderRadius: 6,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                         }}
                     >
@@ -341,7 +341,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             borderRadius: 6,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                         title="Export JSON"
@@ -358,7 +358,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             borderRadius: 6,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                         title="Copy to clipboard"
@@ -398,7 +398,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                             <span
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     fontWeight: 700,
                                     marginRight: '0.5rem',
                                 }}
@@ -416,7 +416,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                         background: 'rgba(255,255,255,0.05)',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         borderRadius: 6,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -471,7 +471,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                             style={{
                                                 fontSize: '0.6rem',
                                                 fontWeight: 800,
-                                                color: '#f8fafc',
+                                                color: 'var(--slate-50)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -486,7 +486,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                         <div
                                             style={{
                                                 fontSize: '0.55rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontFamily: 'monospace',
                                             }}
                                         >
@@ -518,7 +518,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                     padding: '0.4rem 0.75rem',
                                                     fontSize: '0.65rem',
                                                     fontWeight: 800,
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     textTransform: 'uppercase',
                                                     letterSpacing: '0.05em',
                                                     display: 'flex',
@@ -535,7 +535,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                 <span
                                                     style={{
                                                         fontSize: '0.55rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         fontWeight: 600,
                                                     }}
                                                 >
@@ -598,7 +598,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                                     style={{
                                                                         fontSize: '0.45rem',
                                                                         fontWeight: 800,
-                                                                        color: '#f59e0b',
+                                                                        color: 'var(--warning)',
                                                                     }}
                                                                 >
                                                                     {activeCount}
@@ -634,7 +634,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                         >
                                                             <span
                                                                 style={{
-                                                                    color: '#e2e8f0',
+                                                                    color: 'var(--slate-200)',
                                                                     fontWeight: 600,
                                                                 }}
                                                             >
@@ -643,7 +643,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                             <span
                                                                 style={{
                                                                     fontSize: '0.55rem',
-                                                                    color: '#64748b',
+                                                                    color: 'var(--slate-500)',
                                                                     fontFamily: 'monospace',
                                                                 }}
                                                             >
@@ -726,7 +726,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                 gap: '1.5rem',
                                 alignItems: 'center',
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(0,0,0,0.15)',
                             }}
                         >
@@ -757,7 +757,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({ roles, onUpd
                                                     width: 40,
                                                     height: 4,
                                                     borderRadius: 2,
-                                                    background: 'rgba(255,255,255,0.1)',
+                                                    background: 'var(--border-default)',
                                                     overflow: 'hidden',
                                                 }}
                                             >

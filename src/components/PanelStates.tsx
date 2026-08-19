@@ -15,7 +15,7 @@ export const PanelLoading: React.FC<{ label?: string; full?: boolean }> = ({ lab
         alignItems: 'center',
         justifyContent: 'center',
         height,
-        color: '#94a3b8',
+        color: 'var(--slate-400)',
         fontSize: '0.85rem',
       }}
     >
@@ -64,14 +64,14 @@ export const PanelEmpty: React.FC<PanelEmptyProps> = ({ icon: Icon = Inbox, titl
         justifyContent: 'center',
         height,
         padding: '2rem',
-        color: '#94a3b8',
+        color: 'var(--slate-400)',
         textAlign: 'center',
         gap: '0.75rem',
       }}
     >
       <Icon size={36} color="#475569" />
       {title && (
-        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#cbd5e1' }}>{title}</div>
+        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--slate-300)' }}>{title}</div>
       )}
       <div style={{ fontSize: '0.85rem', maxWidth: 420 }}>{message}</div>
       {action && (

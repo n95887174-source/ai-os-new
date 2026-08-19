@@ -26,22 +26,22 @@ const StatsPanel: React.FC<Props> = ({ stats }) => (
         }}
     >
         <div>
-            <span style={{ color: '#64748b' }}>Files:</span>{' '}
-            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{stats.total}</span>
+            <span style={{ color: 'var(--slate-500)' }}>Files:</span>{' '}
+            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>{stats.total}</span>
         </div>
         <div>
-            <span style={{ color: '#64748b' }}>Code:</span>{' '}
+            <span style={{ color: 'var(--slate-500)' }}>Code:</span>{' '}
             <span style={{ color: '#60a5fa', fontWeight: 700 }}>{stats.codeFiles}</span>
         </div>
         <div>
-            <span style={{ color: '#64748b' }}>Lines:</span>{' '}
-            <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+            <span style={{ color: 'var(--slate-500)' }}>Lines:</span>{' '}
+            <span style={{ color: 'var(--slate-50)', fontWeight: 700 }}>
                 {stats.totalLines.toLocaleString()}
             </span>
         </div>
         <div>
-            <span style={{ color: '#64748b' }}>Size:</span>{' '}
-            <span style={{ color: '#f8fafc', fontWeight: 700 }}>{formatSize(stats.totalSize)}</span>
+            <span style={{ color: 'var(--slate-500)' }}>Size:</span>{' '}
+            <span style={{ color: 'var(--slate-50)', fontWeight: 700 }}>{formatSize(stats.totalSize)}</span>
         </div>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {stats.byExt.slice(0, 7).map(([ext, count]) => (
@@ -51,7 +51,7 @@ const StatsPanel: React.FC<Props> = ({ stats }) => (
                         background: 'rgba(100,116,139,0.15)',
                         padding: '0.1rem 0.3rem',
                         borderRadius: 2,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     .{ext} {count}

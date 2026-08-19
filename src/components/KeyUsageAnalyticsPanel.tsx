@@ -23,7 +23,7 @@ const StatCard: React.FC<{
 }> = ({ label, value, icon, color }) => (
     <div
         style={{
-            background: '#1e293b',
+            background: 'var(--slate-800)',
             borderRadius: 10,
             padding: 14,
             display: 'flex',
@@ -48,7 +48,7 @@ const StatCard: React.FC<{
         </div>
         <div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>{value}</div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>{label}</div>
+            <div style={{ fontSize: 12, color: 'var(--slate-400)' }}>{label}</div>
         </div>
     </div>
 );
@@ -73,7 +73,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
             <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 600 }}>
                 Key Usage Analytics
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Usage statistics across all providers and keys
             </p>
 
@@ -123,7 +123,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                 />
             </div>
 
-            <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: 'var(--slate-400)' }}>
                 Per-Provider Breakdown
             </h3>
             <div style={{ marginBottom: 20 }}>
@@ -131,7 +131,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                     <div
                         key={b.provider}
                         style={{
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 8,
                             padding: 12,
                             marginBottom: 6,
@@ -165,7 +165,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                         <div
                             style={{
                                 height: 6,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 borderRadius: 3,
                                 overflow: 'hidden',
                                 marginBottom: 6,
@@ -180,7 +180,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                                 }}
                             />
                         </div>
-                        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#64748b' }}>
+                        <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--slate-500)' }}>
                             <span>{b.requestCount.toLocaleString()} requests</span>
                             <span>{(b.tokenCount / 1000000).toFixed(1)}M tokens</span>
                             <span>{b.avgLatency}ms avg</span>
@@ -192,7 +192,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                 ))}
             </div>
 
-            <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: 'var(--slate-400)' }}>
                 7-Day Usage Trend
             </h3>
             <div
@@ -221,7 +221,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                                 style={{
                                     width: '100%',
                                     height: barH,
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                     borderRadius: '4px 4px 0 0',
                                     opacity: 0.6 + (barH / 70) * 0.4,
                                     minHeight: 8,
@@ -230,7 +230,7 @@ const KeyUsageAnalyticsContent: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: 9,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     transform: 'rotate(-45deg)',
                                     whiteSpace: 'nowrap',
                                 }}

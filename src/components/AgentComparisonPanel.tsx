@@ -109,7 +109,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                     justifyContent: 'center',
                     height: 200,
                     gap: 8,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <Loader2 size={20} className="animate-spin" />
@@ -142,7 +142,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                 >
                     <BarChart3 size={20} color="#a855f7" /> Agent Comparison Tool
                 </h2>
-                <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                     Select up to 2 agents to compare side by side
                 </p>
             </div>
@@ -152,7 +152,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                     display: 'flex',
                     gap: 8,
                     alignItems: 'center',
-                    background: '#0f172a',
+                    background: 'var(--slate-900)',
                     borderRadius: 8,
                     padding: '8px 12px',
                 }}
@@ -166,7 +166,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                         flex: 1,
                         background: 'none',
                         border: 'none',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: 13,
                         outline: 'none',
                     }}
@@ -192,7 +192,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                             key={agent.id}
                             onClick={() => toggle(agent.id)}
                             style={{
-                                background: '#1e293b',
+                                background: 'var(--slate-800)',
                                 borderRadius: 12,
                                 border: isSelected
                                     ? '2px solid #a855f7'
@@ -220,7 +220,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                                         url={identity.avatar.url}
                                     />
                                     <span
-                                        style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 700, fontSize: 14, color: 'var(--slate-200)' }}
                                     >
                                         {agent.name}
                                     </span>
@@ -240,7 +240,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                                     {agent.status}
                                 </div>
                             </div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+                            <div style={{ fontSize: 12, color: 'var(--slate-500)', marginBottom: 10 }}>
                                 {agent.role}
                             </div>
                             <div
@@ -249,7 +249,7 @@ const AgentComparisonPanelContent: React.FC = () => {
                                     gridTemplateColumns: '1fr 1fr',
                                     gap: 6,
                                     fontSize: 12,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

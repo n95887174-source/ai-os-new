@@ -68,7 +68,7 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
                     {ASPECT_ICONS[guardian.aspect]}
                 </div>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1.05rem' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '1.05rem' }}>
                         {guardian.name}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: accentColor, fontWeight: 600 }}>
@@ -89,40 +89,26 @@ const GuardianCard: React.FC<{ guardian: IGuardian }> = ({ guardian }) => {
             <div
                 style={{
                     fontSize: '0.82rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontStyle: 'italic',
                     lineHeight: 1.4,
                 }}
             >
-                "
-                {guardian.aspect === 'speed'
-                    ? 'Мгновенно — это единственная скорость'
-                    : guardian.aspect === 'security'
-                      ? 'Доверяй, но проверяй'
-                      : guardian.aspect === 'power'
-                        ? 'Нет задач, которые нельзя решить'
-                        : guardian.aspect === 'routing'
-                          ? 'Все дороги ведут к ответу'
-                          : guardian.aspect === 'cost'
-                            ? 'Мудрость приходит с ценой'
-                            : guardian.aspect === 'local'
-                              ? 'Лучший сервер — твой'
-                              : 'Вдохновение — точная наука'}
-                "
+                {t(`guardians.motto_${guardian.aspect}`)}
             </div>
 
             {status.providerCount > 0 && (
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)' }}>
                     {t('guardians.providers')}:{' '}
-                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--slate-200)', fontWeight: 600 }}>
                         {status.providers.join(', ')}
                     </span>
                 </div>
             )}
 
             {status.providerCount === 0 && (
-                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                    No bound providers — watches all
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
+                    {t('guardians.no_providers')}
                 </div>
             )}
 
@@ -165,13 +151,13 @@ const GuardiansPanel: React.FC = () => {
                     style={{
                         fontSize: '1.5rem',
                         fontWeight: 700,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginBottom: '0.25rem',
                     }}
                 >
                     {t('guardians.title')}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                     {t('guardians.subtitle')}
                 </div>
             </div>

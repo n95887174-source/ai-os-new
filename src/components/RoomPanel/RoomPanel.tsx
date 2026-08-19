@@ -10,6 +10,7 @@ import type {
 import { invocationEngine } from '../../kernel/instances/services-extras';
 import { agentService } from '../../kernel/instances/services-core';
 import { useInvocationStore } from '../../stores/invocationStore';
+import { StatusBadge, Button } from '../../components/Common';
 
 interface AgentOption {
     id: string;
@@ -84,8 +85,18 @@ const FIELD: React.CSSProperties = {
 const RoomPanel: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { invocations, order, feed, costs, selectedId, select, clearView, clearHistory } =
-        useInvocationStore();
+    const invocations = useInvocationStore((s) => s.invocations);
+    const order = useInvocationStore((s) => s.order);
+    const feed = useInvocationStore((s) => s.feed);
+    const costs = useInvocationStore((s) => s.costs);
+    const selectedId = useInvocationStore((s) => s.selectedId);
+    const select = useInvocationStore((s) => s.select);
+    const clearView = useInvocationStore((s) => s.clearView);
+    const clearHistory = useInvocationStore((s) => s.clearHistory);
+    // FX-04: the "Details" affordance exposes internal entity IDs / policyRef /
+    // sessionRef to end users. Gate it behind dev-only so production users see
+    // only human-meaningful labels (sessionRef.kind is already in the subtitle).
+    const showDebugDetails = import.meta.env?.DEV ?? false;
 
     const [agents] = useState<AgentOption[]>(() => {
         try {
@@ -105,8 +116,12 @@ const RoomPanel: React.FC = () => {
     // Load persisted invocations (history survives page reload) and merge with
     // live events by id — no duplicates because both key on the same id.
     useEffect(() => {
+        useInvocationStore.getState?.()?.ensureSubscribed?.();
         void useInvocationStore.getState().loadHistory();
         void useInvocationStore.getState().loadCosts();
+        return () => {
+            useInvocationStore.getState?.()?.destroy?.();
+        };
     }, []);
 
     const openSession = (ref: ExecutionTarget) => {
@@ -148,7 +163,10 @@ const RoomPanel: React.FC = () => {
             const inv = await invocationEngine.invoke(req);
             setMeta((m) => ({ ...m, [inv.id]: { task: task.trim() } }));
         } catch (e) {
-            setError(String(e));
+            // Raw error is internal detail — surface a safe message, log the
+            // cause for diagnostics (FX-03).
+            console.error('RoomPanel: invocation failed', e);
+            setError(t('room.error.generic'));
         }
     };
 
@@ -239,7 +257,9 @@ const RoomPanel: React.FC = () => {
                 </label>
 
                 <div style={{ marginTop: 10 }}>
-                    <button onClick={handleInvoke}>{t('room.invoke.submit')}</button>
+                    <Button variant="primary" onClick={handleInvoke}>
+                        {t('room.invoke.submit')}
+                    </Button>
                 </div>
                 {error && (
                     <div style={{ color: '#f87171', fontSize: '0.78rem', marginTop: 8 }}>
@@ -251,117 +271,128 @@ const RoomPanel: React.FC = () => {
             {/* ── Invocation lifecycle list (read-only observer) ── */}
             <h3 style={{ margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {t('room.invocations.heading')}
-                <button onClick={() => clearHistory()} style={{ fontSize: '0.7rem' }}>
+                <Button variant="ghost" size="sm" onClick={() => clearHistory()}>
                     {t('room.clearHistory')}
-                </button>
+                </Button>
             </h3>
             {order.length === 0 && (
                 <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>
                     {t('room.invocations.empty')}
                 </div>
             )}
-            {order.map((id) => {
-                const v = invocations[id]!;
-                const name = agentLabel(v);
-                const whereLabel = v.context ? t(`room.invoke.where.${v.context.type}`) : '';
-                const taskText = meta[id]?.task ?? v.reason;
-                const isOpen = !!openDetails[id];
-                return (
-                    <div
-                        key={id}
-                        onClick={() => select(id)}
-                        style={{
-                            ...LOG_ROW,
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            alignItems: 'flex-start',
-                            cursor: 'pointer',
-                            borderColor: id === activeId ? 'rgba(34,211,238,0.7)' : undefined,
-                            background: id === activeId ? 'rgba(34,211,238,0.12)' : undefined,
-                        }}
-                    >
-                        <div style={AVATAR}>{name.charAt(0).toUpperCase()}</div>
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                            <div style={{ fontWeight: 600 }}>{name}</div>
-                            <div style={{ opacity: 0.75, fontSize: '0.74rem' }}>
-                                {whereLabel}
-                                {v.sessionRef ? ` · ${v.sessionRef.kind}` : ''}
-                            </div>
-                            {taskText && (
-                                <div
-                                    style={{
-                                        opacity: 0.85,
-                                        fontSize: '0.74rem',
-                                        marginTop: 2,
-                                    }}
-                                >
-                                    “{taskText}”
-                                </div>
-                            )}
-                            {v.rejectionReason && (
-                                <div
-                                    style={{ color: '#f87171', fontSize: '0.74rem', marginTop: 2 }}
-                                >
-                                    {v.rejectionReason}
-                                </div>
-                            )}
-                            {isOpen && (
-                                <div
-                                    style={{
-                                        fontFamily: 'monospace',
-                                        opacity: 0.6,
-                                        fontSize: '0.7rem',
-                                        marginTop: 4,
-                                    }}
-                                >
-                                    <div>id: {id.slice(0, 8)}</div>
-                                    {v.policyRef && <div>policy: {v.policyRef.slice(0, 8)}</div>}
-                                    {v.sessionRef && (
-                                        <div>
-                                            session: {v.sessionRef.kind}/
-                                            {v.sessionRef.ref.slice(0, 8)}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <span className={`badge status-${v.status}`}>
-                            {t(`room.status.${v.status}`)}
-                        </span>
-                        {costs[id] != null && (
-                            <span
-                                className="badge"
-                                style={{ opacity: 0.8, fontSize: '0.68rem' }}
-                                title={`${t('room.invocation.cost')}`}
-                            >
-                                {t('room.invocation.cost')}: ${costs[id]!.toFixed(4)}
-                            </span>
-                        )}
-                        {v.sessionRef &&
-                        (v.sessionRef.kind === 'conversation' || v.sessionRef.kind === 'debate') ? (
-                            <button
-                                onClick={() => openSession(v.sessionRef!)}
-                                style={{ fontSize: '0.68rem' }}
-                            >
-                                {t('room.invocation.openSession')}
-                            </button>
-                        ) : null}
-                        <button
-                            onClick={() => setOpenDetails((o) => ({ ...o, [id]: !o[id] }))}
-                            style={{ fontSize: '0.68rem' }}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {order.map((id) => {
+                    const v = invocations[id]!;
+                    const name = agentLabel(v);
+                    const whereLabel = v.context ? t(`room.invoke.where.${v.context.type}`) : '';
+                    const taskText = meta[id]?.task ?? v.reason;
+                    const isOpen = !!openDetails[id];
+                    return (
+                        <li
+                            key={id}
+                            onClick={() => select(id)}
+                            style={{
+                                ...LOG_ROW,
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'flex-start',
+                                cursor: 'pointer',
+                                borderColor: id === activeId ? 'rgba(34,211,238,0.7)' : undefined,
+                                background: id === activeId ? 'rgba(34,211,238,0.12)' : undefined,
+                            }}
                         >
-                            {t('room.invocation.details')}
-                        </button>
-                    </div>
-                );
-            })}
+                            <div style={AVATAR}>{name.charAt(0).toUpperCase()}</div>
+                            <div style={{ flex: 1, minWidth: 200 }}>
+                                <div style={{ fontWeight: 600 }}>{name}</div>
+                                <div style={{ opacity: 0.75, fontSize: '0.74rem' }}>
+                                    {whereLabel}
+                                    {v.sessionRef ? ` · ${v.sessionRef.kind}` : ''}
+                                </div>
+                                {taskText && (
+                                    <div
+                                        style={{
+                                            opacity: 0.85,
+                                            fontSize: '0.74rem',
+                                            marginTop: 2,
+                                        }}
+                                    >
+                                        “{taskText}”
+                                    </div>
+                                )}
+                                {v.rejectionReason && (
+                                    <div
+                                        style={{
+                                            color: '#f87171',
+                                            fontSize: '0.74rem',
+                                            marginTop: 2,
+                                        }}
+                                    >
+                                        {v.rejectionReason}
+                                    </div>
+                                )}
+                                {isOpen && (
+                                    <div
+                                        style={{
+                                            fontFamily: 'monospace',
+                                            opacity: 0.6,
+                                            fontSize: '0.7rem',
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        <div>id: {id.slice(0, 8)}</div>
+                                        {v.policyRef && (
+                                            <div>policy: {v.policyRef.slice(0, 8)}</div>
+                                        )}
+                                        {v.sessionRef && (
+                                            <div>
+                                                session: {v.sessionRef.kind}/
+                                                {v.sessionRef.ref.slice(0, 8)}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <StatusBadge status={v.status} label={t(`room.status.${v.status}`)} />
+                            {costs[id] != null && (
+                                <span
+                                    className="badge"
+                                    style={{ opacity: 0.8, fontSize: '0.68rem' }}
+                                    title={`${t('room.invocation.cost')}`}
+                                >
+                                    {t('room.invocation.cost')}: ${costs[id]!.toFixed(4)}
+                                </span>
+                            )}
+                            {v.sessionRef &&
+                            (v.sessionRef.kind === 'conversation' ||
+                                v.sessionRef.kind === 'debate') ? (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openSession(v.sessionRef!)}
+                                >
+                                    {t('room.invocation.openSession')}
+                                </Button>
+                            ) : null}
+                            {showDebugDetails && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setOpenDetails((o) => ({ ...o, [id]: !o[id] }))}
+                                >
+                                    {t('room.invocation.details')}
+                                </Button>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
 
             {/* ── Live output from the execution subsystem (scoped to session) ── */}
             <h3 style={{ margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {t('room.feed.heading')}
-                <button onClick={() => clearView()} style={{ fontSize: '0.7rem' }}>
+                <Button variant="ghost" size="sm" onClick={() => clearView()}>
                     {t('room.clearView')}
-                </button>
+                </Button>
             </h3>
             {activeSessionRef && activeId && (
                 <div style={{ opacity: 0.6, fontSize: '0.72rem', marginBottom: 6 }}>
@@ -379,7 +410,7 @@ const RoomPanel: React.FC = () => {
             {scopedFeed.length === 0 && (
                 <div style={{ opacity: 0.5, fontSize: '0.8rem' }}>{t('room.feed.empty')}</div>
             )}
-            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+            <div style={{ maxHeight: 240, overflowY: 'auto' }} role="log" aria-live="polite">
                 {scopedFeed.map((e, i) => (
                     <div key={i} style={LOG_ROW}>
                         <span style={{ opacity: 0.6 }}>{new Date(e.at).toLocaleTimeString()}</span>

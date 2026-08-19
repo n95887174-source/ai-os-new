@@ -32,7 +32,7 @@ const ResultsTableSection: React.FC<Props> = ({
     if (sortedResults.length === 0) {
         return (
             <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem 1.25rem' }}>
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-600)' }}>
                     {running
                         ? 'Running experiment cells...'
                         : 'Select providers, models, and strategies, then run.'}
@@ -76,13 +76,13 @@ const ResultsTableSection: React.FC<Props> = ({
                                 background: i % 2 === 0 ? 'rgba(0,0,0,0.08)' : 'transparent',
                             }}
                         >
-                            <td style={{ ...tdStyle, textAlign: 'left', color: '#f59e0b' }}>
+                            <td style={{ ...tdStyle, textAlign: 'left', color: 'var(--warning)' }}>
                                 {r.provider}
                             </td>
                             <td style={{ ...tdStyle, textAlign: 'left', color: '#60a5fa' }}>
                                 {r.model}
                             </td>
-                            <td style={{ ...tdStyle, textAlign: 'left', color: '#94a3b8' }}>
+                            <td style={{ ...tdStyle, textAlign: 'left', color: 'var(--slate-400)' }}>
                                 {r.strategy}
                             </td>
                             <td style={tdStyle}>{r.avgLatency}ms</td>

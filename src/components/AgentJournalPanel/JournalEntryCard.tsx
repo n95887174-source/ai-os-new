@@ -90,7 +90,7 @@ export const JournalEntryCard: React.FC<JournalEntryCardProps> = memo(
                                 style={{
                                     padding: '0.05rem 0.4rem',
                                     borderRadius: 8,
-                                    background: 'rgba(139,92,246,0.1)',
+                                    background: 'var(--purple-tint)',
                                     color: '#c4b5fd',
                                     fontSize: '0.6rem',
                                 }}
@@ -110,7 +110,7 @@ export const JournalEntryCard: React.FC<JournalEntryCardProps> = memo(
                             padding: '0.2rem 0.5rem',
                             borderRadius: 6,
                             border: '1px solid rgba(59,130,246,0.3)',
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             color: '#93c5fd',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
@@ -124,7 +124,7 @@ export const JournalEntryCard: React.FC<JournalEntryCardProps> = memo(
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             padding: 4,
                         }}

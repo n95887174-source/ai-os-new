@@ -23,7 +23,7 @@ const tabMeta = (t: ReturnType<typeof useTranslation>['t']) => [
         key: 'providers' as const,
         icon: Server,
         label: (count?: number) => t('pressure_map.tab.providers', { count: count ?? 0 }),
-        color: '#3b82f6',
+        color: 'var(--accent)',
     },
     {
         key: 'sessions' as const,
@@ -60,7 +60,7 @@ const PressureMapPanel: React.FC = () => {
 
     if (!snapshot) {
         return (
-            <div style={{ padding: 24, color: '#64748b', textAlign: 'center' }}>
+            <div style={{ padding: 24, color: 'var(--slate-500)', textAlign: 'center' }}>
                 {t('pressure_map.loading_text')}
             </div>
         );
@@ -72,7 +72,7 @@ const PressureMapPanel: React.FC = () => {
     const tabBtnStyle = (key: string, color: string): React.CSSProperties => ({
         ...TAB_BTN,
         background: activeTab === key ? `${color}26` : 'transparent',
-        color: activeTab === key ? color : '#94a3b8',
+        color: activeTab === key ? color : 'var(--slate-400)',
         borderColor: activeTab === key ? `${color}66` : 'rgba(148,163,184,0.15)',
     });
 
@@ -92,7 +92,7 @@ const PressureMapPanel: React.FC = () => {
                     {t('pressure_map.runtime_title')}
                 </h2>
             </div>
-            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: '#64748b' }}>
+            <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                 {t('pressure_map.subtitle')}
             </p>
 
@@ -120,7 +120,7 @@ const PressureMapPanel: React.FC = () => {
                     style={{
                         ...TAB_BTN,
                         background: 'rgba(255,255,255,0.05)',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         border: '1px solid rgba(255,255,255,0.1)',
                     }}
                 >
@@ -165,7 +165,7 @@ const PressureMapPanel: React.FC = () => {
                             gap: 16,
                             marginTop: 8,
                             fontSize: '0.7rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <span>
@@ -195,14 +195,14 @@ const PressureMapPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: 8,
                             }}
                         >
                             {t('pressure_map.providers_label')}
                         </div>
                         {snapshot.providers.length === 0 ? (
-                            <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
                                 {t('pressure_map.no_providers')}
                             </div>
                         ) : (
@@ -225,14 +225,14 @@ const PressureMapPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: 8,
                             }}
                         >
                             {t('pressure_map.sessions_label')}
                         </div>
                         {snapshot.sessions.length === 0 ? (
-                            <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
                                 {t('pressure_map.no_sessions')}
                             </div>
                         ) : (
@@ -261,7 +261,7 @@ const PressureMapPanel: React.FC = () => {
                 >
                     {snapshot.providers.length === 0 ? (
                         <div
-                            style={{ ...CARD, textAlign: 'center', color: '#64748b', padding: 40 }}
+                            style={{ ...CARD, textAlign: 'center', color: 'var(--slate-500)', padding: 40 }}
                         >
                             {t('pressure_map.no_provider_data')}
                         </div>
@@ -286,7 +286,7 @@ const PressureMapPanel: React.FC = () => {
                                             style={{
                                                 fontWeight: 600,
                                                 fontSize: '0.85rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {p.provider}
@@ -323,7 +323,7 @@ const PressureMapPanel: React.FC = () => {
                 >
                     {snapshot.sessions.length === 0 ? (
                         <div
-                            style={{ ...CARD, textAlign: 'center', color: '#64748b', padding: 40 }}
+                            style={{ ...CARD, textAlign: 'center', color: 'var(--slate-500)', padding: 40 }}
                         >
                             {t('pressure_map.no_session_data')}
                         </div>
@@ -348,7 +348,7 @@ const PressureMapPanel: React.FC = () => {
                                             style={{
                                                 fontWeight: 600,
                                                 fontSize: '0.85rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {s.topic || s.sessionId.slice(0, 16)}

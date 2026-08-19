@@ -4,9 +4,8 @@
  */
 
 import { genId } from '../../utils/gen-id';
-import type { IDatabaseService } from '../types/interfaces';
+import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import { BucketStorageAdapter } from './storage-adapter';
-import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 // Note: rootLogger is re-exported from ../instances for DI consumers
@@ -148,9 +147,11 @@ export class PersonaService {
     private activeTone: TonePreset = 'friendly';
     private isInitialized = false;
     private _database: IDatabaseService | null = null;
+    private _eventBus: IEventBus | null = null;
 
-    constructor(database?: IDatabaseService) {
+    constructor(database?: IDatabaseService, eventBus?: IEventBus) {
         this._database = database ?? null;
+        this._eventBus = eventBus ?? null;
     }
 
     /** Inject database after construction (for DI registration).
@@ -270,7 +271,7 @@ export class PersonaService {
      */
     setActive(personaId: string | null): void {
         this.activePersonaId = personaId;
-        EventBus.emit(EVENTS.PERSONA_CHANGED, {
+        this._eventBus?.emit(EVENTS.PERSONA_CHANGED, {
             personaId,
             persona: personaId ? this.getById(personaId) : null,
         });
@@ -282,7 +283,7 @@ export class PersonaService {
      */
     setTone(tone: TonePreset): void {
         this.activeTone = tone;
-        EventBus.emit(EVENTS.PERSONA_TONE_CHANGED, { tone });
+        this._eventBus?.emit(EVENTS.PERSONA_TONE_CHANGED, { tone });
         LOGGER.info('PersonaService', 'Tone changed', { tone });
     }
 
@@ -317,7 +318,7 @@ export class PersonaService {
 
         this.personas.set(id, persona);
         await this.saveCustomPersonas();
-        EventBus.emit(EVENTS.PERSONA_CREATED, persona);
+        this._eventBus?.emit(EVENTS.PERSONA_CREATED, persona);
         LOGGER.info('PersonaService', 'Custom persona created', { id, name: persona.name });
         return persona;
     }
@@ -340,7 +341,7 @@ export class PersonaService {
 
         this.personas.set(id, updated);
         await this.saveCustomPersonas();
-        EventBus.emit(EVENTS.PERSONA_UPDATED, updated);
+        this._eventBus?.emit(EVENTS.PERSONA_UPDATED, updated);
         LOGGER.info('PersonaService', 'Persona updated', { id });
         return updated;
     }
@@ -359,7 +360,7 @@ export class PersonaService {
         }
 
         await this.saveCustomPersonas();
-        EventBus.emit(EVENTS.PERSONA_DELETED, { id });
+        this._eventBus?.emit(EVENTS.PERSONA_DELETED, { id });
         LOGGER.info('PersonaService', 'Persona deleted', { id });
         return true;
     }

@@ -75,12 +75,12 @@ const RouterTraceView: React.FC = () => {
             >
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <GitBranch size={24} style={{ color: '#8b5cf6' }} />
+                        <GitBranch size={24} style={{ color: 'var(--purple)' }} />
                         <div>
-                            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                                 {t('router_trace.title')}
                             </div>
-                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                                 {t('router_trace.subtitle')}
                             </div>
                         </div>
@@ -94,7 +94,7 @@ const RouterTraceView: React.FC = () => {
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -119,10 +119,10 @@ const RouterTraceView: React.FC = () => {
                 <div className="glass-panel" style={liveFeedPanel}>
                     <div style={cardHeaderRow}>
                         <Activity size={16} style={{ color: '#a855f7' }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {t('router_trace.live_decisions')}
                         </span>
-                        <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginLeft: 'auto' }}>
                             {filteredDecisions.length}
                         </span>
                     </div>
@@ -154,7 +154,7 @@ const RouterTraceView: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.6rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     fontFamily: 'monospace',
                                                 }}
                                             >
@@ -163,7 +163,7 @@ const RouterTraceView: React.FC = () => {
                                             <span
                                                 style={{
                                                     ...tagSmall,
-                                                    background: 'rgba(139,92,246,0.1)',
+                                                    background: 'var(--purple-tint)',
                                                     color: '#a855f7',
                                                 }}
                                             >
@@ -176,7 +176,7 @@ const RouterTraceView: React.FC = () => {
                                                         padding: '0.1rem 0.35rem',
                                                         borderRadius: 3,
                                                         background: 'rgba(245,158,11,0.15)',
-                                                        color: '#f59e0b',
+                                                        color: 'var(--warning)',
                                                         fontWeight: 600,
                                                     }}
                                                 >
@@ -190,7 +190,7 @@ const RouterTraceView: React.FC = () => {
                                                         padding: '0.1rem 0.35rem',
                                                         borderRadius: 3,
                                                         background: 'rgba(239,68,68,0.15)',
-                                                        color: '#ef4444',
+                                                        color: 'var(--error)',
                                                         fontWeight: 700,
                                                     }}
                                                 >
@@ -215,7 +215,7 @@ const RouterTraceView: React.FC = () => {
                                                 <span
                                                     style={{
                                                         fontSize: '0.6rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         marginLeft: 'auto',
                                                     }}
                                                 >
@@ -237,7 +237,7 @@ const RouterTraceView: React.FC = () => {
                             style={{
                                 textAlign: 'center',
                                 padding: '2rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.8rem',
                             }}
                         >

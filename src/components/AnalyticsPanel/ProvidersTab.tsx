@@ -75,7 +75,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                             margin: 0,
                                             fontSize: '1.1rem',
                                             fontWeight: 800,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                         }}
                                     >
                                         {m.id}
@@ -83,7 +83,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginTop: '0.2rem',
                                         }}
                                     >
@@ -116,7 +116,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '0.4rem',
                                         textTransform: 'uppercase',
                                         fontWeight: 700,
@@ -135,7 +135,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                     <span
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -165,7 +165,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '0.4rem',
                                         textTransform: 'uppercase',
                                         fontWeight: 700,
@@ -184,7 +184,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                     <span
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -215,7 +215,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '0.4rem',
                                         textTransform: 'uppercase',
                                         fontWeight: 700,
@@ -234,7 +234,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                     <span
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -265,7 +265,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '0.4rem',
                                         textTransform: 'uppercase',
                                         fontWeight: 700,
@@ -284,7 +284,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                     <span
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -305,7 +305,7 @@ export const ProvidersTab: React.FC<ProvidersTabProps> = ({ metrics, itemVariant
                                             height: '100%',
                                             borderRadius: 2,
                                             width: `${Math.min(m.selectionRate * 100, 100)}%`,
-                                            background: '#3b82f6',
+                                            background: 'var(--accent)',
                                         }}
                                     />
                                 </div>

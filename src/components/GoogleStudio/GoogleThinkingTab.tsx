@@ -87,10 +87,10 @@ export function GoogleThinkingTab({ model }: GoogleThinkingTabProps) {
                     style={{
                         marginTop: 12,
                         padding: 8,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         borderRadius: 8,
                         fontSize: 12,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     }}
                 >
                     {error}

@@ -24,7 +24,7 @@ const tableStyle: React.CSSProperties = {
 
 const headerCell: React.CSSProperties = {
   padding: '0.55rem 0.65rem',
-  color: '#94a3b8',
+  color: 'var(--slate-400)',
   fontSize: '0.75rem',
   fontWeight: 700,
   textAlign: 'left',
@@ -34,7 +34,7 @@ const headerCell: React.CSSProperties = {
 
 const cellStyle: React.CSSProperties = {
   padding: '0.6rem 0.65rem',
-  color: '#cbd5e1',
+  color: 'var(--slate-300)',
   fontSize: '0.8rem',
   verticalAlign: 'middle',
   borderBottom: '1px solid rgba(100,116,139,0.12)',
@@ -53,9 +53,9 @@ const ProbeResults: React.FC<ProbeResultsProps> = ({ results, availableAgents, e
 
   return (
     <div style={tableShell}>
-      <div style={{ padding: '0.65rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', borderBottom: '1px solid rgba(100,116,139,0.16)' }}>
+      <div style={{ padding: '0.65rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-400)', borderBottom: '1px solid rgba(100,116,139,0.16)' }}>
         Quick Test — responses
-        <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 500 }}>
+        <span style={{ marginLeft: 8, color: 'var(--slate-500)', fontWeight: 500 }}>
           {readyCount}/{results.size} ready
         </span>
       </div>
@@ -81,14 +81,14 @@ const ProbeResults: React.FC<ProbeResultsProps> = ({ results, availableAgents, e
             return (
               <React.Fragment key={id}>
                 <tr>
-                  <td style={{ ...cellStyle, color: '#e2e8f0', fontWeight: 700 }}>{name}</td>
+                  <td style={{ ...cellStyle, color: 'var(--slate-200)', fontWeight: 700 }}>{name}</td>
                   <td style={cellStyle}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: c, fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: c }} />
                       {r.status}
                     </span>
                   </td>
-                  <td style={{ ...cellStyle, color: '#94a3b8' }}>
+                  <td style={{ ...cellStyle, color: 'var(--slate-400)' }}>
                     {r.latency > 0 ? `${r.latency}ms` : '—'}
                   </td>
                   <td style={{ ...cellStyle, color: r.error ? '#fca5a5' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -98,7 +98,7 @@ const ProbeResults: React.FC<ProbeResultsProps> = ({ results, availableAgents, e
                     <button
                       onClick={() => onToggleProbe(isExpanded ? null : id)}
                       aria-label={isExpanded ? 'Collapse probe response' : 'Expand probe response'}
-                      style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(15,23,42,0.8)', color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(100,116,139,0.2)', background: 'rgba(15,23,42,0.8)', color: 'var(--slate-400)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     >
                       {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
@@ -111,7 +111,7 @@ const ProbeResults: React.FC<ProbeResultsProps> = ({ results, availableAgents, e
                         padding: '0.75rem',
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.18)',
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                         maxHeight: 180,

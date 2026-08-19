@@ -26,7 +26,7 @@ export const btnSecondary: React.CSSProperties = {
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'transparent',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     cursor: 'pointer',
     fontSize: '0.75rem',
     display: 'flex',

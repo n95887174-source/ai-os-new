@@ -14,8 +14,7 @@
 import type { IAgentResolver, ResolvedAgent } from '../contracts/conversation/agent-resolver';
 import type { ILensEngineService } from '../contracts/lens-engine';
 import { PROVIDER_DISPLAY_NAMES } from '../utils/provider-default-models';
-import { agentService } from '../instances/services-core';
-import { agentAvatarService } from '../instances/services-extras';
+import { AgentAvatarService } from './agent-avatar-service';
 
 export interface AgentAvatarView {
     emoji: string;
@@ -63,13 +62,13 @@ export function resolveAgentIdentity(
     id: string,
     deps: ResolveAgentIdentityDeps = {},
 ): AgentIdentityView {
-    const resolver = deps.resolver ?? agentService;
+    const resolver = deps.resolver;
     const lens = deps.lensEngine;
     const avatarGenerate =
         deps.avatarGenerate ??
         ((id: string) => {
             try {
-                const a = agentAvatarService.generate(id);
+                const a = new AgentAvatarService().generate(id);
                 return { emoji: a.emoji, color: a.color };
             } catch {
                 return NEUTRAL_AVATAR;

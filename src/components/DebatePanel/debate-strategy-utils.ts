@@ -12,9 +12,9 @@ import type {
 
 export const PRIMITIVE_META: Record<string, { color: string; label: string; description: string }> =
     {
-        sequence: { color: '#3b82f6', label: 'Sequence', description: 'Run steps in order' },
+        sequence: { color: 'var(--accent)', label: 'Sequence', description: 'Run steps in order' },
         debate_graph: {
-            color: '#8b5cf6',
+            color: 'var(--purple)',
             label: 'Debate Graph',
             description: 'Multi-agent interaction',
         },
@@ -23,9 +23,9 @@ export const PRIMITIVE_META: Record<string, { color: string; label: string; desc
             label: 'Critic Loop',
             description: 'Iterative refinement',
         },
-        voting: { color: '#f59e0b', label: 'Voting', description: 'Opinion tallying' },
+        voting: { color: 'var(--warning)', label: 'Voting', description: 'Opinion tallying' },
         peer_review: {
-            color: '#10b981',
+            color: 'var(--success)',
             label: 'Peer Review',
             description: 'Structured evaluation',
         },

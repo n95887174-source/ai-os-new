@@ -159,7 +159,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                             {node.name}
                         </span>
                         {node.type === 'file' && node.size != null && (
-                            <span style={{ fontSize: '0.6rem', color: '#475569' }}>
+                            <span style={{ fontSize: '0.6rem', color: 'var(--slate-600)' }}>
                                 {formatSize(node.size)}
                             </span>
                         )}
@@ -189,7 +189,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                         style={{
                             padding: '2rem',
                             textAlign: 'center',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             fontSize: '0.75rem',
                         }}
                     >
@@ -201,7 +201,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                             style={{
                                 padding: '0.35rem 0.75rem',
                                 fontSize: '0.65rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontWeight: 600,
                             }}
                         >
@@ -251,7 +251,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                     </div>
                 )
             ) : treeLoading ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-500)' }}>
                     <Loader2 size={16} />
                 </div>
             ) : tree.length === 0 ? (
@@ -259,7 +259,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                     style={{
                         padding: '2rem',
                         textAlign: 'center',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         fontSize: '0.75rem',
                     }}
                 >
@@ -276,7 +276,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                         left: contextMenu.x,
                         top: contextMenu.y,
                         zIndex: 10000,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 8,
                         padding: '0.25rem',
@@ -295,7 +295,7 @@ export const FileTreeSection: React.FC<FileTreeSectionProps> = ({
                             borderRadius: 4,
                             cursor: 'pointer',
                             fontSize: '0.75rem',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,

@@ -24,7 +24,7 @@ const EmptyHistoryState: React.FC<EmptyHistoryStateProps> = ({ t }) => (
                 marginBottom: '1.5rem',
                 fontSize: '1.2rem',
                 fontWeight: 800,
-                color: '#f8fafc',
+                color: 'var(--slate-50)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
@@ -39,14 +39,14 @@ const EmptyHistoryState: React.FC<EmptyHistoryStateProps> = ({ t }) => (
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 gap: '1rem',
                 padding: '4rem',
             }}
         >
             <Clock size={48} opacity={0.3} />
             <span style={textWeight600}>{t('debate.empty_history')}</span>
-            <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--slate-600)' }}>
                 {t('debate.empty_history_desc')}
             </span>
         </div>

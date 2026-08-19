@@ -10,10 +10,10 @@ import {
     dismissBtnRed,
     textMutedXs,
     textSecondaryXs,
-    button,
     input,
     selectBase,
 } from '../styles/common';
+import { Button } from './Common';
 import { PanelLoading } from './PanelStates';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -176,27 +176,26 @@ const WebhooksPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Webhook size={28} color="#a855f7" /> {t('webhooks.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('webhooks.subtitle')}
                     </p>
                 </div>
-                <button
+                <Button
                     onClick={() => setShowForm(!showForm)}
                     style={{
-                        ...button,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        background: showForm ? '#64748b' : '#a855f7',
+                        background: showForm ? 'var(--slate-500)' : 'var(--accent)',
                     }}
                 >
                     <Plus size={16} /> {showForm ? t('common.cancel') : t('webhooks.add')}
-                </button>
+                </Button>
             </div>
 
             <AnimatePresence>
@@ -230,7 +229,7 @@ const WebhooksPanel: React.FC = () => {
                         style={{
                             fontSize: '1rem',
                             fontWeight: 700,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             margin: '0 0 1rem',
                         }}
                     >
@@ -303,18 +302,16 @@ const WebhooksPanel: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                    <button
+                    <Button
                         onClick={handleAdd}
                         style={{
-                            ...button,
-                            background: '#a855f7',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
                         }}
                     >
                         <Plus size={16} /> {t('webhooks.add_webhook')}
-                    </button>
+                    </Button>
                 </motion.div>
             )}
 
@@ -323,7 +320,7 @@ const WebhooksPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '4rem 2rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                         fontStyle: 'italic',
                         border: '1px dashed rgba(255,255,255,0.1)',
@@ -331,7 +328,13 @@ const WebhooksPanel: React.FC = () => {
                     }}
                 >
                     <Webhook size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>
+                    <div
+                        style={{
+                            fontWeight: 600,
+                            marginBottom: '0.5rem',
+                            color: 'var(--slate-400)',
+                        }}
+                    >
                         {t('webhooks.empty')}
                     </div>
                     <div>{t('webhooks.empty_desc')}</div>
@@ -391,7 +394,7 @@ const WebhooksPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontWeight: 600,
-                                                color: '#f1f5f9',
+                                                color: 'var(--slate-100)',
                                                 fontSize: '0.9rem',
                                             }}
                                         >
@@ -416,7 +419,7 @@ const WebhooksPanel: React.FC = () => {
                                                 borderRadius: 6,
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 background: 'transparent',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 cursor: 'pointer',
                                                 fontSize: '0.75rem',
                                                 display: 'flex',
@@ -480,8 +483,8 @@ const WebhooksPanel: React.FC = () => {
                                                 padding: '0.15rem 0.4rem',
                                                 borderRadius: 4,
                                                 fontSize: '0.65rem',
-                                                background: 'rgba(168,85,247,0.1)',
-                                                color: '#a78bfa',
+                                                background: 'var(--purple-tint)',
+                                                color: 'var(--purple-muted)',
                                             }}
                                         >
                                             {evt}
@@ -497,7 +500,7 @@ const WebhooksPanel: React.FC = () => {
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     padding: '0.5rem',
                     borderTop: '1px solid rgba(255,255,255,0.05)',
                 }}

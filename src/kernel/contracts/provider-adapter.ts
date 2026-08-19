@@ -121,6 +121,12 @@ export interface ILLMClientChatOptions {
     tools?: Record<string, unknown>[];
     toolChoice?: string | { type: 'function'; function: { name: string } };
     responseFormat?: { type: 'text' | 'json_object' };
+    /** B-20: scopes the response cache by agent/session/role to avoid cross-agent contamination. */
+    cacheScope?: {
+        agentId?: string;
+        sessionId?: string;
+        role?: string;
+    };
 }
 
 export interface ILLMClientService {

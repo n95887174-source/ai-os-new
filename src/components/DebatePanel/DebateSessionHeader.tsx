@@ -4,7 +4,8 @@ import { debateEngine, rootLogger } from '../../kernel/instances';
 const LOGGER = rootLogger.child('DebateSessionHeader');
 import type { DebateSession } from '../../kernel/instances';
 import { buildDebateMarkdown } from './debate-markdown';
-import { btnControlBase, debateStatusDot, debateStatusText, flexGap2 } from '../../styles/common';
+import { debateStatusDot, debateStatusText, flexGap2 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface DebateSessionHeaderProps {
     session: DebateSession;
@@ -131,7 +132,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                     {t('debate.round')
                         .replace('{0}', String(session.currentRound))
                         .replace('{1}', String(session.maxRounds))}
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
                         {' | '}
                         {session.arguments?.filter((a) => a.round === session.currentRound)
                             .length ?? 0}{' '}
@@ -152,7 +153,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                             return (
                                 <span
                                     style={{
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.7rem',
                                         fontFamily: 'monospace',
                                         marginLeft: 6,
@@ -188,12 +189,13 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
 
             <div style={flexGap2}>
                 {isActive ? (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handlePause}
                         className="btn-secondary"
                         style={{
-                            ...btnControlBase,
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             borderColor: 'rgba(245,158,11,0.2)',
                             background: 'rgba(245,158,11,0.05)',
                         }}
@@ -201,14 +203,15 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                         aria-label={t('debate.pause')}
                     >
                         <Pause size={18} aria-hidden="true" />
-                    </button>
+                    </Button>
                 ) : isPaused ? (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleResume}
                         className="btn-secondary"
                         style={{
-                            ...btnControlBase,
-                            color: '#10b981',
+                            color: 'var(--success)',
                             borderColor: 'rgba(16,185,129,0.2)',
                             background: 'rgba(16,185,129,0.05)',
                         }}
@@ -216,15 +219,16 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                         aria-label={t('debate.resume')}
                     >
                         <Play size={18} fill="currentColor" aria-hidden="true" />
-                    </button>
+                    </Button>
                 ) : null}
                 {!isTerminal && (
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleStop}
                         className="btn-secondary"
                         style={{
-                            ...btnControlBase,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             borderColor: 'rgba(239,68,68,0.2)',
                             background: 'rgba(239,68,68,0.05)',
                         }}
@@ -232,7 +236,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                         aria-label={t('debate.stop')}
                     >
                         <Square size={18} fill="currentColor" aria-hidden="true" />
-                    </button>
+                    </Button>
                 )}
                 {!isTerminal && (
                     <select
@@ -245,7 +249,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                             borderRadius: 6,
                             fontSize: '0.75rem',
                             background: 'rgba(30,30,50,0.8)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             border: '1px solid rgba(100,116,139,0.3)',
                             cursor: 'pointer',
                         }}
@@ -258,12 +262,13 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                 )}
                 {session.status === 'completed' && (
                     <div style={{ position: 'relative', display: 'inline-flex', gap: 0 }}>
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={handleExportJson}
                             className="btn-secondary"
                             style={{
-                                ...btnControlBase,
-                                color: '#3b82f6',
+                                color: 'var(--accent)',
                                 borderColor: 'rgba(59,130,246,0.2)',
                                 background: 'rgba(59,130,246,0.05)',
                                 borderTopRightRadius: 0,
@@ -273,13 +278,14 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                             aria-label="Export debate as JSON"
                         >
                             <Download size={18} aria-hidden="true" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={handleExportMarkdown}
                             className="btn-secondary"
                             style={{
-                                ...btnControlBase,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 borderColor: 'rgba(16,185,129,0.2)',
                                 background: 'rgba(16,185,129,0.05)',
                                 borderTopLeftRadius: 0,
@@ -290,7 +296,7 @@ export const DebateSessionHeader: React.FC<DebateSessionHeaderProps> = ({
                             aria-label="Export debate as Markdown"
                         >
                             <FileText size={18} aria-hidden="true" />
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>

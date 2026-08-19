@@ -18,7 +18,7 @@ const btn: React.CSSProperties = {
     padding: '8px 16px',
     borderRadius: 8,
     border: '1px solid rgba(255,255,255,0.1)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     cursor: 'pointer',
     fontSize: '0.8rem',
     fontWeight: 600,
@@ -31,7 +31,7 @@ const inputStyle: React.CSSProperties = {
     borderRadius: 8,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.85rem',
     outline: 'none',
 };
@@ -136,11 +136,11 @@ const EvalDatasetPanel: React.FC = () => {
             >
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('eval.title') || 'Evaluation Datasets'}
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('eval.subtitle') ||
                             'Create and run evaluation datasets against your models'}
                     </p>
@@ -201,7 +201,7 @@ const EvalDatasetPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: 40,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                     }}
                 >
@@ -219,8 +219,8 @@ const EvalDatasetPanel: React.FC = () => {
                             }}
                         >
                             <div>
-                                <div style={{ fontWeight: 600, color: '#e2e8f0' }}>{ds.name}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
+                                <div style={{ fontWeight: 600, color: 'var(--slate-200)' }}>{ds.name}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: 2 }}>
                                     {ds.description || 'No description'} &middot;{' '}
                                     {ds.prompts.length} prompts &middot; {ds.runs.length} runs
                                 </div>
@@ -265,10 +265,10 @@ const EvalDatasetPanel: React.FC = () => {
                                                 alignItems: 'center',
                                                 gap: 8,
                                                 fontSize: '0.8rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                             }}
                                         >
-                                            <BarChart3 size={14} style={{ color: '#3b82f6' }} />
+                                            <BarChart3 size={14} style={{ color: 'var(--accent)' }} />
                                             <span>
                                                 {run.provider || 'auto'} &middot;{' '}
                                                 {run.summary.passed}/{run.summary.total} passed
@@ -277,10 +277,10 @@ const EvalDatasetPanel: React.FC = () => {
                                             {run.summary.avgScore >= 0.7 ? (
                                                 <CheckCircle
                                                     size={14}
-                                                    style={{ color: '#10b981' }}
+                                                    style={{ color: 'var(--success)' }}
                                                 />
                                             ) : (
-                                                <XCircle size={14} style={{ color: '#ef4444' }} />
+                                                <XCircle size={14} style={{ color: 'var(--error)' }} />
                                             )}
                                         </div>
                                     ))}

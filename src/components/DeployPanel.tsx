@@ -129,7 +129,7 @@ const DeployPanelContent: React.FC = () => {
     const renderLogs = (logs: DeployLog[]) => (
         <div
             style={{
-                background: '#0f172a',
+                background: 'var(--slate-900)',
                 borderRadius: 6,
                 padding: '8px 12px',
                 fontFamily: 'JetBrains Mono, monospace',
@@ -152,7 +152,7 @@ const DeployPanelContent: React.FC = () => {
                         padding: '2px 0',
                     }}
                 >
-                    <span style={{ color: '#64748b' }}>
+                    <span style={{ color: 'var(--slate-500)' }}>
                         {new Date(log.timestamp).toLocaleTimeString()}
                     </span>{' '}
                     {log.message}
@@ -175,7 +175,7 @@ const DeployPanelContent: React.FC = () => {
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
                         Deploy to Production
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--slate-400)' }}>
                         Manage deployments and environments
                     </p>
                 </div>
@@ -186,7 +186,7 @@ const DeployPanelContent: React.FC = () => {
                         alignItems: 'center',
                         gap: 6,
                         padding: '8px 16px',
-                        background: '#3b82f6',
+                        background: 'var(--accent)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 8,
@@ -230,7 +230,7 @@ const DeployPanelContent: React.FC = () => {
             {showForm && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 10,
                         padding: 16,
                         marginBottom: 16,
@@ -244,7 +244,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -262,7 +262,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -285,7 +285,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -303,7 +303,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -328,7 +328,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -345,7 +345,7 @@ const DeployPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 11,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'block',
                                     marginBottom: 4,
                                 }}
@@ -365,7 +365,7 @@ const DeployPanelContent: React.FC = () => {
                         <label
                             style={{
                                 fontSize: 11,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 display: 'block',
                                 marginBottom: 4,
                             }}
@@ -389,7 +389,7 @@ const DeployPanelContent: React.FC = () => {
                                 onClick={handleAddEnvVar}
                                 style={{
                                     padding: '6px 12px',
-                                    background: '#334155',
+                                    background: 'var(--slate-700)',
                                     border: 'none',
                                     borderRadius: 6,
                                     color: '#fff',
@@ -407,15 +407,15 @@ const DeployPanelContent: React.FC = () => {
                                     gap: 8,
                                     alignItems: 'center',
                                     padding: '4px 8px',
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     borderRadius: 4,
                                     marginBottom: 4,
                                     fontSize: 12,
                                 }}
                             >
-                                <span style={{ color: '#f59e0b', fontWeight: 600 }}>{k}</span>
-                                <span style={{ color: '#94a3b8' }}>=</span>
-                                <span style={{ color: '#22c55e' }}>{v}</span>
+                                <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{k}</span>
+                                <span style={{ color: 'var(--slate-400)' }}>=</span>
+                                <span style={{ color: 'var(--success)' }}>{v}</span>
                                 <button
                                     onClick={() => {
                                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -426,7 +426,7 @@ const DeployPanelContent: React.FC = () => {
                                         marginLeft: 'auto',
                                         background: 'none',
                                         border: 'none',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                         padding: 2,
                                     }}
@@ -442,7 +442,7 @@ const DeployPanelContent: React.FC = () => {
                         style={{
                             marginTop: 12,
                             padding: '8px 20px',
-                            background: '#22c55e',
+                            background: 'var(--success)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 8,
@@ -458,7 +458,7 @@ const DeployPanelContent: React.FC = () => {
 
             {/* ── Configs List ── */}
             <div style={{ marginBottom: 24 }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: 'var(--slate-400)' }}>
                     Deployment Configs
                 </h3>
                 {configs.length === 0 && (
@@ -466,7 +466,7 @@ const DeployPanelContent: React.FC = () => {
                         style={{
                             textAlign: 'center',
                             padding: 32,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: 13,
                         }}
                     >
@@ -482,18 +482,18 @@ const DeployPanelContent: React.FC = () => {
                             alignItems: 'center',
                             gap: 12,
                             padding: '10px 14px',
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 8,
                             marginBottom: 6,
                         }}
                     >
-                        <Rocket size={18} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                        <Rocket size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: 13 }}>{cfg.name}</div>
                             <div
                                 style={{
                                     fontSize: 11,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     display: 'flex',
                                     gap: 8,
                                     marginTop: 2,
@@ -514,7 +514,7 @@ const DeployPanelContent: React.FC = () => {
                                 alignItems: 'center',
                                 gap: 4,
                                 padding: '6px 12px',
-                                background: '#22c55e',
+                                background: 'var(--success)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: 6,
@@ -533,7 +533,7 @@ const DeployPanelContent: React.FC = () => {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 cursor: 'pointer',
                                 padding: 4,
                             }}
@@ -546,7 +546,7 @@ const DeployPanelContent: React.FC = () => {
 
             {/* ── Deployments ── */}
             <div>
-                <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: 'var(--slate-400)' }}>
                     {selectedEnv === 'development'
                         ? 'Development'
                         : selectedEnv === 'staging'
@@ -559,7 +559,7 @@ const DeployPanelContent: React.FC = () => {
                         style={{
                             textAlign: 'center',
                             padding: 24,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: 13,
                         }}
                     >
@@ -573,7 +573,7 @@ const DeployPanelContent: React.FC = () => {
                         <div
                             key={dep.id}
                             style={{
-                                background: '#1e293b',
+                                background: 'var(--slate-800)',
                                 borderRadius: 10,
                                 padding: 12,
                                 marginBottom: 8,
@@ -625,7 +625,7 @@ const DeployPanelContent: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: 11,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginTop: 2,
                                             display: 'flex',
                                             gap: 8,
@@ -638,7 +638,7 @@ const DeployPanelContent: React.FC = () => {
                                             <>
                                                 <span>·</span>
                                                 <Globe size={11} />
-                                                <span style={{ color: '#3b82f6' }}>{dep.url}</span>
+                                                <span style={{ color: 'var(--accent)' }}>{dep.url}</span>
                                             </>
                                         )}
                                     </div>
@@ -679,7 +679,7 @@ const DeployPanelContent: React.FC = () => {
                                                 alignItems: 'center',
                                                 gap: 4,
                                                 padding: '4px 10px',
-                                                background: '#ef4444',
+                                                background: 'var(--error)',
                                                 color: '#fff',
                                                 border: 'none',
                                                 borderRadius: 6,
@@ -698,7 +698,7 @@ const DeployPanelContent: React.FC = () => {
                                 style={{
                                     marginTop: 8,
                                     height: 4,
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     borderRadius: 2,
                                     overflow: 'hidden',
                                 }}
@@ -723,25 +723,25 @@ const DeployPanelContent: React.FC = () => {
                                             gridTemplateColumns: '1fr 1fr',
                                             gap: 8,
                                             fontSize: 12,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 8,
                                         }}
                                     >
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Config: </span>
+                                            <span style={{ color: 'var(--slate-500)' }}>Config: </span>
                                             {dep.configId.slice(-8)}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Environment: </span>
+                                            <span style={{ color: 'var(--slate-500)' }}>Environment: </span>
                                             {dep.environment}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Commit: </span>
+                                            <span style={{ color: 'var(--slate-500)' }}>Commit: </span>
                                             {dep.commitHash?.slice(0, 8) || '-'}
                                         </div>
                                         {dep.rollbackTarget && (
                                             <div>
-                                                <span style={{ color: '#64748b' }}>
+                                                <span style={{ color: 'var(--slate-500)' }}>
                                                     Rollback from:{' '}
                                                 </span>
                                                 {dep.rollbackTarget.slice(-8)}
@@ -762,7 +762,7 @@ const DeployPanelContent: React.FC = () => {
 const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 10px',
-    background: '#0f172a',
+    background: 'var(--slate-900)',
     border: '1px solid #334155',
     borderRadius: 6,
     color: '#fff',

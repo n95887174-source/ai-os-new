@@ -78,11 +78,11 @@ const PromptSecurityPanel: React.FC = () => {
                 <ShieldAlert size={28} style={{ color: '#a855f7' }} />
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('security.title')}
                     </h2>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('security.subtitle')}
                     </p>
                 </div>
@@ -93,7 +93,7 @@ const PromptSecurityPanel: React.FC = () => {
                     style={{
                         margin: '0 0 8px',
                         fontSize: '0.9rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontWeight: 600,
                     }}
                 >
@@ -110,7 +110,7 @@ const PromptSecurityPanel: React.FC = () => {
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.3)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         fontFamily: 'monospace',
@@ -152,9 +152,9 @@ const PromptSecurityPanel: React.FC = () => {
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         {isDangerous ? (
-                            <ShieldAlert size={20} style={{ color: '#ef4444' }} />
+                            <ShieldAlert size={20} style={{ color: 'var(--error)' }} />
                         ) : (
-                            <ShieldCheck size={20} style={{ color: '#22c55e' }} />
+                            <ShieldCheck size={20} style={{ color: 'var(--success)' }} />
                         )}
                         <span
                             style={{
@@ -165,7 +165,7 @@ const PromptSecurityPanel: React.FC = () => {
                         >
                             {scanResult.summary}
                         </span>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#64748b' }}>
+                        <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                             {t('security.score')}: {scanResult.score}/10
                         </span>
                     </div>
@@ -194,7 +194,7 @@ const PromptSecurityPanel: React.FC = () => {
                                             style={{
                                                 fontSize: '0.8rem',
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {f.message}
@@ -228,11 +228,11 @@ const PromptSecurityPanel: React.FC = () => {
                                             style={{
                                                 marginTop: 6,
                                                 fontSize: '0.75rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                             }}
                                         >
                                             <div>
-                                                <span style={{ color: '#94a3b8' }}>Match: </span>
+                                                <span style={{ color: 'var(--slate-400)' }}>Match: </span>
                                                 <code
                                                     style={{
                                                         color: '#f87171',
@@ -246,7 +246,7 @@ const PromptSecurityPanel: React.FC = () => {
                                             </div>
                                             {f.position && (
                                                 <div style={{ marginTop: 2 }}>
-                                                    <span style={{ color: '#94a3b8' }}>
+                                                    <span style={{ color: 'var(--slate-400)' }}>
                                                         Position:{' '}
                                                     </span>
                                                     char {f.position.start}-{f.position.end}
@@ -275,7 +275,7 @@ const PromptSecurityPanel: React.FC = () => {
                             style={{
                                 margin: 0,
                                 fontSize: '0.9rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontWeight: 600,
                             }}
                         >
@@ -287,7 +287,7 @@ const PromptSecurityPanel: React.FC = () => {
                                 alignItems: 'center',
                                 gap: 4,
                                 fontSize: '0.78rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -305,7 +305,7 @@ const PromptSecurityPanel: React.FC = () => {
                         </label>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
                             {t('security.block_score')}:
                         </span>
                         <input
@@ -324,14 +324,14 @@ const PromptSecurityPanel: React.FC = () => {
                             style={{
                                 fontSize: '0.85rem',
                                 fontWeight: 600,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 minWidth: 24,
                             }}
                         >
                             {config.blockOnScore}
                         </span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#475569' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--slate-600)' }}>
                         {config.rules.filter((r) => r.enabled).length}/{config.rules.length}{' '}
                         {t('security.rules_active')}
                     </div>
@@ -350,7 +350,7 @@ const PromptSecurityPanel: React.FC = () => {
                             style={{
                                 margin: 0,
                                 fontSize: '0.9rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontWeight: 600,
                             }}
                         >
@@ -367,7 +367,7 @@ const PromptSecurityPanel: React.FC = () => {
                                     background: 'none',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 <Trash2 size={14} />
@@ -387,7 +387,7 @@ const PromptSecurityPanel: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.78rem',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     textAlign: 'center',
                                     padding: '1rem',
                                 }}
@@ -406,18 +406,18 @@ const PromptSecurityPanel: React.FC = () => {
                                     background: 'rgba(255,255,255,0.02)',
                                     borderRadius: 6,
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 {event.blocked ? (
                                     <ShieldAlert
                                         size={12}
-                                        style={{ color: '#ef4444', flexShrink: 0 }}
+                                        style={{ color: 'var(--error)', flexShrink: 0 }}
                                     />
                                 ) : (
                                     <ShieldCheck
                                         size={12}
-                                        style={{ color: '#22c55e', flexShrink: 0 }}
+                                        style={{ color: 'var(--success)', flexShrink: 0 }}
                                     />
                                 )}
                                 <span
@@ -430,7 +430,7 @@ const PromptSecurityPanel: React.FC = () => {
                                 >
                                     {event.prompt}
                                 </span>
-                                <span style={{ color: '#475569', flexShrink: 0 }}>
+                                <span style={{ color: 'var(--slate-600)', flexShrink: 0 }}>
                                     {event.result.score}/10
                                 </span>
                             </div>

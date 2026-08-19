@@ -57,9 +57,9 @@ export function ComplianceCard({ c }: { c: ComplianceStatus }) {
                     {c.standard}
                 </span>
                 {c.certified ? (
-                    <CheckCircle2 size={16} style={{ color: '#10b981' }} />
+                    <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
                 ) : (
-                    <XCircle size={16} style={{ color: '#ef4444', opacity: 0.5 }} />
+                    <XCircle size={16} style={{ color: 'var(--error)', opacity: 0.5 }} />
                 )}
             </div>
             <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
@@ -133,7 +133,7 @@ export function RegionCard({ r }: { r: RegionStatus }) {
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <Globe size={16} style={{ color: '#3b82f6' }} />
+                <Globe size={16} style={{ color: 'var(--accent)' }} />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.name}</span>
                 {r.available ? (
                     <span
@@ -142,7 +142,7 @@ export function RegionCard({ r }: { r: RegionStatus }) {
                             padding: '1px 6px',
                             borderRadius: 4,
                             background: 'rgba(16,185,129,0.12)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                         }}
                     >
                         Active
@@ -154,7 +154,7 @@ export function RegionCard({ r }: { r: RegionStatus }) {
                             padding: '1px 6px',
                             borderRadius: 4,
                             background: 'rgba(239,68,68,0.12)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                         }}
                     >
                         Down

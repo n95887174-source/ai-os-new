@@ -1,4 +1,4 @@
-import { getDexieDb } from '../instances';
+import { getDexieDb } from '../services/database-service';
 import { rootLogger } from './logger-service';
 import type {
     LockResource,

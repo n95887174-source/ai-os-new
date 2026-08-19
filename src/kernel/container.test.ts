@@ -345,4 +345,38 @@ describe('Container', () => {
             expect(container.get<MockService>('b')).not.toBe(container.get<MockService>('b'));
         });
     });
+
+    describe('dependency edge recording (B-06)', () => {
+        it('recordDependency adds an explicit edge visible in getDependencies', () => {
+            container.recordDependency('a', 'b');
+            expect(container.getDependencies()['a']).toContain('b');
+        });
+
+        it('recordDependencyFromActive attributes the edge to the resolving factory', () => {
+            container.registerFactory('a', (c) => {
+                c.recordDependencyFromActive('b');
+                return makeService({ name: 'a' });
+            });
+            container.get('a');
+            expect(container.getDependencies()['a']).toContain('b');
+        });
+
+        it('recordDependencyFromActive is a no-op when no factory is resolving', () => {
+            container.recordDependencyFromActive('orphan');
+            expect(container.getDependencies()).toEqual({});
+        });
+
+        it('a factory that reaches the locator via lazyService records the edge (graph not blind to lazy deps)', () => {
+            // Mirrors the service-helper wiring: during 'a' resolution the active factory
+            // id is set, so recordDependencyFromActive('b') attributes the locator edge.
+            container.registerFactory('a', (c) => {
+                c.recordDependencyFromActive('b');
+                return makeService({ name: 'a' });
+            });
+            container.registerFactory('b', () => makeService({ name: 'b' }));
+            container.get('a');
+            const deps = container.getDependencies();
+            expect(deps['a']).toContain('b');
+        });
+    });
 });

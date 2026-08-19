@@ -66,12 +66,12 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
         <Zap size={22} color="#f59e0b" />
-        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>Auto-Debate</h3>
-        <span style={{ fontSize: '0.75rem', color: '#64748b', background: 'rgba(100,116,139,0.15)', padding: '2px 8px', borderRadius: 6 }}>BETA</span>
+        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}>Auto-Debate</h3>
+        <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', background: 'rgba(100,116,139,0.15)', padding: '2px 8px', borderRadius: 6 }}>BETA</span>
       </div>
 
       {error && (
-        <div style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ padding: '0.5rem 1rem', background: 'var(--error-tint)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, color: '#fca5a5', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
           <AlertTriangle size={14} /> {error}
           <button onClick={() => setError(null)} style={{ cursor: 'pointer', marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', padding: 0 }}><X size={14} /></button>
         </div>
@@ -95,7 +95,7 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Stress Test</label>
+          <label style={{ fontSize: '0.8rem', color: 'var(--slate-400)', fontWeight: 600 }}>Stress Test</label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input type="number" min={1} max={50} value={stressCount} onChange={e => setStressCount(parseInt(e.target.value) || 5)} className="debate-input" style={{ width: 70 }} aria-label="Stress test count" />
             <button onClick={handleStress} disabled={loading !== null} className="btn-secondary" style={{ flex: 1, padding: '0.5rem', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.85rem' }}>
@@ -104,7 +104,7 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Batch Test</label>
+          <label style={{ fontSize: '0.8rem', color: 'var(--slate-400)', fontWeight: 600 }}>Batch Test</label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input type="number" min={1} max={20} value={batchRuns} onChange={e => setBatchRuns(parseInt(e.target.value) || 3)} className="debate-input" style={{ width: 50 }} aria-label="Batch runs" />
             <input type="text" value={batchTopic} onChange={e => setBatchTopic(e.target.value)} className="debate-input" style={{ flex: 1 }} placeholder="Topic for batch" aria-label="Batch topic" />
@@ -118,18 +118,18 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
       {/* Batch results */}
       {batchResult && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.9rem', color: 'var(--slate-50)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <BarChart3 size={16} color="#10b981" /> Batch Results: "{batchResult.topic}"
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {batchResult.winRates.map(w => (
               <div key={w.provider} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ width: 100, fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, flexShrink: 0 }}>{w.provider}</span>
+                <span style={{ width: 100, fontSize: '0.8rem', color: 'var(--slate-400)', fontWeight: 600, flexShrink: 0 }}>{w.provider}</span>
                 <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
                   <motion.div initial={{ width: 0 }} animate={{ width: `${w.winRate * 100}%` }} transition={{ duration: 0.5 }}
                     style={{ height: '100%', background: `linear-gradient(90deg, #10b981, #059669)`, borderRadius: 4 }} />
                 </div>
-                <span style={{ width: 50, textAlign: 'right', fontSize: '0.8rem', color: '#f8fafc', fontWeight: 700 }}>{Math.round(w.winRate * 100)}%</span>
+                <span style={{ width: 50, textAlign: 'right', fontSize: '0.8rem', color: 'var(--slate-50)', fontWeight: 700 }}>{Math.round(w.winRate * 100)}%</span>
               </div>
             ))}
           </div>
@@ -140,8 +140,8 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
       {results.length > 0 && (
         <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 16, padding: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#f8fafc' }}>History ({results.length} debates)</h4>
-            <button onClick={onClear} className="btn-secondary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: 8, color: '#ef4444' }}>
+            <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--slate-50)' }}>History ({results.length} debates)</h4>
+            <button onClick={onClear} className="btn-secondary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: 8, color: 'var(--error)' }}>
               <X size={12} /> Clear
             </button>
           </div>
@@ -149,13 +149,13 @@ const AutoDebateSection: React.FC<Props> = ({ onAutoDebate, onStressTest, onBatc
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {winRates.map(w => (
                 <div key={w.provider} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-                  <span style={{ width: 90, color: '#94a3b8', fontWeight: 600 }}>{w.provider}</span>
+                  <span style={{ width: 90, color: 'var(--slate-400)', fontWeight: 600 }}>{w.provider}</span>
                   <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                     <motion.div initial={{ width: 0 }} animate={{ width: `${w.winRate * 100}%` }} transition={{ duration: 0.5 }}
                       style={{ height: '100%', background: w.winRate > 0.6 ? '#10b981' : w.winRate > 0.3 ? '#f59e0b' : '#ef4444', borderRadius: 3 }} />
                   </div>
-                  <span style={{ width: 40, textAlign: 'right', fontWeight: 700, color: '#f8fafc' }}>{Math.round(w.winRate * 100)}%</span>
-                  <span style={{ color: '#64748b' }}>({w.wins}/{w.debates})</span>
+                  <span style={{ width: 40, textAlign: 'right', fontWeight: 700, color: 'var(--slate-50)' }}>{Math.round(w.winRate * 100)}%</span>
+                  <span style={{ color: 'var(--slate-500)' }}>({w.wins}/{w.debates})</span>
                 </div>
               ))}
             </div>

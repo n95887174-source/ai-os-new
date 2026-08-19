@@ -34,7 +34,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ checkAllHealth, onNav
                         style={{
                             fontSize: '0.75rem',
                             fontWeight: 700,
-                            color: '#10b981',
+                            color: 'var(--success)',
                             letterSpacing: '0.1em',
                             textTransform: 'uppercase',
                         }}
@@ -48,12 +48,12 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ checkAllHealth, onNav
                         fontWeight: 800,
                         margin: '0 0 0.25rem',
                         letterSpacing: '-0.02em',
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     {t('dashboard.mission_control')}
                 </h1>
-                <p style={{ fontSize: '0.9rem', color: '#94a3b8', margin: 0 }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--slate-400)', margin: 0 }}>
                     {t('dashboard.subtitle')}
                 </p>
             </div>
@@ -70,7 +70,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ checkAllHealth, onNav
                         borderRadius: 12,
                         background: 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         cursor: 'pointer',
                         fontWeight: 700,
                         transition: 'all 0.2s',

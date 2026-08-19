@@ -3,11 +3,10 @@ import { BrainCircuit, X } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import ChatHistoryEntry from './ChatHistoryEntry';
 import { useTranslation } from '../../i18n/useTranslation';
-import type { ChatEntry } from '../../stores/useChatStore';
+import { useActiveSessionHistory } from '../../stores/useChatStore';
 import type { ChatResponse } from '../../types/chat';
 
 interface Props {
-    historyEntries: ChatEntry[] | null;
     editingEntryId: string | null;
     editingText: string;
     isSplitView: boolean;
@@ -28,7 +27,6 @@ interface Props {
 }
 
 const ChatMessagesSection: React.FC<Props> = ({
-    historyEntries,
     editingEntryId,
     editingText,
     isSplitView,
@@ -49,6 +47,7 @@ const ChatMessagesSection: React.FC<Props> = ({
 }) => {
     const { t } = useTranslation();
     const userScrolledUpRef = useRef(false);
+    const historyEntries = useActiveSessionHistory();
 
     const count = historyEntries?.length ?? 0;
 

@@ -320,18 +320,18 @@ const IntelligenceGraph: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div
-                        style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6' }}
+                        style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }}
                     />{' '}
                     Active
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div
-                        style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }}
+                        style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--error)' }}
                     />{' '}
                     Error
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 10, height: 2, background: 'rgba(255,255,255,0.1)' }} />{' '}
+                    <div style={{ width: 10, height: 2, background: 'var(--border-default)' }} />{' '}
                     Error Edge
                 </div>
             </div>

@@ -32,12 +32,12 @@ export function SessionOverviewTab({
                 <div
                     style={{
                         fontSize: '0.8rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginBottom: '0.5rem',
                     }}
                 >
                     {t('debate_runtime.type')}{' '}
-                    <strong style={{ color: '#e2e8f0' }}>{selected.topology.type}</strong>
+                    <strong style={{ color: 'var(--slate-200)' }}>{selected.topology.type}</strong>
                 </div>
                 <TopologyDiagram topology={selected.topology} />
 
@@ -46,7 +46,7 @@ export function SessionOverviewTab({
                         margin: '1rem 0 0.5rem',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
@@ -62,7 +62,7 @@ export function SessionOverviewTab({
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 4,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 fontWeight: 700,
                             }}
                         >
@@ -73,7 +73,7 @@ export function SessionOverviewTab({
                                     width: 6,
                                     height: 6,
                                     borderRadius: '50%',
-                                    background: '#10b981',
+                                    background: 'var(--success)',
                                 }}
                             />
                             {t('debate_runtime.thinking', {
@@ -109,7 +109,7 @@ export function SessionOverviewTab({
                             <span
                                 style={{
                                     fontSize: '0.8rem',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontWeight: 500,
                                 }}
                             >
@@ -125,7 +125,7 @@ export function SessionOverviewTab({
                                 {a.phase}
                             </span>
                             {a.tokensUsed > 0 && (
-                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                     {t('debate_runtime.tokens_short', {
                                         value: a.tokensUsed,
                                     })}
@@ -142,7 +142,7 @@ export function SessionOverviewTab({
                 <div
                     style={{
                         fontSize: '0.75rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginTop: '0.3rem',
                     }}
                 >
@@ -154,7 +154,7 @@ export function SessionOverviewTab({
                         margin: '1rem 0 0.5rem',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <Brain size={14} style={iconMarginRight} />{' '}
@@ -263,7 +263,7 @@ export function SessionOverviewTab({
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
-                                color: '#a78bfa',
+                                color: 'var(--purple-muted)',
                                 marginBottom: '0.3rem',
                             }}
                         >
@@ -277,7 +277,7 @@ export function SessionOverviewTab({
                                 display: 'flex',
                                 gap: '0.5rem',
                                 fontSize: '0.7rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 flexWrap: 'wrap',
                             }}
                         >
@@ -310,7 +310,7 @@ export function SessionOverviewTab({
                         margin: '1rem 0 0.35rem',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     {t('debate_runtime.budget')}
@@ -320,7 +320,7 @@ export function SessionOverviewTab({
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.75rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>

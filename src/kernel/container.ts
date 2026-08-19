@@ -25,6 +25,10 @@ export interface IContainer {
     clear(): Promise<void>;
     getDependencies(): Record<string, string[]>;
     getServices(): string[];
+    /** Record an explicit dependency edge (used by `lazyService` so the graph isn't blind to service-locator deps — B-06). */
+    recordDependency(from: ServiceIdentifier, to: ServiceIdentifier): void;
+    /** Record a dependency on `to` attributed to the currently-resolving factory, if any (B-06). */
+    recordDependencyFromActive(to: ServiceIdentifier): void;
 }
 
 export class Container implements IContainer {
@@ -191,6 +195,21 @@ export class Container implements IContainer {
             ...this.transientFactories.keys(),
         ]);
         return Array.from(all).map(String);
+    }
+
+    recordDependency(from: ServiceIdentifier, to: ServiceIdentifier): void {
+        if (!this.dependencies.has(from)) this.dependencies.set(from, new Set());
+        this.dependencies.get(from)!.add(to);
+    }
+
+    // B-06: when a `lazyService` proxy is first resolved we cannot always attribute the
+    // edge to a caller (runtime access has no active factory). But during a factory's
+    // own resolution `activeFactoryId` is set — wiring `lazyService` through this closes
+    // the gap for registration factories that still reach for the locator. Runtime
+    // (non-factory) locator edges remain untracked pending the B-07 service-locator
+    // removal (L-2).
+    recordDependencyFromActive(to: ServiceIdentifier): void {
+        if (this.activeFactoryId) this.recordDependency(this.activeFactoryId, to);
     }
 }
 

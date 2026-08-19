@@ -47,7 +47,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 <Layers size={12} />
@@ -61,7 +61,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                         padding: '0.75rem',
                         borderRadius: 6,
                         border: '1px dashed rgba(255,255,255,0.1)',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         fontSize: '0.75rem',
                         textAlign: 'center',
                     }}
@@ -100,7 +100,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                                     style={{
                                         fontSize: '0.78rem',
                                         fontWeight: 600,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
@@ -111,7 +111,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
@@ -127,7 +127,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                         padding: 2,
                                         borderRadius: 4,
@@ -146,7 +146,7 @@ const LensStackVisualizer: React.FC<LensStackVisualizerProps> = ({
                     style={{
                         padding: '0.4rem 0.6rem',
                         borderRadius: 6,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.25)',
                         display: 'flex',
                         alignItems: 'flex-start',

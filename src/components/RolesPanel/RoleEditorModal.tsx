@@ -79,12 +79,12 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                     fontSize: '1.5rem',
                                     fontWeight: 800,
                                     margin: 0,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                 }}
                             >
                                 {r.id ? t('roles.edit_title') : t('roles.new_title')}
                             </h3>
-                            <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                                 {tab === 'avatar'
                                     ? 'Customize role appearance and avatar'
                                     : tab === 'history'
@@ -160,7 +160,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                 borderRadius: 10,
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 cursor: 'pointer',
                             }}
                             aria-label={t('common.aria.close_modal')}
@@ -219,7 +219,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textAlign: 'center',
                                     }}
                                 >
@@ -240,7 +240,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                             display: 'block',
                                             fontSize: '0.7rem',
                                             fontWeight: 800,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.5rem',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.05em',
@@ -259,7 +259,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                             display: 'block',
                                             fontSize: '0.7rem',
                                             fontWeight: 800,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.5rem',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.05em',
@@ -283,7 +283,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                             display: 'block',
                                             fontSize: '0.7rem',
                                             fontWeight: 800,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.5rem',
                                             textTransform: 'uppercase',
                                             letterSpacing: '0.05em',
@@ -326,7 +326,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         display: 'block',
                                         fontSize: '0.75rem',
                                         fontWeight: 800,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.5rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -360,7 +360,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         alignItems: 'center',
                                         fontSize: '0.75rem',
                                         fontWeight: 800,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.5rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -370,7 +370,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                     <span
                                         style={{
                                             color: '#60a5fa',
-                                            background: 'rgba(59,130,246,0.1)',
+                                            background: 'var(--accent-tint)',
                                             padding: '0.1rem 0.5rem',
                                             borderRadius: 6,
                                             fontFamily: 'monospace',
@@ -427,7 +427,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                     display: 'block',
                                     fontSize: '0.75rem',
                                     fontWeight: 800,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.5rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
@@ -466,7 +466,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         display: 'block',
                                         fontSize: '0.75rem',
                                         fontWeight: 800,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.5rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -488,7 +488,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -507,7 +507,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         style={{
                                             marginTop: 6,
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         Inherits permissions and prompt from parent. Override fields
@@ -521,7 +521,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         display: 'block',
                                         fontSize: '0.75rem',
                                         fontWeight: 800,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.5rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -538,7 +538,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -563,7 +563,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                     gap: 8,
                                     fontSize: '0.75rem',
                                     fontWeight: 800,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.75rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
@@ -585,7 +585,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                                     gap: 8,
                                     fontSize: '0.75rem',
                                     fontWeight: 800,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '1rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
@@ -698,7 +698,7 @@ export const RoleEditorModal: React.FC<RoleEditorModalProps> = ({
                             fontWeight: 700,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                         }}
                         aria-label={t('common.cancel')}

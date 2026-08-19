@@ -174,10 +174,10 @@ const HypothesisGenerator: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Lightbulb size={18} color="#f59e0b" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('hypothesis_generator.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {hypotheses.length} total
                     </span>
                 </div>
@@ -187,8 +187,8 @@ const HypothesisGenerator: React.FC = () => {
                         padding: '0.45rem 0.9rem',
                         borderRadius: 7,
                         border: 'none',
-                        background: '#f59e0b',
-                        color: '#1e293b',
+                        background: 'var(--warning)',
+                        color: 'var(--slate-800)',
                         cursor: 'pointer',
                         fontWeight: 700,
                         fontSize: '0.78rem',
@@ -236,7 +236,7 @@ const HypothesisGenerator: React.FC = () => {
                             background: 'none',
                             border: 'none',
                             outline: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.78rem',
                         }}
                     />
@@ -246,7 +246,7 @@ const HypothesisGenerator: React.FC = () => {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 0,
                             }}
@@ -260,7 +260,7 @@ const HypothesisGenerator: React.FC = () => {
             {/* List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1rem' }}>
                 {filtered.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                         <Lightbulb size={40} opacity={0.25} style={{ marginBottom: '0.75rem' }} />
                         <div style={{ fontSize: '0.9rem', marginBottom: '0.3rem' }}>
                             {t('hypothesis_generator.empty')}

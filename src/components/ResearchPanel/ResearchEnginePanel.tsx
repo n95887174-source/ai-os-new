@@ -88,7 +88,7 @@ const ResearchEnginePanel: React.FC = () => {
                         style={{
                             fontSize: '1.2rem',
                             fontWeight: 700,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
@@ -96,7 +96,7 @@ const ResearchEnginePanel: React.FC = () => {
                     >
                         <Layers size={22} color="#8b5cf6" /> {t('research_engine.title')}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: 2 }}>
                         {t('research_engine.subtitle')}
                     </div>
                 </div>
@@ -111,7 +111,7 @@ const ResearchEnginePanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(100,116,139,0.15)',
                             border: '1px solid rgba(100,116,139,0.3)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.78rem',
@@ -131,7 +131,7 @@ const ResearchEnginePanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(139,92,246,0.15)',
                             border: '1px solid rgba(139,92,246,0.3)',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.8rem',
@@ -166,7 +166,7 @@ const ResearchEnginePanel: React.FC = () => {
                                     marginBottom: 8,
                                     fontSize: '0.75rem',
                                     fontWeight: 600,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 <Search size={14} /> {t('research_engine.available_sources')} (
@@ -176,7 +176,7 @@ const ResearchEnginePanel: React.FC = () => {
                                         marginLeft: 'auto',
                                         fontSize: '0.65rem',
                                         fontWeight: 400,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     {sourceStats.enabled} active
@@ -221,14 +221,14 @@ const ResearchEnginePanel: React.FC = () => {
                                             </span>
                                             {adapter.needsKey && (
                                                 <span
-                                                    style={{ fontSize: '0.6rem', color: '#f59e0b' }}
+                                                    style={{ fontSize: '0.6rem', color: 'var(--warning)' }}
                                                 >
                                                     🔑
                                                 </span>
                                             )}
                                             {adapter.isRestricted && (
                                                 <span
-                                                    style={{ fontSize: '0.6rem', color: '#ef4444' }}
+                                                    style={{ fontSize: '0.6rem', color: 'var(--error)' }}
                                                 >
                                                     🔒
                                                 </span>
@@ -236,7 +236,7 @@ const ResearchEnginePanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.6rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     marginLeft: 'auto',
                                                 }}
                                             >
@@ -279,7 +279,7 @@ const ResearchEnginePanel: React.FC = () => {
                                     borderRadius: 8,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.2)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.85rem',
                                     outline: 'none',
                                 }}
@@ -294,7 +294,7 @@ const ResearchEnginePanel: React.FC = () => {
                                     borderRadius: 8,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.2)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.85rem',
                                     outline: 'none',
                                     resize: 'vertical',
@@ -309,7 +309,7 @@ const ResearchEnginePanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'transparent',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         cursor: 'pointer',
                                         fontSize: '0.78rem',
                                     }}
@@ -344,7 +344,7 @@ const ResearchEnginePanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '3rem 1rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.85rem',
                         border: '1px dashed rgba(255,255,255,0.06)',
                         borderRadius: 12,

@@ -40,7 +40,7 @@ export const PerformanceProfilerPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     flexDirection: 'column',
                     gap: '0.5rem',
                 }}
@@ -77,12 +77,12 @@ export const PerformanceProfilerPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <Gauge size={26} color="#a855f7" /> {t('performance_profiler.title')}
                 </h2>
-                <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                     {t('performance_profiler.subtitle')}
                 </p>
             </div>
@@ -140,7 +140,7 @@ export const PerformanceProfilerPanel: React.FC = () => {
                     }}
                 >
                     <Zap size={14} color="#f59e0b" />
-                    <span style={{ color: '#fbbf24', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--warning)', fontSize: '0.8rem' }}>
                         {t('performance_profiler.slow_warning', {
                             count: slowServices.length,
                             services: slowServices.map((s) => s.service).join(', '),
@@ -157,7 +157,7 @@ export const PerformanceProfilerPanel: React.FC = () => {
                         gap: 4,
                         padding: '0.4rem 0.5rem',
                         fontSize: '0.7rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -199,13 +199,13 @@ export const PerformanceProfilerPanel: React.FC = () => {
                     >
                         <span
                             style={{
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace',
                             }}
                         >
                             {s.service}
                         </span>
-                        <span style={{ textAlign: 'right', color: '#94a3b8' }}>{s.count}</span>
+                        <span style={{ textAlign: 'right', color: 'var(--slate-400)' }}>{s.count}</span>
                         <LatencyCell value={s.avgLatency} />
                         <LatencyCell value={s.p50} />
                         <LatencyCell value={s.p95} highlight />
@@ -253,7 +253,7 @@ const LatencyCell: React.FC<{ value: number; highlight?: boolean }> = ({ value, 
         <span
             style={{
                 textAlign: 'right',
-                color: highlight ? color : '#cbd5e1',
+                color: highlight ? color : 'var(--slate-300)',
                 fontWeight: highlight ? 600 : 400,
             }}
         >

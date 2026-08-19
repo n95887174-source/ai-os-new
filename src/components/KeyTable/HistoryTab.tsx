@@ -25,15 +25,15 @@ const ACTION_META: Record<
     KeyHistoryEntry['action'],
     { icon: React.ReactNode; color: string; label: string }
 > = {
-    added: { icon: <Plus size={14} />, color: '#3b82f6', label: 'Added' },
-    probed: { icon: <Activity size={14} />, color: '#10b981', label: 'Probe' },
+    added: { icon: <Plus size={14} />, color: 'var(--accent)', label: 'Added' },
+    probed: { icon: <Activity size={14} />, color: 'var(--success)', label: 'Probe' },
     quota_exceeded: {
         icon: <AlertTriangle size={14} />,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         label: 'Quota Exceeded',
     },
-    error: { icon: <Ban size={14} />, color: '#ef4444', label: 'Error' },
-    rotated: { icon: <RotateCw size={14} />, color: '#8b5cf6', label: 'Rotated' },
+    error: { icon: <Ban size={14} />, color: 'var(--error)', label: 'Error' },
+    rotated: { icon: <RotateCw size={14} />, color: 'var(--purple)', label: 'Rotated' },
     status_changed: { icon: <Zap size={14} />, color: '#f97316', label: 'Status Changed' },
     latency_burst: { icon: <Clock size={14} />, color: '#ec4899', label: 'Latency Burst' },
     reputation_changed: {
@@ -41,7 +41,7 @@ const ACTION_META: Record<
         color: '#06b6d4',
         label: 'Reputation Changed',
     },
-    note_added: { icon: <MessageSquare size={14} />, color: '#64748b', label: 'Note Added' },
+    note_added: { icon: <MessageSquare size={14} />, color: 'var(--slate-500)', label: 'Note Added' },
 };
 
 interface DayGroup {
@@ -102,12 +102,12 @@ function computeTrend(history: KeyHistoryEntry[]): {
     ).length;
     const total = recent.length;
     if (total === 0)
-        return { icon: <Minus size={14} />, text: 'No recent activity', color: '#64748b' };
+        return { icon: <Minus size={14} />, text: 'No recent activity', color: 'var(--slate-500)' };
     const errorRate = errors / total;
     if (errorRate > 0.3)
-        return { icon: <TrendingDown size={14} />, text: 'Degrading', color: '#ef4444' };
-    if (errorRate > 0.1) return { icon: <Minus size={14} />, text: 'Unstable', color: '#f59e0b' };
-    return { icon: <TrendingUp size={14} />, text: 'Stable', color: '#10b981' };
+        return { icon: <TrendingDown size={14} />, text: 'Degrading', color: 'var(--error)' };
+    if (errorRate > 0.1) return { icon: <Minus size={14} />, text: 'Unstable', color: 'var(--warning)' };
+    return { icon: <TrendingUp size={14} />, text: 'Stable', color: 'var(--success)' };
 }
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
@@ -127,7 +127,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                     alignItems: 'center',
                     gap: '0.75rem',
                     padding: '2rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 <Clock size={32} opacity={0.3} />
@@ -162,7 +162,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                     <div
                         style={{
                             fontSize: '0.6rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             display: 'flex',
@@ -172,7 +172,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                     >
                         <CalendarDays size={12} /> Key Age
                     </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                         {keyAge}
                     </span>
                 </div>
@@ -190,14 +190,14 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                     <div
                         style={{
                             fontSize: '0.6rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                         }}
                     >
                         Total Events
                     </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                         {history.length}
                     </span>
                 </div>
@@ -215,7 +215,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                     <div
                         style={{
                             fontSize: '0.6rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                         }}
@@ -267,7 +267,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                                     width: 10,
                                     height: 10,
                                     borderRadius: '50%',
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                     border: '2px solid rgba(59,130,246,0.3)',
                                     flexShrink: 0,
                                     zIndex: 1,
@@ -277,14 +277,14 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                                 style={{
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
-                                    color: '#3b82f6',
+                                    color: 'var(--accent)',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.06em',
                                 }}
                             >
                                 {group.label}
                             </span>
-                            <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                 {group.entries.length} event{group.entries.length !== 1 ? 's' : ''}
                             </span>
                         </div>
@@ -341,7 +341,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                                                 </span>
                                                 <span
                                                     style={{
-                                                        color: '#475569',
+                                                        color: 'var(--slate-600)',
                                                         fontSize: '0.62rem',
                                                         fontFamily: 'monospace',
                                                     }}
@@ -351,7 +351,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ apiKey }) => {
                                             </div>
                                             <div
                                                 style={{
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontSize: '0.7rem',
                                                     marginTop: '0.1rem',
                                                     wordBreak: 'break-word',

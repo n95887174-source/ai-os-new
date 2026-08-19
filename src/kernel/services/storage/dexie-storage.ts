@@ -1,8 +1,15 @@
 import { z } from 'zod';
 import { getDexieDb } from '../database-service';
-import { eventBus } from '../../instances';
+import type { IEventBus } from '../../types/interfaces';
 import { rootLogger } from '../logger-service';
 import { EVENTS } from '../../events/event-names';
+
+let _dexieStorageEventBus: IEventBus | null = null;
+
+/** Inject the event bus (called once at bootstrap). */
+export function setDexieStorageEventBus(bus: IEventBus): void {
+    _dexieStorageEventBus = bus;
+}
 
 const LOGGER = rootLogger.child('DexieStorage');
 import type {
@@ -497,7 +504,7 @@ class DexieDebateStore implements DebateStore {
                     db: currentVersion,
                     attempted: record.version,
                 });
-                eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+                _dexieStorageEventBus?.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
                     sessionId: record.id,
                     currentVersion,
                     attemptedVersion: record.version,

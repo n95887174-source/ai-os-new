@@ -22,7 +22,7 @@ const ModerationQueue: React.FC<ModerationQueueProps> = ({ posts, onModerate }) 
                 paddingTop: 8,
             }}
         >
-            <div style={{ fontSize: '0.7rem', color: '#ef4444', marginBottom: 6 }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--error)', marginBottom: 6 }}>
                 {t('forum.moderation')}
             </div>
             {moderated.map((p) => (
@@ -34,7 +34,7 @@ const ModerationQueue: React.FC<ModerationQueueProps> = ({ posts, onModerate }) 
                         alignItems: 'center',
                         gap: 6,
                         fontSize: '0.7rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginBottom: 4,
                     }}
                 >
@@ -53,7 +53,7 @@ const ModerationQueue: React.FC<ModerationQueueProps> = ({ posts, onModerate }) 
                         style={{
                             border: 'none',
                             background: 'transparent',
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             cursor: 'pointer',
                             fontSize: '0.62rem',
                         }}

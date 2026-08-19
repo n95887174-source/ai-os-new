@@ -16,24 +16,24 @@ const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ keys }) => {
   }, [keys]);
 
   const getIntensity = (used: number): { color: string; opacity: number } => {
-    if (used === 0) return { color: '#1e293b', opacity: 0.3 };
+    if (used === 0) return { color: 'var(--slate-800)', opacity: 0.3 };
     const pct = used / maxRequests;
-    if (pct > 0.8) return { color: '#ef4444', opacity: 0.9 };
-    if (pct > 0.5) return { color: '#f59e0b', opacity: 0.8 };
-    if (pct > 0.2) return { color: '#3b82f6', opacity: 0.7 };
-    return { color: '#10b981', opacity: 0.5 };
+    if (pct > 0.8) return { color: 'var(--error)', opacity: 0.9 };
+    if (pct > 0.5) return { color: 'var(--warning)', opacity: 0.8 };
+    if (pct > 0.2) return { color: 'var(--accent)', opacity: 0.7 };
+    return { color: 'var(--success)', opacity: 0.5 };
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
         <BarChart3 size={18} color="#a855f7" />
-        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>Usage Pattern Heatmap</h3>
-        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Daily request distribution per key</span>
+        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--slate-50)' }}>Usage Pattern Heatmap</h3>
+        <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>Daily request distribution per key</span>
       </div>
 
       {keys.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.85rem' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--slate-500)', fontSize: '0.85rem' }}>
           No keys configured. Add API keys to see usage patterns.
         </div>
       ) : (
@@ -49,8 +49,8 @@ const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ keys }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: key.status === 'active' ? '#10b981' : '#ef4444' }} />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>{key.label}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{key.provider}</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>{key.label}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>{key.provider}</span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#94a3b8', fontWeight: 700 }}>
                     {used.toLocaleString()} / {limit ? limit.toLocaleString() : '∞'} ({pct}%)
@@ -82,7 +82,7 @@ const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ keys }) => {
                   })}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                   {[0, 6, 12, 18, 23].map(h => <span key={h}>{`${h}:00`}</span>)}
                 </div>
 
@@ -112,11 +112,11 @@ const UsageHeatmap: React.FC<UsageHeatmapProps> = ({ keys }) => {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center', padding: '0.5rem', marginTop: '0.5rem', fontSize: '0.7rem', color: '#64748b' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: '#10b981', opacity: 0.5, display: 'inline-block' }} /> Low</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: '#3b82f6', opacity: 0.7, display: 'inline-block' }} /> Medium</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: '#f59e0b', opacity: 0.8, display: 'inline-block' }} /> High</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: '#ef4444', opacity: 0.9, display: 'inline-block' }} /> Critical</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center', padding: '0.5rem', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--slate-500)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--success)', opacity: 0.5, display: 'inline-block' }} /> Low</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--accent)', opacity: 0.7, display: 'inline-block' }} /> Medium</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--warning)', opacity: 0.8, display: 'inline-block' }} /> High</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><span style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--error)', opacity: 0.9, display: 'inline-block' }} /> Critical</span>
       </div>
     </div>
   );

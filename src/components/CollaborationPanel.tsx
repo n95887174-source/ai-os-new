@@ -187,7 +187,7 @@ const CollaborationPanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.8rem',
                                     }}
                                 />
@@ -200,7 +200,7 @@ const CollaborationPanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.8rem',
                                     }}
                                 />
@@ -227,8 +227,8 @@ const CollaborationPanel: React.FC = () => {
                                             padding: '0.3rem 0.5rem',
                                             borderRadius: 6,
                                             border: 'none',
-                                            background: 'rgba(239,68,68,0.1)',
-                                            color: '#ef4444',
+                                            background: 'var(--error-tint)',
+                                            color: 'var(--error)',
                                             cursor: 'pointer',
                                             fontSize: '0.75rem',
                                         }}
@@ -261,7 +261,7 @@ const CollaborationPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontWeight: 400,
                                     }}
                                 >
@@ -274,7 +274,7 @@ const CollaborationPanel: React.FC = () => {
                                 style={{
                                     textAlign: 'center',
                                     padding: '2rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.8rem',
                                 }}
                             >
@@ -297,7 +297,7 @@ const CollaborationPanel: React.FC = () => {
                                 <span style={{ fontWeight: 700, fontSize: '1rem' }}>
                                     {team.name}
                                 </span>
-                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                     {team.description}
                                 </span>
                                 <div style={{ flex: 1 }} />
@@ -311,8 +311,8 @@ const CollaborationPanel: React.FC = () => {
                                         padding: '0.3rem 0.6rem',
                                         borderRadius: 6,
                                         border: 'none',
-                                        background: 'rgba(239,68,68,0.1)',
-                                        color: '#ef4444',
+                                        background: 'var(--error-tint)',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                         fontSize: '0.7rem',
                                     }}
@@ -327,7 +327,7 @@ const CollaborationPanel: React.FC = () => {
                                     style={{
                                         fontSize: '0.7rem',
                                         fontWeight: 600,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.4rem',
                                     }}
                                 >
@@ -386,7 +386,7 @@ const CollaborationPanel: React.FC = () => {
                                                     style={{
                                                         background: 'none',
                                                         border: 'none',
-                                                        color: '#ef4444',
+                                                        color: 'var(--error)',
                                                         cursor: 'pointer',
                                                         padding: 2,
                                                     }}
@@ -410,7 +410,7 @@ const CollaborationPanel: React.FC = () => {
                                             borderRadius: 6,
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             background: 'rgba(0,0,0,0.3)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.8rem',
                                         }}
                                     />
@@ -446,7 +446,7 @@ const CollaborationPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.7rem',
                                             fontWeight: 600,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         INVITE LINKS
@@ -457,7 +457,7 @@ const CollaborationPanel: React.FC = () => {
                                             padding: '0.2rem 0.5rem',
                                             borderRadius: 6,
                                             border: 'none',
-                                            background: 'rgba(168,85,247,0.1)',
+                                            background: 'var(--purple-tint)',
                                             color: '#a855f7',
                                             cursor: 'pointer',
                                             fontSize: '0.7rem',
@@ -491,12 +491,12 @@ const CollaborationPanel: React.FC = () => {
                                                 style={{
                                                     flex: 1,
                                                     fontSize: '0.75rem',
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                 }}
                                             >
                                                 {inv.code}
                                             </code>
-                                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                                 {inv.useCount}/{inv.maxUses} used
                                             </span>
                                             <span
@@ -537,7 +537,7 @@ const CollaborationPanel: React.FC = () => {
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                     cursor: 'pointer',
                                                 }}
                                             >
@@ -546,7 +546,7 @@ const CollaborationPanel: React.FC = () => {
                                         </div>
                                     ))}
                                     {invites.length === 0 && (
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                             No invite links yet.
                                         </div>
                                     )}
@@ -564,7 +564,7 @@ const CollaborationPanel: React.FC = () => {
                             style={{
                                 textAlign: 'center',
                                 padding: '2rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.8rem',
                             }}
                         >
@@ -626,7 +626,7 @@ const CollaborationPanel: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontSize: '0.65rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                     }}
                                                 >
                                                     Shared by {s.sharedBy} ·{' '}
@@ -647,7 +647,7 @@ const CollaborationPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.65rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     textTransform: 'capitalize',
                                                 }}
                                             >
@@ -664,7 +664,7 @@ const CollaborationPanel: React.FC = () => {
                                                 style={{
                                                     background: 'none',
                                                     border: 'none',
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                     cursor: 'pointer',
                                                 }}
                                             >
@@ -676,7 +676,7 @@ const CollaborationPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: '0.75rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 padding: '1rem',
                                                 textAlign: 'center',
                                             }}

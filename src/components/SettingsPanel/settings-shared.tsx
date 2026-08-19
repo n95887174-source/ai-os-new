@@ -55,7 +55,7 @@ export const SettingRow = ({
                         fontSize: '1.05rem',
                         fontWeight: 700,
                         marginBottom: '0.4rem',
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     {title}
@@ -63,7 +63,7 @@ export const SettingRow = ({
                 <div
                     style={{
                         fontSize: '0.85rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         lineHeight: 1.6,
                         maxWidth: 450,
                     }}
@@ -170,9 +170,9 @@ export const ConfigInput = ({
                 gap: '1rem',
             }}
         >
-            <label style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{label}</label>
+            <label style={{ color: 'var(--slate-400)', fontSize: '0.78rem' }}>{label}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                {error && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{error}</span>}
+                {error && <span style={{ color: 'var(--error)', fontSize: '0.7rem' }}>{error}</span>}
                 <input
                     type="number"
                     value={value}
@@ -184,7 +184,7 @@ export const ConfigInput = ({
                         borderRadius: 6,
                         background: 'rgba(0,0,0,0.3)',
                         border: `1px solid ${error ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         textAlign: 'right',
                         fontSize: '0.78rem',
                         outline: 'none',

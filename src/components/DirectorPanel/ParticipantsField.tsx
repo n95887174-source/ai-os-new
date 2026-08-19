@@ -148,7 +148,7 @@ const ParticipantsField: React.FC<{
             )}
 
             {agents.length === 0 && (
-                <p style={{ color: '#f59e0b', fontSize: '0.75rem', margin: '0.4rem 0 0' }}>
+                <p style={{ color: 'var(--warning)', fontSize: '0.75rem', margin: '0.4rem 0 0' }}>
                     {t('director.configure.no_agents')}
                 </p>
             )}

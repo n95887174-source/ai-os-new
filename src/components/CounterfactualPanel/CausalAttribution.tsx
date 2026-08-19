@@ -22,7 +22,7 @@ const ComponentDiff: React.FC<{ component: string; provider: string; delta: numb
                 fontFamily: 'monospace',
             }}
         >
-            <span style={{ color: '#94a3b8' }}>{String(component)}</span>
+            <span style={{ color: 'var(--slate-400)' }}>{String(component)}</span>
             <span style={{ color }}>
                 {delta > 0 ? '+' : ''}
                 {delta.toFixed(3)}
@@ -48,7 +48,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
                     }}
@@ -63,7 +63,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 600,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: 6,
                         }}
                     >
@@ -73,7 +73,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                         style={{
                             fontSize: '0.75rem',
                             fontFamily: 'monospace',
-                            color: '#fbbf24',
+                            color: 'var(--warning)',
                             marginBottom: 8,
                         }}
                     >
@@ -91,7 +91,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 600,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: 6,
                         }}
                     >
@@ -103,7 +103,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                             style={{
                                 fontSize: '0.75rem',
                                 fontFamily: 'monospace',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 marginBottom: 2,
                             }}
                         >
@@ -122,7 +122,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                             style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 600,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 marginBottom: 4,
                             }}
                         >
@@ -153,7 +153,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                     style={{
                         fontSize: '0.65rem',
                         fontWeight: 600,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginBottom: 4,
                     }}
                 >
@@ -173,7 +173,7 @@ const CausalAttribution: React.FC<Props> = ({ explanation }) => {
                 >
                     {explanation.marginShift > 0 ? '+' : ''}
                     {explanation.marginShift.toFixed(3)}
-                    <span style={{ color: '#94a3b8', marginLeft: 8, fontSize: '0.65rem' }}>
+                    <span style={{ color: 'var(--slate-400)', marginLeft: 8, fontSize: '0.65rem' }}>
                         ({explanation.originalWinner} → {explanation.simulatedWinner})
                     </span>
                 </div>

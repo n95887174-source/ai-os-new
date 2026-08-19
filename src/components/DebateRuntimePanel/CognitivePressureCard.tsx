@@ -41,7 +41,7 @@ export function CognitivePressureCard({ pressure }: CognitivePressureCardProps) 
                     </div>
                     <div style={flexJustifyBetween}>
                         <span style={textSecondary}>{t('debate_runtime.active_chains')}</span>
-                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--slate-200)', fontWeight: 600 }}>
                             {pressure.activeReasoningChains}
                         </span>
                     </div>

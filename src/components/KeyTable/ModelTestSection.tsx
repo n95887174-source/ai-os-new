@@ -29,7 +29,7 @@ const ModelTestSection: React.FC<Props> = ({
         borderRadius: 6,
         background: 'rgba(59,130,246,0.12)',
         border: '1px solid rgba(59,130,246,0.2)',
-        color: '#3b82f6',
+        color: 'var(--accent)',
         cursor: refreshingModels ? 'wait' : 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
@@ -141,7 +141,7 @@ const ModelTestSection: React.FC<Props> = ({
                     );
                 })}
                 {availableModels.length > 8 && (
-                    <span style={{ fontSize: '0.65rem', color: '#3b82f6', alignSelf: 'center' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--accent)', alignSelf: 'center' }}>
                         {t('overview.models_more', { count: availableModels.length - 8 })}
                     </span>
                 )}

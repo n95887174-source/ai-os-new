@@ -166,7 +166,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({ action, onChange, onRemove 
                 />
             )}
             {action.type === 'pause' && (
-                <span style={{ fontSize: 10, color: '#64748b' }}>(no config needed)</span>
+                <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>(no config needed)</span>
             )}
             <button onClick={onRemove} style={s.iconBtn} aria-label={t('common.aria.delete')}>
                 <X size={12} />

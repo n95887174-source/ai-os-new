@@ -126,21 +126,21 @@ const CachePanel: React.FC = () => {
         {
             label: t('cache.size'),
             value: safeStats.size,
-            color: '#3b82f6',
+            color: 'var(--accent)',
             icon: <HardDrive size={18} />,
             suffix: t('cache.entries'),
         },
         {
             label: t('cache.hits'),
             value: safeStats.hits,
-            color: '#10b981',
+            color: 'var(--success)',
             icon: <Database size={18} />,
             suffix: '',
         },
         {
             label: t('cache.misses'),
             value: safeStats.misses,
-            color: '#f59e0b',
+            color: 'var(--warning)',
             icon: <Search size={18} />,
             suffix: '',
         },
@@ -180,12 +180,12 @@ const CachePanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Database size={28} color="#3b82f6" /> {t('cache.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('cache.subtitle')}
                     </p>
                 </div>
@@ -209,7 +209,7 @@ const CachePanel: React.FC = () => {
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 padding: '0.4rem 0.5rem',
                                 fontSize: '0.8rem',
                                 outline: 'none',
@@ -224,7 +224,7 @@ const CachePanel: React.FC = () => {
                             padding: '0.5rem 0.9rem',
                             borderRadius: 8,
                             border: 'none',
-                            background: '#ef4444',
+                            background: 'var(--error)',
                             color: '#fff',
                             cursor: 'pointer',
                             fontWeight: 600,
@@ -248,7 +248,7 @@ const CachePanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -293,7 +293,7 @@ const CachePanel: React.FC = () => {
                                 style={{
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
                                 }}
@@ -306,7 +306,7 @@ const CachePanel: React.FC = () => {
                             style={{
                                 fontSize: '2rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginTop: '0.5rem',
                             }}
                         >
@@ -316,7 +316,7 @@ const CachePanel: React.FC = () => {
                                     style={{
                                         fontSize: '0.85rem',
                                         fontWeight: 400,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginLeft: 4,
                                     }}
                                 >
@@ -340,7 +340,7 @@ const CachePanel: React.FC = () => {
                     style={{
                         fontSize: '1rem',
                         fontWeight: 700,
-                        color: '#f1f5f9',
+                        color: 'var(--slate-100)',
                         margin: '0 0 1rem',
                     }}
                 >

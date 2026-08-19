@@ -18,7 +18,7 @@ const TrendChart: React.FC<Props> = ({ trends }) => {
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginBottom: 8,
                     }}
                 >
@@ -26,7 +26,7 @@ const TrendChart: React.FC<Props> = ({ trends }) => {
                 </div>
                 <div
                     style={{
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.75rem',
                         textAlign: 'center',
                         padding: 20,
@@ -46,7 +46,7 @@ const TrendChart: React.FC<Props> = ({ trends }) => {
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginBottom: 8,
                 }}
             >
@@ -88,7 +88,7 @@ const TrendChart: React.FC<Props> = ({ trends }) => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: '0.6rem',
-                    color: '#475569',
+                    color: 'var(--slate-600)',
                     marginTop: 4,
                 }}
             >

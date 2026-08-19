@@ -32,13 +32,13 @@ const StatusBar: React.FC<StatusBarProps> = ({
                 {
                     label: 'Uptime',
                     value: `${Math.floor(status.uptime / 60000)}m`,
-                    color: '#a78bfa',
+                    color: 'var(--purple-muted)',
                 },
                 { label: 'DI', value: String(stats.di), color: '#34d399' },
-                { label: 'Source', value: String(stats.source), color: '#f59e0b' },
+                { label: 'Source', value: String(stats.source), color: 'var(--warning)' },
                 { label: 'UI Panels', value: String(stats.hasUi), color: '#22d3ee' },
-                { label: 'Unmapped', value: String(stats.unmapped), color: '#fbbf24' },
-                { label: 'Dismissed', value: String(stats.dismissed), color: '#64748b' },
+                { label: 'Unmapped', value: String(stats.unmapped), color: 'var(--warning)' },
+                { label: 'Dismissed', value: String(stats.dismissed), color: 'var(--slate-500)' },
                 {
                     label: 'Progress',
                     value: `${progress}%`,

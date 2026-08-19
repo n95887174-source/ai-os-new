@@ -76,13 +76,13 @@ const SessionCard: React.FC<SessionCardProps> = ({
                         style={{
                             fontSize: '0.85rem',
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             marginBottom: 2,
                         }}
                     >
                         {session.title}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {session.loops.length} loop{session.loops.length !== 1 ? 's' : ''} ·{' '}
                         {new Date(session.createdAt).toLocaleString()}
                     </div>
@@ -101,8 +101,8 @@ const SessionCard: React.FC<SessionCardProps> = ({
                         padding: '4px 10px',
                         borderRadius: 6,
                         border: '1px solid rgba(34,197,94,0.3)',
-                        background: 'rgba(34,197,94,0.1)',
-                        color: '#22c55e',
+                        background: 'var(--success-tint)',
+                        color: 'var(--success)',
                         cursor: 'pointer',
                         fontSize: '0.72rem',
                         fontWeight: 600,
@@ -125,7 +125,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                         borderRadius: 6,
                         border: 'none',
                         background: 'transparent',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         opacity: 0.6,
                     }}
@@ -154,12 +154,12 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                     style={{
                                         padding: '1rem',
                                         textAlign: 'center',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.8rem',
                                     }}
                                 >
                                     No loops yet. Click{' '}
-                                    <strong style={{ color: '#22c55e' }}>Run</strong> to start.
+                                    <strong style={{ color: 'var(--success)' }}>Run</strong> to start.
                                 </div>
                             )}
                             {session.loops.map((loop, idx) => (
@@ -180,7 +180,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                             style={{
                                                 fontSize: '0.75rem',
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             Citations
@@ -196,7 +196,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                                 borderRadius: 4,
                                                 background: 'rgba(255,255,255,0.05)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 outline: 'none',
                                             }}
                                         >
@@ -216,7 +216,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                                 padding: '4px 10px',
                                                 borderRadius: 6,
                                                 border: '1px solid rgba(168,85,247,0.3)',
-                                                background: 'rgba(168,85,247,0.1)',
+                                                background: 'var(--purple-tint)',
                                                 color: '#a855f7',
                                                 cursor: 'pointer',
                                                 fontSize: '0.7rem',
@@ -236,7 +236,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                                     borderRadius: 6,
                                                     border: '1px solid rgba(255,255,255,0.1)',
                                                     background: 'transparent',
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     cursor: 'pointer',
                                                     fontSize: '0.7rem',
                                                 }}
@@ -250,7 +250,7 @@ const SessionCard: React.FC<SessionCardProps> = ({
                                             style={{
                                                 fontSize: '0.65rem',
                                                 lineHeight: 1.5,
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 background: 'rgba(0,0,0,0.2)',
                                                 padding: 12,
                                                 borderRadius: 8,

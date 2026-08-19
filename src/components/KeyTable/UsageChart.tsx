@@ -45,7 +45,7 @@ const UsageChart: React.FC<UsageChartProps> = ({
                         style={{
                             fontSize: '0.75rem',
                             margin: '0 0 0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             textTransform: 'uppercase',
                             fontWeight: 700,
                             letterSpacing: '0.05em',
@@ -77,7 +77,7 @@ const UsageChart: React.FC<UsageChartProps> = ({
                         style={{
                             fontSize: '0.75rem',
                             margin: '0 0 0.5rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             textTransform: 'uppercase',
                             fontWeight: 700,
                         }}
@@ -93,20 +93,20 @@ const UsageChart: React.FC<UsageChartProps> = ({
                         }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Requests</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Requests</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {usageToday.requests}
                             </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Tokens</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Tokens</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {usageToday.tokens.toLocaleString()}
                             </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Cost</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Cost</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {formatCost(usageToday.estimatedCost)}
                             </span>
                         </div>
@@ -125,7 +125,7 @@ const UsageChart: React.FC<UsageChartProps> = ({
                         style={{
                             fontSize: '0.75rem',
                             margin: '0 0 0.5rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             textTransform: 'uppercase',
                             fontWeight: 700,
                         }}
@@ -141,20 +141,20 @@ const UsageChart: React.FC<UsageChartProps> = ({
                         }}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Requests</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Requests</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {usageMonthly.requests}
                             </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Tokens</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Tokens</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {usageMonthly.tokens.toLocaleString()}
                             </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#64748b' }}>Cost</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Cost</span>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                                 {formatCost(usageMonthly.estimatedCost)}
                             </span>
                         </div>
@@ -174,7 +174,7 @@ const UsageChart: React.FC<UsageChartProps> = ({
                     style={{
                         fontSize: '0.75rem',
                         margin: '0 0 0.75rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         textTransform: 'uppercase',
                         fontWeight: 700,
                         letterSpacing: '0.05em',

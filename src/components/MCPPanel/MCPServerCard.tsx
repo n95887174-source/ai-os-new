@@ -74,10 +74,10 @@ export const MCPServerCard = memo(function MCPServerCard({
                     }}
                 />
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {server.name}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', fontFamily: 'monospace' }}>
                         {server.url}
                     </div>
                 </div>
@@ -104,9 +104,9 @@ export const MCPServerCard = memo(function MCPServerCard({
                             style={{
                                 padding: '0.5rem',
                                 borderRadius: 8,
-                                background: 'rgba(16,185,129,0.1)',
+                                background: 'var(--success-tint)',
                                 border: '1px solid rgba(16,185,129,0.2)',
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -123,7 +123,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                 borderRadius: 8,
                                 background: 'rgba(100,116,139,0.1)',
                                 border: '1px solid rgba(100,116,139,0.2)',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -140,7 +140,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                             borderRadius: 8,
                             background: 'rgba(59,130,246,0.05)',
                             border: '1px solid rgba(59,130,246,0.2)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             cursor: 'pointer',
                         }}
                     >
@@ -156,7 +156,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                             borderRadius: 8,
                             background: 'rgba(239,68,68,0.05)',
                             border: '1px solid rgba(239,68,68,0.2)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                         }}
                     >
@@ -180,7 +180,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                 style={{
                                     padding: '0.75rem',
                                     borderRadius: 8,
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     color: '#fca5a5',
                                     fontSize: '0.85rem',
                                     marginBottom: '1rem',
@@ -193,7 +193,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '1rem',
                                 }}
                             >
@@ -201,7 +201,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                             </div>
                         )}
                         {loadingTools ? (
-                            <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                            <div style={{ color: 'var(--slate-400)', fontSize: '0.85rem' }}>
                                 {t('mcp.loading_capabilities')}
                             </div>
                         ) : (
@@ -217,7 +217,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                         style={{
                                             fontSize: '0.8rem',
                                             fontWeight: 700,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             marginBottom: '0.75rem',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -244,7 +244,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                                     style={{
                                                         fontSize: '0.85rem',
                                                         fontWeight: 600,
-                                                        color: '#e2e8f0',
+                                                        color: 'var(--slate-200)',
                                                         marginBottom: '0.25rem',
                                                     }}
                                                 >
@@ -254,7 +254,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                                     <div
                                                         style={{
                                                             fontSize: '0.75rem',
-                                                            color: '#94a3b8',
+                                                            color: 'var(--slate-400)',
                                                         }}
                                                     >
                                                         {tool.description}
@@ -266,7 +266,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                         <div
                                             style={{
                                                 fontSize: '0.8rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontStyle: 'italic',
                                             }}
                                         >
@@ -279,7 +279,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                         style={{
                                             fontSize: '0.8rem',
                                             fontWeight: 700,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             marginBottom: '0.75rem',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -306,7 +306,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                                     style={{
                                                         fontSize: '0.85rem',
                                                         fontWeight: 600,
-                                                        color: '#e2e8f0',
+                                                        color: 'var(--slate-200)',
                                                         marginBottom: '0.25rem',
                                                     }}
                                                 >
@@ -315,7 +315,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                                 <div
                                                     style={{
                                                         fontSize: '0.7rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         fontFamily: 'monospace',
                                                     }}
                                                 >
@@ -325,7 +325,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                                     <div
                                                         style={{
                                                             fontSize: '0.75rem',
-                                                            color: '#94a3b8',
+                                                            color: 'var(--slate-400)',
                                                         }}
                                                     >
                                                         {res.description}
@@ -337,7 +337,7 @@ export const MCPServerCard = memo(function MCPServerCard({
                                         <div
                                             style={{
                                                 fontSize: '0.8rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontStyle: 'italic',
                                             }}
                                         >

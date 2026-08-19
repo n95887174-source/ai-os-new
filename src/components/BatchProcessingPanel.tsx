@@ -136,11 +136,11 @@ const BatchProcessingPanel: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('batch.title')}
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('batch.subtitle')}
                     </p>
                 </div>
@@ -151,7 +151,7 @@ const BatchProcessingPanel: React.FC = () => {
                     style={{
                         margin: '0 0 8px',
                         fontSize: '0.9rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontWeight: 600,
                     }}
                 >
@@ -168,7 +168,7 @@ const BatchProcessingPanel: React.FC = () => {
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.3)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         fontFamily: 'monospace',
@@ -176,7 +176,7 @@ const BatchProcessingPanel: React.FC = () => {
                     }}
                 />
                 {promptList.length > 0 && (
-                    <div style={{ marginTop: 6, fontSize: '0.78rem', color: '#64748b' }}>
+                    <div style={{ marginTop: 6, fontSize: '0.78rem', color: 'var(--slate-500)' }}>
                         {promptList.length} {t('batch.prompts_count')}
                     </div>
                 )}
@@ -187,7 +187,7 @@ const BatchProcessingPanel: React.FC = () => {
                     style={{
                         margin: '0 0 8px',
                         fontSize: '0.9rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontWeight: 600,
                     }}
                 >
@@ -236,7 +236,7 @@ const BatchProcessingPanel: React.FC = () => {
                                                     alignItems: 'center',
                                                     gap: 4,
                                                     fontSize: '0.75rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     cursor: 'pointer',
                                                 }}
                                             >
@@ -263,7 +263,7 @@ const BatchProcessingPanel: React.FC = () => {
                         style={{
                             margin: '0 0 8px',
                             fontSize: '0.9rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 600,
                         }}
                     >
@@ -283,12 +283,12 @@ const BatchProcessingPanel: React.FC = () => {
                                 key={task.prompt}
                                 style={{
                                     fontSize: '0.78rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     display: 'flex',
                                     gap: 8,
                                 }}
                             >
-                                <span style={{ color: '#94a3b8', minWidth: 24 }}>#{i + 1}</span>
+                                <span style={{ color: 'var(--slate-400)', minWidth: 24 }}>#{i + 1}</span>
                                 <span
                                     style={{
                                         flex: 1,
@@ -299,7 +299,7 @@ const BatchProcessingPanel: React.FC = () => {
                                 >
                                     {task.prompt}
                                 </span>
-                                <span style={{ color: '#3b82f6', minWidth: 80 }}>
+                                <span style={{ color: 'var(--accent)', minWidth: 80 }}>
                                     {task.provider}
                                 </span>
                                 <span style={{ color: '#a855f7', minWidth: 120 }}>
@@ -311,7 +311,7 @@ const BatchProcessingPanel: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     textAlign: 'center',
                                 }}
                             >
@@ -379,7 +379,7 @@ const BatchProcessingPanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontSize: '0.85rem',
                             marginLeft: 'auto',
@@ -398,7 +398,7 @@ const BatchProcessingPanel: React.FC = () => {
                             justifyContent: 'space-between',
                             marginBottom: 8,
                             fontSize: '0.85rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                         }}
                     >
                         <span>
@@ -445,7 +445,7 @@ const BatchProcessingPanel: React.FC = () => {
                         style={{
                             margin: '0 0 8px',
                             fontSize: '0.9rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 600,
                         }}
                     >
@@ -457,7 +457,7 @@ const BatchProcessingPanel: React.FC = () => {
                             gridTemplateColumns: '2fr 1fr 1.5fr 80px 80px 80px 1fr',
                             gap: 8,
                             fontSize: '0.78rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <div style={{ fontWeight: 600, padding: '4px 8px' }}>
@@ -499,7 +499,7 @@ const BatchProcessingPanel: React.FC = () => {
                                     gridTemplateColumns: '2fr 1fr 1.5fr 80px 80px 80px 1fr',
                                     gap: 8,
                                     fontSize: '0.75rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     padding: '4px 8px',
                                     background:
                                         i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
@@ -527,9 +527,9 @@ const BatchProcessingPanel: React.FC = () => {
                                 </span>
                                 <span>
                                     {r.status === 'success' ? (
-                                        <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+                                        <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
                                     ) : (
-                                        <AlertCircle size={14} style={{ color: '#ef4444' }} />
+                                        <AlertCircle size={14} style={{ color: 'var(--error)' }} />
                                     )}
                                 </span>
                                 <span>{r.latency}ms</span>
@@ -565,7 +565,7 @@ const BatchProcessingPanel: React.FC = () => {
                             style={{
                                 margin: 0,
                                 fontSize: '0.9rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontWeight: 600,
                             }}
                         >
@@ -579,7 +579,7 @@ const BatchProcessingPanel: React.FC = () => {
                             style={{
                                 padding: '4px 8px',
                                 borderRadius: 6,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 border: '1px solid rgba(239,68,68,0.2)',
                                 color: '#f87171',
                                 cursor: 'pointer',
@@ -600,7 +600,7 @@ const BatchProcessingPanel: React.FC = () => {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     fontSize: '0.8rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     padding: '6px 8px',
                                     background: 'rgba(255,255,255,0.02)',
                                     borderRadius: 6,
@@ -609,19 +609,19 @@ const BatchProcessingPanel: React.FC = () => {
                                 <span>{j.label}</span>
                                 <span>
                                     {j.status === 'completed' && (
-                                        <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+                                        <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
                                     )}
                                     {j.status === 'running' && (
-                                        <Loader2 size={14} style={{ color: '#3b82f6' }} />
+                                        <Loader2 size={14} style={{ color: 'var(--accent)' }} />
                                     )}
                                     {j.status === 'cancelled' && (
-                                        <X size={14} style={{ color: '#f59e0b' }} />
+                                        <X size={14} style={{ color: 'var(--warning)' }} />
                                     )}
                                     {j.status === 'pending' && (
-                                        <span style={{ color: '#64748b' }}>⏳</span>
+                                        <span style={{ color: 'var(--slate-500)' }}>⏳</span>
                                     )}
                                     {j.status === 'failed' && (
-                                        <AlertCircle size={14} style={{ color: '#ef4444' }} />
+                                        <AlertCircle size={14} style={{ color: 'var(--error)' }} />
                                     )}
                                     <span style={{ marginLeft: 6 }}>
                                         {j.completed + j.failed}/{j.total}

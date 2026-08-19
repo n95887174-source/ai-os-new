@@ -25,7 +25,7 @@ export const TagBar: React.FC<TagBarProps> = ({ allTags, activeTag, onSelect }) 
                         padding: '0.2rem 0.6rem',
                         borderRadius: 12,
                         border: '1px solid #ef4444',
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         color: '#fca5a5',
                         cursor: 'pointer',
                         fontSize: '0.7rem',
@@ -46,7 +46,7 @@ export const TagBar: React.FC<TagBarProps> = ({ allTags, activeTag, onSelect }) 
                         borderRadius: 12,
                         border: '1px solid rgba(245,158,11,0.3)',
                         background: 'rgba(245,158,11,0.05)',
-                        color: '#fbbf24',
+                        color: 'var(--warning)',
                         cursor: 'pointer',
                         fontSize: '0.7rem',
                     }}

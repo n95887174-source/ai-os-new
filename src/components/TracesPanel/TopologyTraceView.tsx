@@ -39,7 +39,7 @@ const TopologyTraceView: React.FC = () => {
 
     if (nodes.length === 0) {
         return (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-500)' }}>
                 <Activity size={32} opacity={0.3} aria-hidden="true" />
                 <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
                     No topology events yet
@@ -57,7 +57,7 @@ const TopologyTraceView: React.FC = () => {
                 <div
                     style={{
                         fontSize: '0.75rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
@@ -71,9 +71,9 @@ const TopologyTraceView: React.FC = () => {
                         fontSize: '0.7rem',
                         padding: '0.3rem 0.75rem',
                         borderRadius: 6,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.2)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         fontWeight: 700,
                     }}
@@ -129,7 +129,7 @@ const TopologyTraceView: React.FC = () => {
                                         width: 10,
                                         height: 10,
                                         borderRadius: '50%',
-                                        background: '#475569',
+                                        background: 'var(--slate-600)',
                                     }}
                                 />
                             )}
@@ -147,7 +147,7 @@ const TopologyTraceView: React.FC = () => {
                                 <span
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 4,
@@ -159,7 +159,7 @@ const TopologyTraceView: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: isActive ? color : '#64748b',
+                                    color: isActive ? color : 'var(--slate-500)',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
                                 }}

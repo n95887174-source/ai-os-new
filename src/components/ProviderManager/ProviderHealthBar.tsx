@@ -17,7 +17,7 @@ export const ProviderHealthBar: React.FC<ProviderHealthBarProps> = ({ healthScor
     const c = BAND_COLORS[band] || '#64748b';
     return (
         <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48, fontWeight: 700 }}>
+            <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)', minWidth: 48, fontWeight: 700 }}>
                 HEALTH
             </span>
             <div

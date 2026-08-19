@@ -133,13 +133,13 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
             label: 'Active',
             value: agents.filter((a) => (a.stats.lastActive ?? 0) > now - RECENT_THRESHOLD_MS)
                 .length,
-            color: '#10b981',
+            color: 'var(--success)',
         },
         {
             label: 'Idle',
             value: agents.filter((a) => (a.stats.lastActive ?? 0) <= now - RECENT_THRESHOLD_MS)
                 .length,
-            color: '#64748b',
+            color: 'var(--slate-500)',
         },
     ];
 
@@ -152,7 +152,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <BarChart3 size={18} color="#3b82f6" />
-                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--slate-200)' }}>
                     Agent Statistics Dashboard
                 </span>
             </div>
@@ -164,7 +164,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                         label: 'Total Calls',
                         value: totalCalls.toLocaleString(),
                         icon: <Zap size={16} />,
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                     },
                     {
                         label: 'Total Tokens',
@@ -173,13 +173,13 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                                 ? `${(totalTokens / 1000).toFixed(1)}K`
                                 : totalTokens.toLocaleString(),
                         icon: <Activity size={16} />,
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                     },
                     {
                         label: 'Avg Latency',
                         value: `${avgLatency}ms`,
                         icon: <TrendingUp size={16} />,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                     },
                     {
                         label: 'Success Rate',
@@ -225,7 +225,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                                 {card.label}
                             </span>
                         </div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-200)' }}>
                             {card.value}
                         </div>
                     </div>
@@ -247,7 +247,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -264,7 +264,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                                 <span
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         width: 80,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -279,7 +279,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                                 <span
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         width: 36,
                                         textAlign: 'right',
                                     }}
@@ -292,7 +292,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textAlign: 'center',
                                     padding: '1rem',
                                 }}
@@ -319,7 +319,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -337,7 +337,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                                     alignItems: 'center',
                                     gap: 4,
                                     fontSize: '0.65rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 <div
@@ -368,7 +368,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginBottom: '0.5rem',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
@@ -382,7 +382,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                             <span
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     width: 80,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -397,7 +397,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     width: 48,
                                     textAlign: 'right',
                                 }}
@@ -412,7 +412,7 @@ export const AgentStatsDashboard: React.FC<AgentStatsDashboardProps> = ({ agentS
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textAlign: 'center',
                                 padding: '1rem',
                             }}

@@ -67,7 +67,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                     >
                         <Fish size={20} color="#06b6d4" /> Aquarium Trading
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Trade creatures with other users
                     </p>
                 </div>
@@ -95,7 +95,7 @@ const AquariumTradingPanelContent: React.FC = () => {
             {showOffer && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -114,7 +114,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 12,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: 4,
                                     display: 'block',
                                 }}
@@ -129,8 +129,8 @@ const AquariumTradingPanelContent: React.FC = () => {
                                     padding: '8px 10px',
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    background: '#0f172a',
-                                    color: '#e2e8f0',
+                                    background: 'var(--slate-900)',
+                                    color: 'var(--slate-200)',
                                     fontSize: 13,
                                     outline: 'none',
                                 }}
@@ -147,7 +147,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: 12,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: 4,
                                     display: 'block',
                                 }}
@@ -162,8 +162,8 @@ const AquariumTradingPanelContent: React.FC = () => {
                                     padding: '8px 10px',
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    background: '#0f172a',
-                                    color: '#e2e8f0',
+                                    background: 'var(--slate-900)',
+                                    color: 'var(--slate-200)',
                                     fontSize: 13,
                                     outline: 'none',
                                 }}
@@ -186,8 +186,8 @@ const AquariumTradingPanelContent: React.FC = () => {
                             padding: '8px 10px',
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 13,
                             outline: 'none',
                             marginBottom: 12,
@@ -223,7 +223,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Active Trades ({trades.length})
@@ -235,7 +235,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                 style={{
                                     padding: '10px 12px',
                                     borderRadius: 8,
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     border: '1px solid rgba(255,255,255,0.04)',
                                     borderLeft: `3px solid ${t.status === 'open' ? '#10b981' : '#f59e0b'}`,
                                 }}
@@ -248,22 +248,22 @@ const AquariumTradingPanelContent: React.FC = () => {
                                     }}
                                 >
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}
                                     >
                                         {t.offeredCreatureName}
                                     </span>
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>
+                                    <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                         → {t.requestedCreatureName}
                                     </span>
                                 </div>
-                                <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>
+                                <div style={{ fontSize: 11, color: 'var(--slate-600)', marginBottom: 2 }}>
                                     by {t.offeredBy} · {new Date(t.createdAt).toLocaleDateString()}
                                 </div>
                                 {t.note && (
                                     <div
                                         style={{
                                             fontSize: 11,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontStyle: 'italic',
                                             marginBottom: 4,
                                         }}
@@ -283,7 +283,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                                     cursor: 'pointer',
                                                     fontSize: 10,
                                                     background: 'rgba(16,185,129,0.15)',
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                 }}
                                             >
                                                 <Check size={10} /> Accept
@@ -297,7 +297,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                                     cursor: 'pointer',
                                                     fontSize: 10,
                                                     background: 'rgba(239,68,68,0.15)',
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                 }}
                                             >
                                                 <Ban size={10} /> Decline
@@ -314,7 +314,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                                 cursor: 'pointer',
                                                 fontSize: 10,
                                                 background: 'rgba(239,68,68,0.15)',
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                             }}
                                         >
                                             <X size={10} /> Cancel
@@ -324,7 +324,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                         style={{
                                             marginLeft: 'auto',
                                             fontSize: 10,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'capitalize',
                                         }}
                                     >
@@ -338,7 +338,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                 style={{
                                     padding: 16,
                                     textAlign: 'center',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: 13,
                                 }}
                             >
@@ -354,7 +354,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Trade History ({history.length})
@@ -373,7 +373,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                     style={{
                                         padding: '8px 10px',
                                         borderRadius: 6,
-                                        background: '#0f172a',
+                                        background: 'var(--slate-900)',
                                         border: '1px solid rgba(255,255,255,0.04)',
                                         fontSize: 11,
                                     }}
@@ -382,7 +382,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                         style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                         }}
                                     >
                                         <span>
@@ -398,7 +398,7 @@ const AquariumTradingPanelContent: React.FC = () => {
                                             {t.status}
                                         </span>
                                     </div>
-                                    <div style={{ color: '#475569' }}>
+                                    <div style={{ color: 'var(--slate-600)' }}>
                                         {t.offeredBy} · {new Date(t.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>

@@ -58,7 +58,7 @@ export const VitalCard: React.FC<VitalCardProps> = memo(
                 style={{
                     fontSize: '2rem',
                     fontWeight: 800,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                     marginBottom: '0.25rem',
                 }}
             >
@@ -67,7 +67,7 @@ export const VitalCard: React.FC<VitalCardProps> = memo(
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontWeight: 600,
                     marginBottom: '1rem',
                 }}

@@ -36,7 +36,7 @@ const DowngradeMapSection: React.FC<Props> = ({
                 style={{
                     fontSize: '1rem',
                     fontWeight: 700,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                     margin: 0,
                     display: 'flex',
                     alignItems: 'center',
@@ -78,11 +78,11 @@ const DowngradeMapSection: React.FC<Props> = ({
                                     minWidth: 0,
                                     flex: 1,
                                     ...inputDarkSm,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                     fontWeight: 700,
                                 }}
                             />
-                            <ArrowRight size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                            <ArrowRight size={14} style={{ color: 'var(--slate-500)', flexShrink: 0 }} />
                         </div>
                         <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
                             <button
@@ -101,7 +101,7 @@ const DowngradeMapSection: React.FC<Props> = ({
                                     borderRadius: 6,
                                     border: '1px solid rgba(239,68,68,0.22)',
                                     background: 'rgba(239,68,68,0.08)',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     cursor: 'pointer',
                                     display: 'grid',
                                     placeItems: 'center',
@@ -122,7 +122,7 @@ const DowngradeMapSection: React.FC<Props> = ({
                                     gap: '0.5rem',
                                 }}
                             >
-                                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                     {i + 1}.
                                 </span>
                                 <input
@@ -138,7 +138,7 @@ const DowngradeMapSection: React.FC<Props> = ({
                                         width: 28,
                                         height: 28,
                                         borderRadius: 6,
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         background: 'transparent',
                                         border: 'none',
                                         cursor: 'pointer',

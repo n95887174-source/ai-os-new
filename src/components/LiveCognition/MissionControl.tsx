@@ -102,11 +102,11 @@ const MissionControl: React.FC = () => {
                         <div
                             style={{
                                 padding: '0.4rem 0.8rem',
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                                 borderRadius: 8,
                                 fontSize: '0.7rem',
                                 fontWeight: 800,
-                                color: '#3b82f6',
+                                color: 'var(--accent)',
                                 border: '1px solid rgba(59,130,246,0.2)',
                             }}
                         >
@@ -164,8 +164,8 @@ const MissionControl: React.FC = () => {
                             style={{
                                 fontSize: '0.65rem',
                                 fontWeight: 800,
-                                color: '#f59e0b',
-                                background: 'rgba(245,158,11,0.1)',
+                                color: 'var(--warning)',
+                                background: 'var(--warning-tint)',
                                 padding: '0.2rem 0.5rem',
                                 borderRadius: 4,
                             }}
@@ -293,7 +293,7 @@ const MissionControl: React.FC = () => {
                                     animate={{ width: `${health?.vitals?.cpu ?? 0}%` }}
                                     style={{
                                         height: '100%',
-                                        background: '#3b82f6',
+                                        background: 'var(--accent)',
                                         borderRadius: 2,
                                     }}
                                 />
@@ -325,7 +325,7 @@ const MissionControl: React.FC = () => {
                                     }}
                                     style={{
                                         height: '100%',
-                                        background: '#10b981',
+                                        background: 'var(--success)',
                                         borderRadius: 2,
                                     }}
                                 />
@@ -347,7 +347,7 @@ const MissionControl: React.FC = () => {
                                     alignItems: 'center',
                                     gap: 8,
                                     fontSize: '0.75rem',
-                                    color: '#3b82f6',
+                                    color: 'var(--accent)',
                                     fontWeight: 800,
                                     marginBottom: '0.5rem',
                                 }}

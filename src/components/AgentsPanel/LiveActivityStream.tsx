@@ -44,14 +44,14 @@ const typeConfig: Record<
     ActivityEvent['type'],
     { icon: typeof Activity; color: string; bg: string }
 > = {
-    step_complete: { icon: Zap, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-    stream_end: { icon: Activity, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-    lifecycle: { icon: RefreshCw, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-    spawn: { icon: PlayCircle, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-    remove: { icon: Trash2, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+    step_complete: { icon: Zap, color: 'var(--success)', bg: 'rgba(16,185,129,0.1)' },
+    stream_end: { icon: Activity, color: 'var(--accent)', bg: 'rgba(59,130,246,0.1)' },
+    lifecycle: { icon: RefreshCw, color: 'var(--warning)', bg: 'rgba(245,158,11,0.1)' },
+    spawn: { icon: PlayCircle, color: 'var(--purple)', bg: 'rgba(139,92,246,0.1)' },
+    remove: { icon: Trash2, color: 'var(--error)', bg: 'rgba(239,68,68,0.1)' },
     restart: { icon: RefreshCw, color: '#06b6d4', bg: 'rgba(6,182,212,0.1)' },
     handoff: { icon: ArrowRightLeft, color: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
-    error: { icon: AlertTriangle, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+    error: { icon: AlertTriangle, color: 'var(--error)', bg: 'rgba(239,68,68,0.1)' },
 };
 
 const lifecycleColors: Record<string, string> = {
@@ -270,13 +270,13 @@ export const LiveActivityStream: React.FC = () => {
                             style={{
                                 fontSize: '0.95rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 margin: 0,
                             }}
                         >
                             Live Activity Stream
                         </h3>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)', margin: 0 }}>
                             {events.length} events • {filtered.length} shown
                         </p>
                     </div>
@@ -309,7 +309,7 @@ export const LiveActivityStream: React.FC = () => {
                             borderRadius: 6,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                         title="Clear all"
@@ -353,9 +353,9 @@ export const LiveActivityStream: React.FC = () => {
                             fontSize: '0.6rem',
                             fontWeight: 700,
                             borderRadius: 6,
-                            border: `1px solid ${typeFilter === type ? typeConfig[type].color : 'rgba(255,255,255,0.1)'}`,
+                            border: `1px solid ${typeFilter === type ? typeConfig[type].color : 'var(--border-default)'}`,
                             background: typeFilter === type ? typeConfig[type].bg : 'transparent',
-                            color: typeFilter === type ? typeConfig[type].color : '#94a3b8',
+                            color: typeFilter === type ? typeConfig[type].color : 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                     >
@@ -383,7 +383,7 @@ export const LiveActivityStream: React.FC = () => {
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             gap: '0.5rem',
                         }}
                     >
@@ -394,7 +394,7 @@ export const LiveActivityStream: React.FC = () => {
                                 : 'No activity yet — waiting for agent events…'}
                         </p>
                         {isPaused && (
-                            <p style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                            <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                                 Paused events will not be captured
                             </p>
                         )}
@@ -455,7 +455,7 @@ export const LiveActivityStream: React.FC = () => {
                                                 style={{
                                                     fontSize: '0.75rem',
                                                     fontWeight: 700,
-                                                    color: '#f8fafc',
+                                                    color: 'var(--slate-50)',
                                                 }}
                                             >
                                                 {evt.agentName}
@@ -479,7 +479,7 @@ export const LiveActivityStream: React.FC = () => {
                                                     style={{
                                                         fontSize: '0.55rem',
                                                         fontWeight: 600,
-                                                        color: '#94a3b8',
+                                                        color: 'var(--slate-400)',
                                                         fontFamily: 'monospace',
                                                     }}
                                                 >
@@ -490,7 +490,7 @@ export const LiveActivityStream: React.FC = () => {
                                         <p
                                             style={{
                                                 fontSize: '0.7rem',
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 margin: 0,
                                             }}
                                         >
@@ -506,7 +506,7 @@ export const LiveActivityStream: React.FC = () => {
                                                     borderRadius: 6,
                                                     background: 'rgba(0,0,0,0.3)',
                                                     fontSize: '0.65rem',
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontFamily: 'monospace',
                                                     whiteSpace: 'pre-wrap',
                                                     wordBreak: 'break-all',
@@ -523,7 +523,7 @@ export const LiveActivityStream: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.55rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontFamily: 'monospace',
                                             flexShrink: 0,
                                             display: 'flex',

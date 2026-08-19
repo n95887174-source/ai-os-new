@@ -2,8 +2,9 @@ import { Shield, Key, Terminal, Settings, Database, Trash2 } from 'lucide-react'
 import { externalSecretsService } from '../../kernel/instances';
 import type { SystemSettings, BackendStatus } from '../../kernel/instances';
 import { useTranslation } from '../../i18n/useTranslation';
-import { amberBtn, dangerBtn, flexBetween, textSecondary } from '../../styles/common';
+import { flexBetween, textSecondary } from '../../styles/common';
 import { ConfigInput, SettingRow, Toggle } from './settings-shared';
+import { Button } from '../Common';
 import type { RuntimeConfigForm } from './settings-shared';
 
 interface AdvancedTabProps {
@@ -41,7 +42,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                 style={{
                     fontSize: '1.25rem',
                     fontWeight: 800,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                     marginBottom: '0.5rem',
                 }}
             >
@@ -74,7 +75,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                             gap: '0.75rem',
                         }}
                     >
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--warning)' }}>
                             {t('settings.monitoring')}
                         </div>
                         <ConfigInput
@@ -158,7 +159,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                             max={3600000}
                             defaultValue={60000}
                         />
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3b82f6' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)' }}>
                             {t('settings.traces_label')}
                         </div>
                         <ConfigInput
@@ -200,7 +201,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                                 alignSelf: 'flex-end',
                                 padding: '0.6rem 1.5rem',
                                 borderRadius: 8,
-                                background: '#10b981',
+                                background: 'var(--success)',
                                 border: 'none',
                                 color: 'white',
                                 fontWeight: 700,
@@ -227,7 +228,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                     type="button"
                     onClick={() => setShowSecretsDetail((v) => !v)}
                     style={{
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                         borderColor: 'rgba(139,92,246,0.3)',
                         padding: '0.4rem 1rem',
                         borderRadius: 8,
@@ -264,8 +265,8 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                     {secretsBackends.map((b) => (
                         <div key={b.type} style={flexBetween}>
                             <div>
-                                <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{b.label}</span>
-                                <span style={{ marginLeft: '0.5rem', color: '#64748b' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>{b.label}</span>
+                                <span style={{ marginLeft: '0.5rem', color: 'var(--slate-500)' }}>
                                     ({b.type})
                                 </span>
                                 <span
@@ -292,7 +293,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                                     style={{
                                         padding: '0.3rem 0.75rem',
                                         borderRadius: 6,
-                                        background: '#8b5cf6',
+                                        background: 'var(--purple)',
                                         border: 'none',
                                         color: 'white',
                                         fontSize: '0.72rem',
@@ -306,7 +307,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                             {b.active && (
                                 <span
                                     style={{
-                                        color: '#8b5cf6',
+                                        color: 'var(--purple)',
                                         fontWeight: 700,
                                         fontSize: '0.7rem',
                                         textTransform: 'uppercase',
@@ -361,14 +362,13 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                 title={t('settings.reset_title')}
                 description={t('settings.reset_desc')}
             >
-                <button
-                    type="button"
-                    style={amberBtn}
+                <Button
+                    variant="warning"
                     onClick={onResetDefaults}
                     aria-label={t('settings.reset_aria')}
                 >
                     {t('settings.reset_button')}
-                </button>
+                </Button>
             </SettingRow>
             <SettingRow
                 icon={<Database size={20} aria-hidden="true" />}
@@ -376,14 +376,13 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
                 title={t('settings.factory_reset')}
                 description={t('settings.factory_reset_desc')}
             >
-                <button
-                    type="button"
-                    style={{ ...dangerBtn, display: 'flex', alignItems: 'center', gap: 6 }}
+                <Button
+                    variant="danger"
                     onClick={onPurgeData}
                     aria-label={t('settings.factory_aria')}
                 >
                     <Trash2 size={16} aria-hidden="true" /> {t('settings.factory_button')}
-                </button>
+                </Button>
             </SettingRow>
         </>
     );

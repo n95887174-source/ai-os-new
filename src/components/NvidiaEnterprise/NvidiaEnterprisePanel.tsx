@@ -217,7 +217,7 @@ export default function NvidiaEnterprisePanel() {
                             borderRadius: 6,
                             border: '1px solid rgba(239,68,68,0.3)',
                             background: 'transparent',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             fontSize: 12,
                             cursor: 'pointer',
                         }}

@@ -131,7 +131,7 @@ const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
                     <div style={{ fontSize: 18, fontWeight: 700, color: colors.text }}>
                         {(data.score * 100).toFixed(0)}
                     </div>
-                    <div style={{ fontSize: 10, color: '#64748b' }}>
+                    <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                         {t('pressure_map.unit_pressure')}
                     </div>
                 </div>
@@ -150,15 +150,15 @@ const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
                         fontSize: 11,
                     }}
                 >
-                    <span style={{ color: '#64748b' }}>Latency</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Latency</span>
                     <span>{(data.breakdown.latency * 100).toFixed(0)}%</span>
-                    <span style={{ color: '#64748b' }}>Reliability</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Reliability</span>
                     <span>{(data.breakdown.reliability * 100).toFixed(0)}%</span>
-                    <span style={{ color: '#64748b' }}>Errors</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Errors</span>
                     <span style={{ color: data.breakdown.errorRate > 0.1 ? '#ef4444' : '#22c55e' }}>
                         {(data.breakdown.errorRate * 100).toFixed(1)}%
                     </span>
-                    <span style={{ color: '#64748b' }}>Status</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Status</span>
                     <span style={{ color: statusColor }}>
                         {(data.breakdown.status * 100).toFixed(0)}%
                     </span>
@@ -171,7 +171,7 @@ const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: 10,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginBottom: 3,
                     }}
                 >
@@ -208,7 +208,7 @@ const ProviderCard: React.FC<{ data: ProviderPressureEntry }> = ({ data }) => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             fontSize: 10,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: 3,
                         }}
                     >
@@ -250,7 +250,7 @@ const PressureMap: React.FC = () => {
 
     if (!snapshot) {
         return (
-            <div style={{ padding: 24, color: '#64748b', textAlign: 'center' }}>
+            <div style={{ padding: 24, color: 'var(--slate-500)', textAlign: 'center' }}>
                 {t('pressure_map.loading')}
             </div>
         );
@@ -273,7 +273,7 @@ const PressureMap: React.FC = () => {
                     </h2>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>
+                    <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                         {t('pressure_map.last_update')}{' '}
                         {new Date(snapshot.timestamp).toLocaleTimeString()}
                     </span>
@@ -284,7 +284,7 @@ const PressureMap: React.FC = () => {
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 8,
                             padding: '6px 10px',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -327,7 +327,7 @@ const PressureMap: React.FC = () => {
                         <Thermometer size={24} color={pColor(snapshot.global.level).text} />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                        <div style={{ fontSize: 12, color: 'var(--slate-500)' }}>
                             {t('pressure_map.system_pressure')}
                         </div>
                         <div
@@ -340,7 +340,7 @@ const PressureMap: React.FC = () => {
                             {(snapshot.global.score * 100).toFixed(0)}
                         </div>
                         <div
-                            style={{ fontSize: 10, color: '#64748b', textTransform: 'capitalize' }}
+                            style={{ fontSize: 10, color: 'var(--slate-500)', textTransform: 'capitalize' }}
                         >
                             {snapshot.global.level}
                         </div>
@@ -352,7 +352,7 @@ const PressureMap: React.FC = () => {
                             icon: <Globe size={14} />,
                             label: 'Providers',
                             value: `${snapshot.providers.length} active`,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         },
                         {
                             icon: <AlertTriangle size={14} />,
@@ -364,7 +364,7 @@ const PressureMap: React.FC = () => {
                             icon: <Activity size={14} />,
                             label: 'Sessions',
                             value: `${snapshot.sessions.length} active`,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         },
                     ].map((s) => (
                         <div
@@ -373,7 +373,7 @@ const PressureMap: React.FC = () => {
                         >
                             <span style={{ color: s.color }}>{s.icon}</span>
                             <div>
-                                <div style={{ color: '#64748b', fontSize: 10 }}>{s.label}</div>
+                                <div style={{ color: 'var(--slate-500)', fontSize: 10 }}>{s.label}</div>
                                 <div style={{ fontWeight: 500 }}>{s.value}</div>
                             </div>
                         </div>
@@ -386,7 +386,7 @@ const PressureMap: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: 40,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         border: '1px dashed rgba(255,255,255,0.1)',
                         borderRadius: 12,
                     }}

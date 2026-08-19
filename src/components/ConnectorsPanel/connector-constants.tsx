@@ -56,7 +56,7 @@ export const DEFAULT_CONNECTORS: Connector[] = [
         name: 'GitHub OAuth',
         type: 'Version Control',
         description: 'PR reviews and autonomous code commits.',
-        color: '#f8fafc',
+        color: 'var(--slate-50)',
         status: 'disconnected',
     },
     {
@@ -64,7 +64,7 @@ export const DEFAULT_CONNECTORS: Connector[] = [
         name: 'Notion API',
         type: 'Knowledge Base',
         description: 'Query and update knowledge graph blocks.',
-        color: '#e2e8f0',
+        color: 'var(--slate-200)',
         status: 'disconnected',
     },
 ];

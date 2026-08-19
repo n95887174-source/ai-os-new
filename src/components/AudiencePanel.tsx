@@ -152,7 +152,7 @@ function AudiencePollView({
                         );
                     })}
                     {poll.winner && (
-                        <div style={{ fontSize: '0.7rem', color: '#22c55e', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--success)', marginTop: '0.25rem' }}>
                             Winner: {poll.winner}
                         </div>
                     )}

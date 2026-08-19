@@ -45,8 +45,8 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                                 padding: '6px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.72rem',
                                 outline: 'none',
                             }}
@@ -78,7 +78,7 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -93,13 +93,13 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -114,19 +114,19 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(139,92,246,0.1)',
+                                background: 'var(--purple-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Citations
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--purple-muted)' }}>
                                 {data.citations.length}
                             </div>
                         </div>
@@ -162,19 +162,19 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                                         style={{
                                             fontSize: '0.78rem',
                                             fontWeight: 600,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                         }}
                                     >
                                         {sec.title}
                                     </span>
-                                    <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         {sec.wordCount} words
                                     </span>
                                 </div>
                                 <div
                                     style={{
                                         fontSize: '0.68rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         lineHeight: 1.5,
                                         whiteSpace: 'pre-wrap',
                                     }}
@@ -204,7 +204,7 @@ export const ResearchReportTab: React.FC<Props> = ({ engine, session }) => {
                             >
                                 Peer Review Summary
                             </div>
-                            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                            <div style={{ fontSize: '0.68rem', color: 'var(--slate-400)' }}>
                                 {data.peerReview.summary}
                             </div>
                         </div>

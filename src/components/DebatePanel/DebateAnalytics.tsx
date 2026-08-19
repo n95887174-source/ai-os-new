@@ -109,7 +109,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                         <div
                             style={{
                                 fontSize: '0.8rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginTop: '0.75rem',
                                 textAlign: 'right',
                                 fontWeight: 600,
@@ -172,7 +172,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: '0.35rem',
                                     }}
                                 >
@@ -190,7 +190,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: '0.2rem',
                                     }}
                                 >
@@ -235,7 +235,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                         >
                                             <span
                                                 style={{
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                     fontWeight: 600,
                                                     textTransform: 'capitalize',
                                                 }}
@@ -267,7 +267,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                                 display: 'flex',
                                                 gap: '0.75rem',
                                                 marginTop: '0.25rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontSize: '0.65rem',
                                             }}
                                         >
@@ -301,7 +301,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                     <p
                         style={{
                             fontSize: '0.78rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             lineHeight: 1.5,
                             margin: '0.75rem 0',
                         }}
@@ -322,7 +322,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                             }}
                         >
                             <Zap size={14} color="#ef4444" />
-                            <div style={{ fontSize: '0.72rem', color: '#e2e8f0' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-200)' }}>
                                 <strong>{t('debate.disagreement_peak')}</strong>{' '}
                                 {t('debate.at_round')}{' '}
                                 {session.interpretation.disagreementPeak.round} (
@@ -342,7 +342,7 @@ const DebateAnalytics: React.FC<DebateAnalyticsProps> = ({ session, getAgentLabe
                                     display: 'flex',
                                     gap: '0.5rem',
                                     fontSize: '0.72rem',
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     alignItems: 'flex-start',
                                 }}
                             >

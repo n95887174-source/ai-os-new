@@ -24,7 +24,7 @@ const GroupDistribution: React.FC<Props> = ({
             style={{
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 marginBottom: '0.35rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -61,8 +61,8 @@ const GroupDistribution: React.FC<Props> = ({
                                 background: color,
                             }}
                         />
-                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{g}</span>
-                        <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--slate-400)' }}>{g}</span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                             {groupCounts[g]} ({Math.round(pct)}%)
                         </span>
                     </div>

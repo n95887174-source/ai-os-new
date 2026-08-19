@@ -1,5 +1,6 @@
 import { Search, Upload, Download, Trash, Trash2 } from 'lucide-react';
-import { flexColGap4, flexWrapGap4, inputLargeSelect, btnImportExport } from '../../styles/common';
+import { flexColGap4, flexWrapGap4, inputLargeSelect } from '../../styles/common';
+import { Button } from '../Common';
 
 type FilterType = 'all' | 'recent' | 'today' | 'week' | 'month';
 type MessageFilter = 'all' | 'short' | 'medium' | 'long';
@@ -52,7 +53,7 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({
                             left: '1.25rem',
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                         size={20}
                         aria-hidden="true"
@@ -104,22 +105,24 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({
             </div>
         </div>
         <div style={flexWrapGap4}>
-            <button
+            <Button
+                variant="ghost"
+                size="lg"
                 onClick={onImport}
                 className="btn-secondary"
-                style={btnImportExport}
                 aria-label="Import chat sessions from JSON file"
             >
                 <Upload size={20} /> Import JSON
-            </button>
-            <button
+            </Button>
+            <Button
+                variant="ghost"
+                size="lg"
                 onClick={onExport}
                 className="btn-secondary"
-                style={btnImportExport}
                 aria-label="Export chat sessions to JSON file"
             >
                 <Download size={20} /> Export JSON
-            </button>
+            </Button>
             {selectedCount > 0 && (
                 <button
                     onClick={onDeleteSelected}
@@ -131,7 +134,7 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({
                         gap: 10,
                         borderRadius: 14,
                         fontSize: '1rem',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         borderColor: 'rgba(239,68,68,0.3)',
                     }}
                     aria-label={`Delete ${selectedCount} selected chat sessions`}
@@ -149,7 +152,7 @@ const AdminToolbar: React.FC<AdminToolbarProps> = ({
                     gap: 10,
                     borderRadius: 14,
                     fontSize: '1rem',
-                    color: '#ef4444',
+                    color: 'var(--error)',
                     borderColor: 'rgba(239,68,68,0.3)',
                 }}
                 aria-label="Delete all chat sessions"

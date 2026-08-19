@@ -32,7 +32,7 @@ const ConsiliaTab: React.FC<ConsiliaTabProps> = ({ consilia }) => (
                     <div
                         style={{
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.9rem',
                         }}
                     >
@@ -40,10 +40,10 @@ const ConsiliaTab: React.FC<ConsiliaTabProps> = ({ consilia }) => (
                     </div>
                     <span style={chip(CONSULIA_COLORS[c.type] || '#64748b')}>{c.type}</span>
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 6 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)', marginTop: 6 }}>
                     {c.description}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 8 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: 8 }}>
                     {c.roles.length} roles · {c.minParticipants}–{c.maxParticipants} participants
                 </div>
             </div>

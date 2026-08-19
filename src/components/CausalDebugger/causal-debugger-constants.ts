@@ -21,7 +21,7 @@ export const INPUT_STYLE: React.CSSProperties = {
     borderRadius: 8,
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.03)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.8rem',
     outline: 'none',
     boxSizing: 'border-box',

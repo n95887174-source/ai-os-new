@@ -149,7 +149,7 @@ export default function GroqSpeedDashboard() {
                                     key={i}
                                     style={{
                                         flex: 1,
-                                        background: '#22c55e',
+                                        background: 'var(--success)',
                                         height: `${Math.max(4, h)}%`,
                                         borderRadius: '2px 2px 0 0',
                                         opacity: 0.4 + (i / speedHistory.length) * 0.6,

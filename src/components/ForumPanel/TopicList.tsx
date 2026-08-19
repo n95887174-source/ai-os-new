@@ -33,8 +33,8 @@ const TopicRow: React.FC<{
         }}
     >
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {topic.pinned && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>📌</span>}
-            <span style={{ fontSize: '0.76rem', color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
+            {topic.pinned && <span style={{ color: 'var(--warning)', fontSize: '0.68rem' }}>📌</span>}
+            <span style={{ fontSize: '0.76rem', color: 'var(--slate-200)', fontWeight: 600, flex: 1 }}>
                 {topic.title}
             </span>
             <button
@@ -78,7 +78,7 @@ const TopicRow: React.FC<{
                 gap: 10,
                 marginTop: 4,
                 fontSize: '0.66rem',
-                color: '#64748b',
+                color: 'var(--slate-500)',
             }}
         >
             <span>{topic.category}</span>
@@ -172,7 +172,7 @@ const TopicList: React.FC<TopicListProps> = ({
                 <div
                     style={{
                         fontSize: '0.72rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         textAlign: 'center',
                         padding: '1.5rem 0',
                     }}
@@ -207,7 +207,7 @@ const TopicList: React.FC<TopicListProps> = ({
                     >
                         Prev
                     </button>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Page {page + 1}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>Page {page + 1}</span>
                     <button onClick={() => onPageChange(page + 1)} style={btnStyle('#94a3b8')}>
                         Next
                     </button>
@@ -230,7 +230,7 @@ const btnStyle = (color: string): React.CSSProperties => ({
 const chipStyle: React.CSSProperties = {
     background: 'none',
     border: '1px solid rgba(255,255,255,0.12)',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     cursor: 'pointer',
     padding: '0.2rem 0.5rem',
     borderRadius: 999,
@@ -250,10 +250,10 @@ const chipStyleActive: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 0,
-    background: '#0f172a',
+    background: 'var(--slate-900)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 6,
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.7rem',
     padding: '0.32rem 0.55rem',
 };
@@ -262,7 +262,7 @@ const primaryBtn: React.CSSProperties = {
     padding: '0.32rem 0.7rem',
     borderRadius: 6,
     border: 'none',
-    background: '#8b5cf6',
+    background: 'var(--purple)',
     color: '#fff',
     cursor: 'pointer',
     fontWeight: 700,

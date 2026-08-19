@@ -123,7 +123,7 @@ function RuleCard({
                 </button>
                 <button
                     onClick={() => onDelete(rule.id)}
-                    style={{ ...iconBtnStyle, color: '#ef4444' }}
+                    style={{ ...iconBtnStyle, color: 'var(--error)' }}
                 >
                     <Trash2 size={16} />
                 </button>
@@ -210,6 +210,8 @@ const iconBtnStyle: React.CSSProperties = {
 };
 
 export default function SmartRoutingPanel() {
+    // B-21: smartRoutingService is a WHAT-IF simulator only. Rules edited here do NOT
+    // affect live routing — `RouterService.getRankedProviders` is the authoritative path.
     const [config, setConfig] = useState<SmartRoutingConfig>(() => smartRoutingService.getConfig());
     const [rules, setRules] = useState<RoutingRule[]>(() => smartRoutingService.getRules());
     const [history, setHistory] = useState<RoutingDecision[]>(() =>
@@ -663,7 +665,7 @@ const simBtnStyle: React.CSSProperties = {
     borderRadius: 8,
     padding: '6px 14px',
     background: 'rgba(59,130,246,0.08)',
-    color: '#3b82f6',
+    color: 'var(--accent)',
     fontSize: '0.85rem',
     fontWeight: 600,
     cursor: 'pointer',

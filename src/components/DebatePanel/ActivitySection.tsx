@@ -43,7 +43,7 @@ const ActivityHeatmap: React.FC<ActivitySectionProps> = ({ session, t }) => {
                             >
                                 <span
                                     style={{
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 500,
                                         flex: 1,
                                         overflow: 'hidden',
@@ -55,7 +55,7 @@ const ActivityHeatmap: React.FC<ActivitySectionProps> = ({ session, t }) => {
                                 </span>
                                 <span
                                     style={{
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         flexShrink: 0,
                                         marginLeft: '0.5rem',
                                     }}
@@ -167,7 +167,7 @@ const MostDiscussedSection: React.FC<ActivitySectionProps> = ({ session, t }) =>
                                     }}
                                 >
                                     @{arg.agentName}{' '}
-                                    <span style={{ color: '#64748b', fontWeight: 400 }}>
+                                    <span style={{ color: 'var(--slate-500)', fontWeight: 400 }}>
                                         &middot; {t('debate.round_label')} {arg.round}
                                     </span>
                                 </span>
@@ -181,7 +181,7 @@ const MostDiscussedSection: React.FC<ActivitySectionProps> = ({ session, t }) =>
                                     {arg.childCount} {t('debate.responses')}
                                 </span>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)', lineHeight: 1.4 }}>
                                 "{arg.content}"
                             </div>
                             <div

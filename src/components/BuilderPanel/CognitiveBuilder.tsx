@@ -89,7 +89,7 @@ const CognitiveBuilder: React.FC = () => {
                     {
                         ...params,
                         animated: true,
-                        style: { stroke: '#3b82f6', strokeWidth: 2 },
+                        style: { stroke: 'var(--accent)', strokeWidth: 2 },
                         type: 'smoothstep',
                     },
                     eds,
@@ -326,7 +326,7 @@ const CognitiveBuilder: React.FC = () => {
                         borderRadius: 16,
                         overflow: 'hidden',
                         border: '1px solid rgba(255,255,255,0.05)',
-                        background: '#020617',
+                        background: 'var(--slate-950)',
                         boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)',
                     }}
                     role="region"
@@ -370,7 +370,7 @@ const CognitiveBuilder: React.FC = () => {
                                         alignItems: 'center',
                                         gap: 8,
                                         fontSize: '0.8rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontWeight: 600,
                                     }}
                                 >

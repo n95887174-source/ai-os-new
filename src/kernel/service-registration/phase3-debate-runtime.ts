@@ -185,10 +185,13 @@ export const registerPhase3: Phase = (helpers, ctx) => {
             }),
     );
 
-    register('qualityImpactCollector', (_c) => new QualityImpactCollector());
+    register(
+        'qualityImpactCollector',
+        (c) => new QualityImpactCollector(c.get<IEventBus>('eventBus')),
+    );
 
-    register('experimentEngine', (_c) => {
-        const engine = new ExperimentEngine();
+    register('experimentEngine', (c) => {
+        const engine = new ExperimentEngine(c.get<IEventBus>('eventBus'));
         engine
             .init()
             .catch((e: unknown) =>

@@ -35,7 +35,7 @@ const TokenChart: React.FC<{
                 <h3 style={{ ...h3ChartTitle, margin: '0 0 0.25rem' }}>
                     <TrendingUp size={18} color="#a855f7" /> {t('analytics.chart.token_throughput')}
                 </h3>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                     Real-time telemetry aggregated over the last 24 hours.
                 </div>
             </div>
@@ -48,7 +48,7 @@ const TokenChart: React.FC<{
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div
-                        style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}
+                        style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }}
                     />{' '}
                     Spend ($)
                 </span>
@@ -78,7 +78,7 @@ const TokenChart: React.FC<{
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: '0.7rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontWeight: 600,
                 }}
             >
@@ -115,8 +115,8 @@ const WorkloadChart: React.FC<{
                                 fontSize: '0.85rem',
                             }}
                         >
-                            <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{m.id}</span>
-                            <span style={{ color: '#94a3b8', fontWeight: 600 }}>
+                            <span style={{ fontWeight: 700, color: 'var(--slate-200)' }}>{m.id}</span>
+                            <span style={{ color: 'var(--slate-400)', fontWeight: 600 }}>
                                 {(m.selectionRate * 100).toFixed(1)}%
                             </span>
                         </div>
@@ -152,7 +152,7 @@ const WorkloadChart: React.FC<{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.85rem',
                     textAlign: 'center',
                 }}
@@ -166,14 +166,14 @@ const WorkloadChart: React.FC<{
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#3b82f6',
+                    color: 'var(--accent)',
                     fontWeight: 800,
                     marginBottom: '0.25rem',
                 }}
             >
                 {t('analytics.optimization_engine')}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--slate-300)', lineHeight: 1.5 }}>
                 {t('analytics.optimization_desc')}
             </div>
         </div>
@@ -199,10 +199,10 @@ const CacheBlock: React.FC<{
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <HardDrive size={20} color="#a855f7" />
             <div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     {t('analytics.cache_hit_rate')}
                 </span>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)', marginTop: 2 }}>
                     {cacheStats?.hits ?? 0} {t('analytics.cache_hits')} /{' '}
                     {(cacheStats?.hits ?? 0) + (cacheStats?.misses ?? 0)}{' '}
                     {t('analytics.cache_requests')}

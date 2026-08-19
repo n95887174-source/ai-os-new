@@ -58,72 +58,81 @@ const PostCard: React.FC<{
     onModerate: (id: string, action: string) => void;
     onVote: (id: string, vote: 'up' | 'down') => void;
     onQuote?: (post: Post) => void;
-}> = ({ post, onModerate, onVote, onQuote }) => (
-    <div
-        style={{
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: '#0d1526',
-            borderRadius: 8,
-            padding: '0.6rem 0.8rem',
-            marginBottom: 8,
-        }}
-    >
+}> = ({ post, onModerate, onVote, onQuote }) => {
+    const { t } = useTranslation();
+    return (
         <div
             style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 6,
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: '#0d1526',
+                borderRadius: 8,
+                padding: '0.6rem 0.8rem',
+                marginBottom: 8,
             }}
         >
-            <AuthorBadge author={post.author} />
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                {post.agentProvenance && (
-                    <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                        {post.agentProvenance.tokensCost} tok
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 6,
+                }}
+            >
+                <AuthorBadge author={post.author} />
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {post.agentProvenance && (
+                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
+                            {post.agentProvenance.tokensCost} tok
+                        </span>
+                    )}
+                    <span style={{ fontSize: '0.66rem', color: 'var(--slate-400)', fontWeight: 700 }}>
+                        {post.score}
                     </span>
-                )}
-                <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontWeight: 700 }}>
-                    {post.score}
-                </span>
-                <button onClick={() => onVote(post.id, 'up')} style={iconBtnSmall} title="upvote">
-                    ▲
-                </button>
-                <button
-                    onClick={() => onVote(post.id, 'down')}
-                    style={iconBtnSmall}
-                    title="downvote"
-                >
-                    ▼
-                </button>
-                {onQuote && typeof onQuote === 'function' && (
-                    <button onClick={() => onQuote(post)} style={iconBtnSmall} title="quote">
-                        ❝
+                    <button
+                        onClick={() => onVote(post.id, 'up')}
+                        style={iconBtnSmall}
+                        title="upvote"
+                    >
+                        ▲
                     </button>
-                )}
-                <button
-                    onClick={() => onModerate(post.id, 'hide')}
-                    style={iconBtnSmall}
-                    title="hide"
-                >
-                    ○
-                </button>
-                <button
-                    onClick={() => onModerate(post.id, 'remove')}
-                    style={iconBtnSmall}
-                    title="remove"
-                >
-                    ×
-                </button>
+                    <button
+                        onClick={() => onVote(post.id, 'down')}
+                        style={iconBtnSmall}
+                        title="downvote"
+                    >
+                        ▼
+                    </button>
+                    {onQuote && typeof onQuote === 'function' && (
+                        <button onClick={() => onQuote(post)} style={iconBtnSmall} title="quote">
+                            ❝
+                        </button>
+                    )}
+                    <button
+                        onClick={() => onModerate(post.id, 'hide')}
+                        style={iconBtnSmall}
+                        title="hide"
+                        aria-label={t('forum.moderate.hide')}
+                    >
+                        ○
+                    </button>
+                    <button
+                        onClick={() => onModerate(post.id, 'remove')}
+                        style={iconBtnSmall}
+                        title="remove"
+                        aria-label={t('forum.moderate.remove')}
+                    >
+                        ×
+                    </button>
+                </div>
             </div>
+            <div
+                className="forum-post-body"
+                dangerouslySetInnerHTML={{ __html: post.renderedHtml }}
+                style={{ fontSize: '0.75rem', color: 'var(--slate-300)', marginTop: 6, lineHeight: 1.5 }}
+            />
         </div>
-        <div
-            className="forum-post-body"
-            dangerouslySetInnerHTML={{ __html: post.renderedHtml }}
-            style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: 6, lineHeight: 1.5 }}
-        />
-    </div>
-);
+    );
+};
 
 /**
  * TopicView — selected thread: posts + consensus badge + composer.
@@ -148,7 +157,7 @@ const TopicView: React.FC<TopicViewProps> = ({
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#475569',
+                    color: 'var(--slate-600)',
                     textAlign: 'center',
                     padding: '2.5rem 0',
                 }}
@@ -202,7 +211,7 @@ const TopicView: React.FC<TopicViewProps> = ({
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 700 }}>
                     {thread.topic.title}
                 </span>
                 {consensus && (
@@ -221,7 +230,7 @@ const TopicView: React.FC<TopicViewProps> = ({
                 <span
                     style={{
                         fontSize: '0.68rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginLeft: 'auto',
                         display: 'flex',
                         gap: 8,
@@ -255,7 +264,7 @@ const TopicView: React.FC<TopicViewProps> = ({
                 <div
                     style={{
                         fontSize: '0.72rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         textAlign: 'center',
                         padding: '1.5rem 0',
                     }}
@@ -308,7 +317,7 @@ const TopicView: React.FC<TopicViewProps> = ({
 const iconBtnSmall: React.CSSProperties = {
     border: 'none',
     background: 'transparent',
-    color: '#64748b',
+    color: 'var(--slate-500)',
     cursor: 'pointer',
     fontSize: '0.7rem',
     padding: '0 2px',
@@ -316,7 +325,7 @@ const iconBtnSmall: React.CSSProperties = {
 
 const exportBtn: React.CSSProperties = {
     border: '1px solid rgba(139,92,246,0.3)',
-    background: 'rgba(139,92,246,0.1)',
+    background: 'var(--purple-tint)',
     color: '#c4b5fd',
     cursor: 'pointer',
     fontSize: '0.66rem',
@@ -326,10 +335,10 @@ const exportBtn: React.CSSProperties = {
 
 const searchInput: React.CSSProperties = {
     width: '100%',
-    background: '#0f172a',
+    background: 'var(--slate-900)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 6,
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.7rem',
     padding: '0.32rem 0.55rem',
 };

@@ -63,6 +63,13 @@ const quality: Record<string, string> = {
     'quality_impact.export_sessions_desc': 'All debate sessions with quality data',
     'quality_impact.export_baselines': 'Baselines',
     'quality_impact.export_baselines_desc': 'Baseline sessions without quality techniques enabled',
+
+    // category labels + impact metrics (FX-01)
+    'quality.category.P0': 'P0 — Core',
+    'quality.category.P1': 'P1 — Advanced',
+    'quality.category.P2': 'P2 — Experimental',
+    'quality.sessions_label': 'sessions',
+    'quality.no_impact_data': 'No impact data yet',
 };
 
 export { quality };

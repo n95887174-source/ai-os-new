@@ -28,7 +28,7 @@ const inputStyle: React.CSSProperties = {
     borderRadius: 8,
     background: 'rgba(0,0,0,0.3)',
     border: '1px solid rgba(255,255,255,0.1)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.85rem',
     outline: 'none',
     fontFamily: 'monospace',
@@ -107,7 +107,7 @@ const WorkflowPanel: React.FC = () => {
                     }}
                 >
                     <h2
-                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('workflows.title')}
                     </h2>
@@ -126,7 +126,7 @@ const WorkflowPanel: React.FC = () => {
                         <Plus size={16} />
                     </button>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--slate-500)' }}>
                     {t('workflows.subtitle')}
                 </p>
                 {workflows.map((wf) => (
@@ -154,17 +154,17 @@ const WorkflowPanel: React.FC = () => {
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <GitBranch size={14} style={{ color: '#3b82f6' }} />
+                                <GitBranch size={14} style={{ color: 'var(--accent)' }} />
                                 <span
                                     style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                     }}
                                 >
                                     {wf.title}
                                 </span>
-                                {wf.isBuiltIn && <Star size={10} style={{ color: '#f59e0b' }} />}
+                                {wf.isBuiltIn && <Star size={10} style={{ color: 'var(--warning)' }} />}
                             </div>
                             {!wf.isBuiltIn && (
                                 <button
@@ -177,17 +177,17 @@ const WorkflowPanel: React.FC = () => {
                                         background: 'none',
                                         border: 'none',
                                         cursor: 'pointer',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     <Trash2 size={12} />
                                 </button>
                             )}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)', marginTop: 4 }}>
                             {wf.description}
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--slate-600)', marginTop: 4 }}>
                             {wf.steps.length} steps · used {wf.usageCount} times
                         </div>
                     </div>
@@ -196,7 +196,7 @@ const WorkflowPanel: React.FC = () => {
 
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {!selectedWf && (
-                    <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--slate-500)' }}>
                         <GitBranch size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
                         <p>{t('workflows.select_workflow')}</p>
                     </div>
@@ -205,10 +205,10 @@ const WorkflowPanel: React.FC = () => {
                 {selectedWf && (
                     <>
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: '#e2e8f0' }}>
+                            <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: 'var(--slate-200)' }}>
                                 {selectedWf.title}
                             </h3>
-                            <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: '#64748b' }}>
+                            <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                                 {selectedWf.description}
                             </p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -245,7 +245,7 @@ const WorkflowPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.85rem',
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                     fontWeight: 600,
                                                 }}
                                             >
@@ -254,7 +254,7 @@ const WorkflowPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.72rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     marginTop: 2,
                                                 }}
                                             >
@@ -263,7 +263,7 @@ const WorkflowPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#475569',
+                                                    color: 'var(--slate-600)',
                                                     marginTop: 4,
                                                     display: '-webkit-box',
                                                     WebkitLineClamp: 2,
@@ -284,7 +284,7 @@ const WorkflowPanel: React.FC = () => {
                                 style={{
                                     margin: '0 0 8px',
                                     fontSize: '0.9rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     fontWeight: 600,
                                 }}
                             >
@@ -349,7 +349,7 @@ const WorkflowPanel: React.FC = () => {
                                     style={{
                                         margin: '0 0 8px',
                                         fontSize: '0.9rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontWeight: 600,
                                     }}
                                 >
@@ -394,18 +394,18 @@ const WorkflowPanel: React.FC = () => {
                                             {sr.status === 'success' ? (
                                                 <CheckCircle2
                                                     size={14}
-                                                    style={{ color: '#22c55e' }}
+                                                    style={{ color: 'var(--success)' }}
                                                 />
                                             ) : (
                                                 <AlertCircle
                                                     size={14}
-                                                    style={{ color: '#ef4444' }}
+                                                    style={{ color: 'var(--error)' }}
                                                 />
                                             )}
                                             <span
                                                 style={{
                                                     fontSize: '0.8rem',
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                     fontWeight: 600,
                                                 }}
                                             >
@@ -414,7 +414,7 @@ const WorkflowPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     marginLeft: 'auto',
                                                 }}
                                             >
@@ -436,7 +436,7 @@ const WorkflowPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     marginTop: 4,
                                                     display: '-webkit-box',
                                                     WebkitLineClamp: 2,
@@ -458,7 +458,7 @@ const WorkflowPanel: React.FC = () => {
                                     style={{
                                         margin: '0 0 8px',
                                         fontSize: '0.9rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontWeight: 600,
                                     }}
                                 >
@@ -479,7 +479,7 @@ const WorkflowPanel: React.FC = () => {
                                                     background: 'rgba(255,255,255,0.02)',
                                                     borderRadius: 6,
                                                     fontSize: '0.78rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                 }}
                                             >
                                                 <span>
@@ -524,7 +524,7 @@ const WorkflowPanel: React.FC = () => {
                         style={{
                             width: 480,
                             maxWidth: '90vw',
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 16,
                             padding: 24,
                             border: '1px solid rgba(255,255,255,0.1)',
@@ -537,7 +537,7 @@ const WorkflowPanel: React.FC = () => {
                                 marginBottom: 16,
                             }}
                         >
-                            <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: '1.1rem' }}>
+                            <h3 style={{ margin: 0, color: 'var(--slate-200)', fontSize: '1.1rem' }}>
                                 {t('workflows.create')}
                             </h3>
                             <button
@@ -547,13 +547,13 @@ const WorkflowPanel: React.FC = () => {
                                     background: 'none',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 <X size={18} />
                             </button>
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 16 }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginBottom: 16 }}>
                             {t('workflows.create_desc')}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -585,7 +585,7 @@ const WorkflowPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(255,255,255,0.05)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         cursor: 'pointer',
                                         fontSize: '0.85rem',
                                     }}

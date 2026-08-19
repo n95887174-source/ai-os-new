@@ -9,11 +9,18 @@
  * Prefix format: `superagents:${bucket}:${key}` — no namespace sub-prefix.
  */
 
-import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import type { IEventBus } from '../types/interfaces';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 const LOGGER = rootLogger.child('BucketStorageAdapter');
+
+let _bucketStorageEventBus: IEventBus | null = null;
+
+/** Inject the event bus (called once at bootstrap). */
+export function setBucketStorageEventBus(bus: IEventBus): void {
+    _bucketStorageEventBus = bus;
+}
 
 export const KNOWN_BUCKETS = ['agents', 'research', 'roles', 'providers', 'ui'] as const;
 export type StorageBucket = (typeof KNOWN_BUCKETS)[number];
@@ -118,7 +125,7 @@ export class BucketStorageAdapter {
             writeRaw(this.prefix + key, JSON.stringify(value));
         } catch (e) {
             if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-                eventBus.emit(EVENTS.NOTIFICATION, {
+                _bucketStorageEventBus?.emit(EVENTS.NOTIFICATION, {
                     message: `localStorage quota exceeded for bucket "${this.bucket}" - data may be lost`,
                     type: 'error',
                 });

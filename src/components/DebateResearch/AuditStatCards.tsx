@@ -78,7 +78,7 @@ const Card: React.FC<{
         }}
     >
         <div style={{ fontSize: '1rem', fontWeight: 800, color }}>{value}</div>
-        <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{label}</div>
+        <div style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>{label}</div>
     </div>
 );
 

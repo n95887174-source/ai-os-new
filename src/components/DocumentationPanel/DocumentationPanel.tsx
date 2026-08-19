@@ -78,14 +78,14 @@ const DocumentationPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.75rem',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <BookOpen size={28} color="#3b82f6" /> {t('docs.title')}
                     </h2>
                     <p
                         style={{
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontSize: '0.85rem',
                             marginTop: '0.5rem',
                             lineHeight: 1.5,
@@ -129,7 +129,7 @@ const DocumentationPanel: React.FC = () => {
                             margin: '0 0 0.5rem',
                             fontSize: '0.85rem',
                             fontWeight: 800,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         {t('docs.dev_support')}
@@ -137,7 +137,7 @@ const DocumentationPanel: React.FC = () => {
                     <p
                         style={{
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             lineHeight: 1.6,
                             marginBottom: '1rem',
                         }}

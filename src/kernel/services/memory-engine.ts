@@ -98,7 +98,7 @@ export class MemoryService implements IMemoryEngine {
             },
             withLock: (fn) => this.cache.withLock(fn),
             emitUpdated: () => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             },
         });
     }
@@ -229,7 +229,7 @@ export class MemoryService implements IMemoryEngine {
                 this.cache.unshift(newEntry);
             };
             const onCommit = () => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             };
             if (tx) {
                 const snapshot = tx.capture(this.cache.entries);
@@ -303,7 +303,7 @@ export class MemoryService implements IMemoryEngine {
                 this.cache.upsert(newEntry);
             };
             const onCommit = () => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             };
             if (tx) {
                 const snapshot = tx.capture(this.cache.entries);
@@ -396,7 +396,7 @@ export class MemoryService implements IMemoryEngine {
                 this.cache.prepend(persisted);
             };
             const onCommit = () => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
                 govOp?.complete();
             };
             if (tx) {
@@ -469,7 +469,7 @@ export class MemoryService implements IMemoryEngine {
                 },
             );
             tx.onCommit(() => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             });
         } else {
             try {
@@ -484,7 +484,7 @@ export class MemoryService implements IMemoryEngine {
                 const newIdx = this.cache.findIndex(id);
                 if (newIdx === -1) return;
                 this.cache.spliceAt(newIdx);
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             });
         }
         if (this.workerClient.ready) {
@@ -518,7 +518,7 @@ export class MemoryService implements IMemoryEngine {
                 };
                 const onCommit = () => {
                     resultId = id;
-                    this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
                 };
                 if (tx) {
                     const snapshot = tx.capture(this.cache.entries);
@@ -550,7 +550,7 @@ export class MemoryService implements IMemoryEngine {
                 };
                 const onCommit = () => {
                     resultId = newId;
-                    this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                    this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
                 };
                 if (tx) {
                     const snapshot = tx.capture(this.cache.entries);
@@ -748,7 +748,7 @@ export class MemoryService implements IMemoryEngine {
                 this.cache.clear();
             };
             const onCommit = () => {
-                this.deps.eventBus.emitOnce(EVENTS.MEMORY_UPDATED, 'all', this.cache.entries);
+                this.deps.eventBus.emit(EVENTS.MEMORY_UPDATED, this.cache.entries);
             };
             if (tx) {
                 const snapshot = tx.capture(this.cache.entries);

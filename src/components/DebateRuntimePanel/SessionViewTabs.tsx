@@ -12,8 +12,8 @@ import {
     debateRuntimeArgumentsPanel,
     debateRuntimeEmptyState,
     debateRuntimeTabBar,
-    debateRuntimeTabButton,
 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface SessionViewTabsProps {
     selected: DebateSessionSnapshot;
@@ -44,10 +44,10 @@ const SessionViewTabs: React.FC<SessionViewTabsProps> = ({
     return (
         <>
             <div style={debateRuntimeTabBar}>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={() => setSessionViewTab('overview')}
                     style={{
-                        ...debateRuntimeTabButton,
                         color: sessionViewTab === 'overview' ? '#a78bfa' : '#64748b',
                         borderBottom:
                             sessionViewTab === 'overview'
@@ -56,11 +56,11 @@ const SessionViewTabs: React.FC<SessionViewTabsProps> = ({
                     }}
                 >
                     {t('debate_runtime.overview')}
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
                     onClick={() => setSessionViewTab('arguments')}
                     style={{
-                        ...debateRuntimeTabButton,
                         color: sessionViewTab === 'arguments' ? '#a78bfa' : '#64748b',
                         borderBottom:
                             sessionViewTab === 'arguments'
@@ -73,15 +73,15 @@ const SessionViewTabs: React.FC<SessionViewTabsProps> = ({
                 >
                     <MessageSquare size={14} /> {t('debate_runtime.arguments')}
                     {currentArgs.length > 0 && (
-                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                             ({currentArgs.length})
                         </span>
                     )}
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
                     onClick={() => setSessionViewTab('controls')}
                     style={{
-                        ...debateRuntimeTabButton,
                         color: sessionViewTab === 'controls' ? '#a78bfa' : '#64748b',
                         borderBottom:
                             sessionViewTab === 'controls'
@@ -93,7 +93,7 @@ const SessionViewTabs: React.FC<SessionViewTabsProps> = ({
                     }}
                 >
                     <Sliders size={14} /> {t('debate_runtime.controls')}
-                </button>
+                </Button>
             </div>
 
             {sessionViewTab === 'overview' ? (

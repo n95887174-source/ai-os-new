@@ -12,7 +12,8 @@ import { HybridPolicy } from './conversation-hybrid-policy';
 import { ConversationOrchestrator } from './conversation-orchestrator';
 import type { ScenarioRepository } from '../dal/scenario-repository';
 import type { DirectorRepository } from '../dal/director-repository';
-import { eventBus, EVENTS } from '../events/event-bus';
+import { EVENTS } from '../events/event-bus';
+import type { IEventBus } from '../types/interfaces';
 
 /**
  * Recording decorator over an `IExecutionEngine`. Delegates execution to the
@@ -70,15 +71,25 @@ export class ConversationDirectorService implements IConversationDirectorService
         return this.state;
     }
 
-    /** Write state through a method so TS does not narrow the field at call sites. */
+    /**
+     * Single writer for the Director's lifecycle status (B-10). Keeps `this.state`
+     * (exposed via `getState()`) and `this.session.status` (the persisted run record)
+     * in lockstep so they can never diverge into three parallel channels. Every
+     * status transition — lifecycle methods AND `conversation:*` events — flows here.
+     */
     private setState(s: DirectorState): void {
         this.state = s;
+        if (this.session) {
+            this.session.status = s;
+            this.session.updatedAt = Date.now();
+        }
     }
 
     constructor(
         private readonly scenarioRepository: ScenarioRepository,
         private readonly executionEngine: IExecutionEngine,
         private readonly directorRepository?: DirectorRepository,
+        private readonly eventBus?: IEventBus,
     ) {
         // Observe the conversation:* lifecycle for the active session so the
         // `ConversationSession` run record stays in sync with what actually
@@ -92,7 +103,10 @@ export class ConversationDirectorService implements IConversationDirectorService
             EVENTS.CONVERSATION_ABORTED,
             EVENTS.CONVERSATION_COMPLETED,
         ] as const) {
-            this.busUnsubs.push(eventBus.onSafe(name, (d) => this.applyConversationEvent(name, d)));
+            this.busUnsubs.push(
+                this.eventBus?.onSafe(name, (d) => this.applyConversationEvent(name, d)) ??
+                    (() => {}),
+            );
         }
     }
 
@@ -134,6 +148,7 @@ export class ConversationDirectorService implements IConversationDirectorService
             new HybridPolicy(found.turns),
             this.recording,
             context,
+            this.eventBus,
         );
         const now = Date.now();
         this.session = {
@@ -164,9 +179,12 @@ export class ConversationDirectorService implements IConversationDirectorService
         }
         if (this.isRunning) return;
         this.isRunning = true;
-        this.state = 'running';
+        this.setState('running');
         const sessionId = this.sessionId;
         const recording = this.recording;
+        // Eagerly create the session AbortController so an abort() arriving
+        // during the very first turn has a live signal to fire (B-08).
+        this.orchestrator.getAbortSignal(sessionId);
         try {
             while ((this.phase as any) !== 'paused' && (this.phase as any) !== 'aborted') {
                 const before = recording.results.length;
@@ -180,7 +198,13 @@ export class ConversationDirectorService implements IConversationDirectorService
                 }
             }
         } catch (e) {
-            this.setState('error');
+            // An abort-induced throw must be reported as 'aborted', never as a
+            // generic failure (B-01).
+            if (this.orchestrator?.isAborted(sessionId)) {
+                this.setState('aborted');
+            } else {
+                this.setState('error');
+            }
             throw e;
         } finally {
             this.isRunning = false;
@@ -190,19 +214,23 @@ export class ConversationDirectorService implements IConversationDirectorService
 
     pause(): void {
         this.orchestrator?.pause();
-        this.state = 'paused';
+        this.setState('paused');
         this.persist();
     }
 
     async resume(): Promise<void> {
+        // Resume must clear the abort flag and drop the (poisoned) controller,
+        // otherwise the next processNextStep immediately returns and the run is
+        // silently marked 'completed' (B-09).
+        this.orchestrator?.clearAbort(this.sessionId);
         this.orchestrator?.resume();
-        this.state = 'running';
+        this.setState('running');
         await this.run();
     }
 
     abort(): void {
         this.orchestrator?.abortSession(this.sessionId);
-        this.state = 'aborted';
+        this.setState('aborted');
         this.persist();
     }
 
@@ -282,7 +310,7 @@ export class ConversationDirectorService implements IConversationDirectorService
             case EVENTS.CONVERSATION_TURN_START:
                 s.currentParticipantId = d.participantId as string;
                 s.currentTurnIndex = (d.turnIndex as number | undefined) ?? null;
-                if (lifecycleStable) s.status = 'running';
+                if (lifecycleStable) this.setState('running');
                 break;
             case EVENTS.CONVERSATION_TURN_COMPLETE:
                 s.currentParticipantId = null;
@@ -290,26 +318,26 @@ export class ConversationDirectorService implements IConversationDirectorService
                 s.results.push({ success: true, content: d.content as string | undefined });
                 if (d.injected) s.injectedDone++;
                 else s.plannedDone++;
-                if (lifecycleStable) s.status = 'running';
+                if (lifecycleStable) this.setState('running');
                 break;
             case EVENTS.CONVERSATION_TURN_ERROR:
                 s.currentParticipantId = null;
                 s.currentTurnIndex = null;
                 s.results.push({ success: false, error: d.error as string });
                 s.failed++;
-                if (lifecycleStable) s.status = 'error';
+                if (lifecycleStable) this.setState('error');
                 break;
             case EVENTS.CONVERSATION_PAUSED:
-                s.status = 'paused';
+                this.setState('paused');
                 break;
             case EVENTS.CONVERSATION_RESUMED:
-                s.status = 'running';
+                this.setState('running');
                 break;
             case EVENTS.CONVERSATION_ABORTED:
-                s.status = 'aborted';
+                this.setState('aborted');
                 break;
             case EVENTS.CONVERSATION_COMPLETED:
-                s.status = 'completed';
+                this.setState('completed');
                 break;
         }
         s.updatedAt = Date.now();

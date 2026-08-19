@@ -78,7 +78,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     background: 'none',
                     border: 'none',
                     outline: 'none',
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                     fontSize: '0.9rem',
                 }}
             />
@@ -89,7 +89,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <X size={14} />
@@ -104,7 +104,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     left: 0,
                     right: 0,
                     zIndex: 10,
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 12,
                     marginTop: '0.25rem',
@@ -127,7 +127,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                             background: 'none',
                             border: 'none',
                             borderBottom: '1px solid rgba(255,255,255,0.05)',
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             cursor: 'pointer',
                             textAlign: 'left',
                             fontSize: '0.85rem',
@@ -135,7 +135,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     >
                         <ChevronRight size={12} color="#3b82f6" />
                         <span style={{ fontWeight: 600 }}>{r.title}</span>
-                        <span style={{ color: '#64748b', marginLeft: 'auto', fontSize: '0.75rem' }}>
+                        <span style={{ color: 'var(--slate-500)', marginLeft: 'auto', fontSize: '0.75rem' }}>
                             {t(NAV_ITEMS.find((n) => n.id === r.section)?.labelKey || r.section)}
                         </span>
                     </button>

@@ -106,16 +106,16 @@ const RoutingSLAView: React.FC<RoutingSLAViewProps> = ({ keys, onAddProvider }) 
                             style={{
                                 justifyContent: 'space-between',
                                 fontSize: '0.65rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginTop: '0.2rem',
                                 padding: '0 0.25rem',
                             }}
                         >
                             <span></span>
-                            <span style={{ color: '#10b981' }}>200 (real-time)</span>
-                            <span style={{ color: '#3b82f6' }}>500 (interactive)</span>
-                            <span style={{ color: '#f59e0b' }}>1000 (responsive)</span>
-                            <span style={{ color: '#ef4444' }}>3000 (tolerant)</span>
+                            <span style={{ color: 'var(--success)' }}>200 (real-time)</span>
+                            <span style={{ color: 'var(--accent)' }}>500 (interactive)</span>
+                            <span style={{ color: 'var(--warning)' }}>1000 (responsive)</span>
+                            <span style={{ color: 'var(--error)' }}>3000 (tolerant)</span>
                             <span></span>
                         </div>
                     </div>

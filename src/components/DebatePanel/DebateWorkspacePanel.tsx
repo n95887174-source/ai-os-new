@@ -145,7 +145,7 @@ const DebateWorkspacePanel: React.FC = () => {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <MessageCircle size={24} color="#a855f7" />
-                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#f1f5f9' }}>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-100)' }}>
                     Debate Rooms
                 </h2>
             </div>
@@ -164,7 +164,7 @@ const DebateWorkspacePanel: React.FC = () => {
                         borderRadius: 8,
                         border: '1px solid rgba(100,116,139,0.3)',
                         background: 'rgba(15,23,42,0.6)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                     }}
@@ -197,7 +197,7 @@ const DebateWorkspacePanel: React.FC = () => {
                     style={{
                         padding: '0.5rem 0.75rem',
                         borderRadius: 8,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.2)',
                         color: '#fca5a5',
                         fontSize: '0.8rem',
@@ -223,7 +223,7 @@ const DebateWorkspacePanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.9rem',
                             flexDirection: 'column',
                             gap: 8,
@@ -261,7 +261,7 @@ const DebateWorkspacePanel: React.FC = () => {
                                     style={{
                                         fontSize: '0.9rem',
                                         fontWeight: 600,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         marginBottom: 2,
                                     }}
                                 >
@@ -272,7 +272,7 @@ const DebateWorkspacePanel: React.FC = () => {
                                         display: 'flex',
                                         gap: 12,
                                         fontSize: '0.75rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -289,7 +289,7 @@ const DebateWorkspacePanel: React.FC = () => {
                                     padding: '0.35rem 0.75rem',
                                     borderRadius: 6,
                                     border: '1px solid rgba(168,85,247,0.3)',
-                                    background: 'rgba(168,85,247,0.1)',
+                                    background: 'var(--purple-tint)',
                                     color: '#a855f7',
                                     cursor: 'pointer',
                                     display: 'flex',
@@ -308,7 +308,7 @@ const DebateWorkspacePanel: React.FC = () => {
                                     borderRadius: 6,
                                     border: 'none',
                                     background: 'transparent',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',

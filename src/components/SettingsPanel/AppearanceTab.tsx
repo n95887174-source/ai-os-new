@@ -61,7 +61,7 @@ const TokenEditor: React.FC<TokenEditorProps> = ({ name, value, onChange }) => {
             }}
         >
             <div
-                style={{ flex: 1, fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'monospace' }}
+                style={{ flex: 1, fontSize: '0.78rem', color: 'var(--slate-400)', fontFamily: 'monospace' }}
             >
                 {name.replace(/^--/, '')}
             </div>
@@ -92,7 +92,7 @@ const TokenEditor: React.FC<TokenEditorProps> = ({ name, value, onChange }) => {
                     borderRadius: 6,
                     background: 'rgba(0,0,0,0.3)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.75rem',
                     fontFamily: 'monospace',
                     outline: 'none',
@@ -236,7 +236,7 @@ const AppearanceTab: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Palette size={22} color="#a855f7" />
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#e2e8f0' }}>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--slate-200)' }}>
                         Design Tokens LIVE
                     </span>
                 </div>
@@ -288,7 +288,7 @@ const AppearanceTab: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(139,92,246,0.15)',
                             border: '1px solid rgba(139,92,246,0.3)',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                             fontWeight: 600,
@@ -323,7 +323,7 @@ const AppearanceTab: React.FC = () => {
             <div
                 style={{
                     fontSize: '0.82rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     padding: '0.75rem 1rem',
                     background: 'rgba(168,85,247,0.06)',
                     borderRadius: 12,
@@ -359,13 +359,13 @@ const AppearanceTab: React.FC = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.5rem',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontWeight: 700,
                                     fontSize: '0.85rem',
                                     textAlign: 'left',
                                 }}
                             >
-                                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
                                     {groupInfo?.icon || '📦'}
                                 </span>
                                 {groupInfo?.label || guessGroupLabel(group)}
@@ -373,12 +373,12 @@ const AppearanceTab: React.FC = () => {
                                     style={{
                                         marginLeft: 'auto',
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     {items.length} tokens
                                 </span>
-                                <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                <span style={{ color: 'var(--slate-500)', fontSize: '0.7rem' }}>
                                     {isExpanded ? '▼' : '▶'}
                                 </span>
                             </button>

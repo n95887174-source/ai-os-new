@@ -30,7 +30,7 @@ export const ToolSandboxTab: React.FC<ToolSandboxTabProps> = ({
                 style={{
                     fontSize: '0.8rem',
                     fontWeight: 800,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     display: 'flex',
@@ -39,7 +39,7 @@ export const ToolSandboxTab: React.FC<ToolSandboxTabProps> = ({
             >
                 <span>{t('tools.exec_params_label')}</span>
                 <span
-                    style={{ cursor: 'pointer', color: '#3b82f6', textTransform: 'none' }}
+                    style={{ cursor: 'pointer', color: 'var(--accent)', textTransform: 'none' }}
                     onClick={onResetParams}
                 >
                     {t('tools.exec_reset')}
@@ -51,10 +51,10 @@ export const ToolSandboxTab: React.FC<ToolSandboxTabProps> = ({
                 style={{
                     height: 140,
                     padding: '1.25rem',
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     border: '1px solid rgba(255,255,255,0.05)',
                     borderRadius: 12,
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     outline: 'none',
                     resize: 'none',
                     fontFamily: '"JetBrains Mono", monospace',
@@ -110,7 +110,7 @@ export const ToolSandboxTab: React.FC<ToolSandboxTabProps> = ({
             <div
                 style={{
                     flex: 1,
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     borderRadius: 12,
                     border: '1px solid rgba(255,255,255,0.05)',
                     padding: '1.25rem',
@@ -140,7 +140,7 @@ export const ToolSandboxTab: React.FC<ToolSandboxTabProps> = ({
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             fontSize: '0.9rem',
                             textAlign: 'center',
                             lineHeight: 1.6,

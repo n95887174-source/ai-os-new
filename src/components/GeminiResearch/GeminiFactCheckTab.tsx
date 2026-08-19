@@ -21,13 +21,13 @@ const cardStyle: React.CSSProperties = {
 const assessmentIcon = (status: string) => {
     switch (status) {
         case 'supported':
-            return <CheckCircle2 size={14} style={{ color: '#22c55e' }} />;
+            return <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />;
         case 'contradicted':
-            return <XCircle size={14} style={{ color: '#ef4444' }} />;
+            return <XCircle size={14} style={{ color: 'var(--error)' }} />;
         case 'partially_supported':
-            return <AlertCircle size={14} style={{ color: '#f59e0b' }} />;
+            return <AlertCircle size={14} style={{ color: 'var(--warning)' }} />;
         default:
-            return <AlertCircle size={14} style={{ color: '#64748b' }} />;
+            return <AlertCircle size={14} style={{ color: 'var(--slate-500)' }} />;
     }
 };
 
@@ -74,7 +74,7 @@ export const GeminiFactCheckTab: React.FC<Props> = ({ service, sessionId }) => {
             </button>
 
             {data && data.length === 0 && (
-                <div style={{ ...cardStyle, color: '#64748b', textAlign: 'center', padding: 30 }}>
+                <div style={{ ...cardStyle, color: 'var(--slate-500)', textAlign: 'center', padding: 30 }}>
                     No claims found in this session
                 </div>
             )}
@@ -138,10 +138,10 @@ export const GeminiFactCheckTab: React.FC<Props> = ({ service, sessionId }) => {
                                     {(a.confidence * 100).toFixed(0)}%
                                 </span>
                             </div>
-                            <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: 6 }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--slate-300)', marginBottom: 6 }}>
                                 {a.claim}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                 {a.reasoning}
                             </div>
                             {a.suggestedCorrection && (
@@ -149,7 +149,7 @@ export const GeminiFactCheckTab: React.FC<Props> = ({ service, sessionId }) => {
                                     style={{
                                         marginTop: 6,
                                         fontSize: '0.8rem',
-                                        color: '#f59e0b',
+                                        color: 'var(--warning)',
                                         padding: '6px 10px',
                                         borderRadius: 6,
                                         background: 'rgba(245,158,11,0.08)',

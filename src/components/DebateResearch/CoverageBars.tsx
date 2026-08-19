@@ -16,10 +16,10 @@ interface Props {
 
 const BARS = [
     { label: 'Events', key: 'eventScore' as const, color: '#a855f7' },
-    { label: 'Logger', key: 'loggerScore' as const, color: '#3b82f6' },
-    { label: 'Health', key: 'healthScore' as const, color: '#10b981' },
+    { label: 'Logger', key: 'loggerScore' as const, color: 'var(--accent)' },
+    { label: 'Health', key: 'healthScore' as const, color: 'var(--success)' },
     { label: 'Tracing', key: 'tracingScore' as const, color: '#06b6d4' },
-    { label: 'Lifecycle', key: 'lifecycleScore' as const, color: '#f59e0b' },
+    { label: 'Lifecycle', key: 'lifecycleScore' as const, color: 'var(--warning)' },
 ];
 
 const CoverageBars: React.FC<Props> = (props) => (
@@ -45,7 +45,7 @@ const CoverageBars: React.FC<Props> = (props) => (
                             marginBottom: '0.15rem',
                         }}
                     >
-                        <span style={{ color: '#94a3b8', fontWeight: 600 }}>{label}</span>
+                        <span style={{ color: 'var(--slate-400)', fontWeight: 600 }}>{label}</span>
                         <span style={{ color: scoreColor(score), fontWeight: 700 }}>
                             {score}% ({count}/{props.total})
                         </span>

@@ -156,11 +156,11 @@ const PromptLibraryPanel: React.FC = () => {
             >
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('prompts.title')}
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('prompts.subtitle')}
                     </p>
                 </div>
@@ -201,7 +201,7 @@ const PromptLibraryPanel: React.FC = () => {
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -214,7 +214,7 @@ const PromptLibraryPanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -261,7 +261,7 @@ const PromptLibraryPanel: React.FC = () => {
                             gridColumn: '1 / -1',
                             textAlign: 'center',
                             padding: '3rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <FileText size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
@@ -321,7 +321,7 @@ const PromptLibraryPanel: React.FC = () => {
                                 </span>
                                 {prompt.isBuiltIn && (
                                     <span
-                                        style={{ fontSize: '0.7rem', color: '#f59e0b' }}
+                                        style={{ fontSize: '0.7rem', color: 'var(--warning)' }}
                                         title={t('prompts.builtin_badge')}
                                     >
                                         <Star size={12} />
@@ -339,7 +339,7 @@ const PromptLibraryPanel: React.FC = () => {
                                         background: 'none',
                                         border: 'none',
                                         cursor: 'pointer',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         borderRadius: 4,
                                     }}
                                     title={t('prompts.use_in_chat')}
@@ -374,7 +374,7 @@ const PromptLibraryPanel: React.FC = () => {
                                             background: 'none',
                                             border: 'none',
                                             cursor: 'pointer',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             borderRadius: 4,
                                         }}
                                         title={t('prompts.delete')}
@@ -402,7 +402,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     margin: 0,
                                     fontSize: '0.95rem',
                                     fontWeight: 600,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     marginBottom: 6,
                                 }}
                             >
@@ -412,7 +412,7 @@ const PromptLibraryPanel: React.FC = () => {
                                 style={{
                                     margin: 0,
                                     fontSize: '0.8rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     lineHeight: 1.4,
                                     display: '-webkit-box',
                                     WebkitLineClamp: 3,
@@ -424,7 +424,7 @@ const PromptLibraryPanel: React.FC = () => {
                             </p>
                         </div>
                         {prompt.usageCount > 0 && (
-                            <div style={{ marginTop: 8, fontSize: '0.7rem', color: '#475569' }}>
+                            <div style={{ marginTop: 8, fontSize: '0.7rem', color: 'var(--slate-600)' }}>
                                 {t('prompts.usage_count', { count: prompt.usageCount })}
                             </div>
                         )}
@@ -440,14 +440,14 @@ const PromptLibraryPanel: React.FC = () => {
                                             borderRadius: 8,
                                             fontSize: '0.65rem',
                                             background: 'rgba(255,255,255,0.04)',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         {tag}
                                     </span>
                                 ))}
                                 {prompt.tags.length > 3 && (
-                                    <span style={{ fontSize: '0.65rem', color: '#475569' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-600)' }}>
                                         +{prompt.tags.length - 3}
                                     </span>
                                 )}
@@ -479,7 +479,7 @@ const PromptLibraryPanel: React.FC = () => {
                             maxWidth: '90vw',
                             maxHeight: '80vh',
                             overflowY: 'auto',
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 16,
                             padding: 24,
                             border: '1px solid rgba(255,255,255,0.1)',
@@ -493,7 +493,7 @@ const PromptLibraryPanel: React.FC = () => {
                                 marginBottom: 20,
                             }}
                         >
-                            <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: '1.1rem' }}>
+                            <h3 style={{ margin: 0, color: 'var(--slate-200)', fontSize: '1.1rem' }}>
                                 {editingPrompt ? t('prompts.edit') : t('prompts.create')}
                             </h3>
                             <button
@@ -503,7 +503,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     background: 'none',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 <X size={18} />
@@ -519,7 +519,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     borderRadius: 8,
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.9rem',
                                     outline: 'none',
                                 }}
@@ -534,7 +534,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     borderRadius: 8,
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.85rem',
                                     outline: 'none',
                                     fontFamily: 'monospace',
@@ -549,7 +549,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     borderRadius: 8,
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.85rem',
                                     outline: 'none',
                                 }}
@@ -569,7 +569,7 @@ const PromptLibraryPanel: React.FC = () => {
                                     borderRadius: 8,
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.85rem',
                                     outline: 'none',
                                 }}
@@ -589,7 +589,7 @@ const PromptLibraryPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(255,255,255,0.05)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         cursor: 'pointer',
                                         fontSize: '0.85rem',
                                     }}

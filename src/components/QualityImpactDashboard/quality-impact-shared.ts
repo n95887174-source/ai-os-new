@@ -45,11 +45,11 @@ export const headerStyle: React.CSSProperties = {
     fontSize: '24px',
     fontWeight: 700,
     marginBottom: '8px',
-    color: '#f1f5f9',
+    color: 'var(--slate-100)',
 };
 export const subtitleStyle: React.CSSProperties = {
     fontSize: '14px',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     marginBottom: '24px',
 };
 
@@ -90,12 +90,12 @@ export const statCardStyle: React.CSSProperties = {
 export const statValueStyle: React.CSSProperties = {
     fontSize: '32px',
     fontWeight: 700,
-    color: '#f1f5f9',
+    color: 'var(--slate-100)',
     marginBottom: '4px',
 };
 export const statLabelStyle: React.CSSProperties = {
     fontSize: '13px',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
 };
@@ -115,7 +115,7 @@ export const tableHeaderStyle: React.CSSProperties = {
     borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
     fontSize: '12px',
     fontWeight: 600,
-    color: '#64748b',
+    color: 'var(--slate-500)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     userSelect: 'none',
@@ -136,14 +136,14 @@ export const expandedRowStyle: React.CSSProperties = {
     background: 'rgba(15, 23, 42, 0.3)',
     borderBottom: '1px solid rgba(148, 163, 184, 0.05)',
     fontSize: '13px',
-    color: '#cbd5e1',
+    color: 'var(--slate-300)',
     lineHeight: 1.6,
 };
 
 export const emptyStyle: React.CSSProperties = {
     padding: '60px 20px',
     textAlign: 'center',
-    color: '#64748b',
+    color: 'var(--slate-500)',
 };
 
 export const badgeStyle = (color: string): React.CSSProperties => ({

@@ -3,7 +3,7 @@ import type { TeamState } from './wizard-constants';
 
 const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
     <div>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
             Fine-tune how the team executes. These settings affect the behavior of the coordination
             strategy.
         </div>
@@ -13,7 +13,7 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         marginBottom: 4,
@@ -43,7 +43,7 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>1</span>
@@ -55,14 +55,14 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         marginBottom: 4,
                     }}
                 >
                     <span>Consensus Threshold</span>
-                    <span style={{ color: '#f59e0b' }}>
+                    <span style={{ color: 'var(--warning)' }}>
                         {(team.executionConfig?.consensusThreshold || 0.7).toFixed(1)}
                     </span>
                 </label>
@@ -88,7 +88,7 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>0.5 (easy)</span>
@@ -100,14 +100,14 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         marginBottom: 4,
                     }}
                 >
                     <span>Parallel Timeout (ms)</span>
-                    <span style={{ color: '#10b981' }}>
+                    <span style={{ color: 'var(--success)' }}>
                         {team.executionConfig?.parallelTimeout || 30000}ms
                     </span>
                 </label>
@@ -133,7 +133,7 @@ const ConfigStep: React.FC<TeamState> = ({ team, setTeam }) => (
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>5s</span>

@@ -65,8 +65,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
                 ) : (
                     <span style={{ width: 11 }} />
                 )}
-                <span style={{ color: '#cbd5e1' }}>{keyName}</span>
-                <span style={{ color: '#475569' }}>:</span>
+                <span style={{ color: 'var(--slate-300)' }}>{keyName}</span>
+                <span style={{ color: 'var(--slate-600)' }}>:</span>
                 {!isComplex && (
                     <span
                         style={{ color: valueColor(value), marginLeft: 4, wordBreak: 'break-all' }}
@@ -128,7 +128,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
                             style={{
                                 ...indent,
                                 padding: '2px 6px',
-                                color: '#475569',
+                                color: 'var(--slate-600)',
                                 fontSize: '0.7rem',
                             }}
                         >

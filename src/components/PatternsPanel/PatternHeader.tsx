@@ -29,7 +29,7 @@ const PatternHeader: React.FC<Props> = ({
                     style={{
                         fontSize: '1.5rem',
                         fontWeight: 800,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         marginBottom: '0.5rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -38,7 +38,7 @@ const PatternHeader: React.FC<Props> = ({
                 >
                     <Book size={28} color="var(--accent-primary)" /> {t('patterns.title')}
                 </h1>
-                <p style={{ fontSize: '0.9rem', color: '#64748b' }}>{t('patterns.subtitle')}</p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--slate-500)' }}>{t('patterns.subtitle')}</p>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="search-box" style={{ position: 'relative' }}>
@@ -48,7 +48,7 @@ const PatternHeader: React.FC<Props> = ({
                             left: '12px',
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                         size={18}
                     />
@@ -62,7 +62,7 @@ const PatternHeader: React.FC<Props> = ({
                             borderRadius: 12,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             width: 300,
                         }}
                     />

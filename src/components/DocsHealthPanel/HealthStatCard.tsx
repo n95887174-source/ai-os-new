@@ -22,7 +22,7 @@ export const HealthStatCard: React.FC<HealthStatCardProps> = ({ label, value, co
                 style={{
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                 }}
@@ -31,7 +31,7 @@ export const HealthStatCard: React.FC<HealthStatCardProps> = ({ label, value, co
             </div>
             <div style={{ color }}>{icon}</div>
         </div>
-        <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.5rem' }}>
+        <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--slate-50)', marginTop: '0.5rem' }}>
             {value}
         </div>
     </div>

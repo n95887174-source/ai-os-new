@@ -44,7 +44,7 @@ const AuthorBadge: React.FC<AuthorBadgeProps> = ({ author }) => {
             )}
             {isAgent ? '◆' : '●'} {author.displayName || author.id}
             {author.roleId && isAgent ? ` · ${author.roleId}` : ''}
-            <span style={{ color: '#64748b', fontWeight: 400 }}>
+            <span style={{ color: 'var(--slate-500)', fontWeight: 400 }}>
                 {isAgent ? t('forum.author_agent') : t('forum.author_human')}
             </span>
         </span>

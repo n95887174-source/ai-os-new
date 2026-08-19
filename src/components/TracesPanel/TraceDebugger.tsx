@@ -99,7 +99,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                             borderRadius: 12,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                         }}
                         aria-label="Close debugger"
@@ -124,7 +124,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                 fontSize: '1.25rem',
                                 fontWeight: 800,
                                 fontFamily: '"JetBrains Mono", monospace',
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                             }}
                         >
                             {trace.traceId}
@@ -135,7 +135,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                         style={{
                             width: 1,
                             height: 40,
-                            background: 'rgba(255,255,255,0.1)',
+                            background: 'var(--border-default)',
                             margin: '0 0.5rem',
                         }}
                         aria-hidden="true"
@@ -262,7 +262,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                 borderRadius: 10,
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 cursor: 'pointer',
                                 marginLeft: '0.5rem',
                             }}
@@ -280,7 +280,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                             color: '#a855f7',
                             width: 100,
                             textAlign: 'center',
-                            background: 'rgba(168,85,247,0.1)',
+                            background: 'var(--purple-tint)',
                             padding: '0.6rem 1rem',
                             borderRadius: 10,
                             border: '1px solid rgba(168,85,247,0.2)',
@@ -325,7 +325,7 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                       gap: 8,
                                       fontSize: '0.8rem',
                                       fontWeight: 800,
-                                      color: '#ef4444',
+                                      color: 'var(--error)',
                                       textTransform: 'uppercase',
                                       letterSpacing: '0.05em',
                                   }}
@@ -355,14 +355,14 @@ const TraceDebugger: React.FC<TraceDebuggerProps> = ({ trace, onClose }) => {
                                       </span>
                                       <span
                                           style={{
-                                              color: '#94a3b8',
+                                              color: 'var(--slate-400)',
                                               fontFamily: '"JetBrains Mono", monospace',
                                               minWidth: 150,
                                           }}
                                       >
                                           {iss.type}
                                       </span>
-                                      <span style={{ color: '#e2e8f0' }}>{iss.message}</span>
+                                      <span style={{ color: 'var(--slate-200)' }}>{iss.message}</span>
                                   </div>
                               ))}
                           </div>

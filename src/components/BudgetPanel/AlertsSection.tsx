@@ -45,15 +45,15 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ alerts }) => {
                                     borderRadius: 3,
                                     fontSize: '0.65rem',
                                     background: 'rgba(239,68,68,0.15)',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     marginRight: 6,
                                 }}
                             >
                                 {alert.type}
                             </span>
-                            <span style={{ color: '#e2e8f0' }}>{alert.message}</span>
+                            <span style={{ color: 'var(--slate-200)' }}>{alert.message}</span>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                             {alert.current.toFixed(2)}/{alert.limit.toFixed(2)} ({alert.level}%)
                         </span>
                     </div>

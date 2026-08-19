@@ -177,12 +177,12 @@ const MCPPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Server size={28} color="#a855f7" /> {t('mcp.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('mcp.subtitle')}
                     </p>
                 </div>
@@ -196,9 +196,9 @@ const MCPPanel: React.FC = () => {
                             padding: '0.75rem 1.25rem',
                             borderRadius: 12,
                             fontWeight: 700,
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             border: '1px solid rgba(59,130,246,0.2)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             cursor: 'pointer',
                         }}
                     >
@@ -236,7 +236,7 @@ const MCPPanel: React.FC = () => {
                             alignItems: 'center',
                             gap: 12,
                             padding: '0.75rem 1rem',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 12,
                             color: '#fca5a5',
@@ -276,19 +276,19 @@ const MCPPanel: React.FC = () => {
                         {
                             label: t('mcp.stats.connected'),
                             value: stats.connected,
-                            color: '#10b981',
+                            color: 'var(--success)',
                             icon: <Power size={20} />,
                         },
                         {
                             label: t('mcp.stats.disconnected'),
                             value: stats.disconnected,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             icon: <PowerOff size={20} />,
                         },
                         {
                             label: t('mcp.stats.errors'),
                             value: stats.error,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             icon: <AlertTriangle size={20} />,
                         },
                     ].map((stat) => (
@@ -316,13 +316,13 @@ const MCPPanel: React.FC = () => {
                                         fontSize: '0.75rem',
                                         fontWeight: 700,
                                         textTransform: 'uppercase',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                     }}
                                 >
                                     {stat.label}
                                 </span>
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                                 {stat.value}
                             </div>
                         </div>
@@ -338,7 +338,7 @@ const MCPPanel: React.FC = () => {
                         left: 14,
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 />
                 <input
@@ -377,14 +377,14 @@ const MCPPanel: React.FC = () => {
                             justifyContent: 'center',
                             gap: 16,
                             height: '100%',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <Server size={48} style={{ opacity: 0.3 }} />
                         <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>
                             {searchQuery ? t('mcp.empty_search') : t('mcp.empty_none')}
                         </p>
-                        <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                             {t('mcp.empty_desc')}
                         </p>
                     </div>

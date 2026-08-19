@@ -6,8 +6,8 @@
 import { genId } from '../../utils/gen-id';
 import { rootLogger } from './logger-service';
 import type { ILLMClientService } from '../contracts/provider-adapter';
+import type { IEventBus } from '../types/interfaces';
 import { sanitizePromptVar } from '../../shared/utils/sanitize';
-import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 const MAX_RESULTS = 500; // B10-143: Cap results to prevent unbounded growth
 
@@ -57,9 +57,16 @@ export class RoleTestingSandboxService {
         return database;
     }
 
-    constructor(llmClient: ILLMClientService, config: Partial<SandboxConfig> = {}) {
+    private _eventBus: IEventBus | null = null;
+
+    constructor(
+        llmClient: ILLMClientService,
+        config: Partial<SandboxConfig> = {},
+        eventBus?: IEventBus,
+    ) {
         this.llmClient = llmClient;
         this.config = { ...DEFAULT_CONFIG, ...config };
+        this._eventBus = eventBus ?? null;
     }
 
     async init(): Promise<void> {
@@ -130,7 +137,7 @@ export class RoleTestingSandboxService {
             }
             await this.save();
 
-            EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_COMPLETED, result);
+            this._eventBus?.emit(EVENTS.ROLE_SANDBOX_TEST_COMPLETED, result);
             LOGGER.info('RoleTestingSandbox', 'Test completed', {
                 testId,
                 success: result.success,
@@ -156,7 +163,7 @@ export class RoleTestingSandboxService {
             }
             await this.save();
 
-            EventBus.emit(EVENTS.ROLE_SANDBOX_TEST_FAILED, result);
+            this._eventBus?.emit(EVENTS.ROLE_SANDBOX_TEST_FAILED, result);
             LOGGER.error('RoleTestingSandbox', 'Test failed', { testId, error });
 
             return result;

@@ -39,12 +39,12 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                 style={{
                     fontSize: '0.72rem',
                     fontWeight: 700,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     marginBottom: '0.25rem',
                 }}
             >
                 {t('debate.probe_title')}
-                <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 400 }}>
+                <span style={{ marginLeft: 8, color: 'var(--slate-500)', fontWeight: 400 }}>
                     {Array.from(probeResults.values()).filter((r) => r.status === 'ready').length}/
                     {probeResults.size} {t('debate.probe_ready')}
                 </span>
@@ -88,7 +88,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                             />
                             <span
                                 style={{
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontWeight: 600,
                                     minWidth: 80,
                                     flexShrink: 0,
@@ -111,7 +111,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                             {r.latency > 0 && (
                                 <span
                                     style={{
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         fontSize: '0.7rem',
                                         minWidth: 35,
                                         flexShrink: 0,
@@ -123,7 +123,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                             {preview ? (
                                 <span
                                     style={{
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontSize: '0.72rem',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -137,7 +137,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                             ) : r.error ? (
                                 <span
                                     style={{
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         fontSize: '0.7rem',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -150,7 +150,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                             ) : (
                                 <span
                                     style={{
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.7rem',
                                         fontStyle: 'italic',
                                         flex: 1,
@@ -160,7 +160,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                                     {t('debate.probe_no_response')}
                                 </span>
                             )}
-                            <span style={{ color: '#475569', fontSize: '0.6rem', flexShrink: 0 }}>
+                            <span style={{ color: 'var(--slate-600)', fontSize: '0.6rem', flexShrink: 0 }}>
                                 {isExpanded ? '\u25B2' : '\u25BC'}
                             </span>
                         </div>
@@ -173,7 +173,7 @@ export const ProbeResultsList: React.FC<ProbeResultsListProps> = ({
                                     border: '1px solid rgba(168,85,247,0.12)',
                                     borderTop: 'none',
                                     fontSize: '0.78rem',
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word',
                                     maxHeight: 150,

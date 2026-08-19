@@ -219,6 +219,8 @@ const debate: Record<string, string> = {
     'debate_runtime.create_session': 'Create Session',
     'debate_runtime.creating': 'Creating',
     'debate_runtime.creating_desc': 'Creating Desc',
+    'debate_runtime.cancelling': 'Cancelling',
+    'debate_runtime.cancelling_desc': 'Cancelling debate…',
     'debate_runtime.debate_quality': 'Debate Quality',
     'debate_runtime.error_agents_required': 'Error Agents Required',
     'debate_runtime.error_topic_required': 'Error Topic Required',

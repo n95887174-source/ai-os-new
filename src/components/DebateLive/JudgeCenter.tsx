@@ -50,7 +50,7 @@ export const JudgeCenter: React.FC<Props> = ({ judge, phase }) => {
             />
             <span
                 style={{
-                    color: '#fbbf24',
+                    color: 'var(--warning)',
                     fontWeight: 700,
                     fontSize: '0.6rem',
                     textAlign: 'center',

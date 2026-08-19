@@ -91,7 +91,7 @@ const ProjectToolbar: React.FC<Props> = ({
                         background: 'none',
                         border: 'none',
                         outline: 'none',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.72rem',
                     }}
                 />
@@ -102,7 +102,7 @@ const ProjectToolbar: React.FC<Props> = ({
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             padding: 0,
                         }}
@@ -116,7 +116,7 @@ const ProjectToolbar: React.FC<Props> = ({
                 style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     cursor: 'pointer',
                     padding: 3,
                     fontSize: '0.65rem',
@@ -150,7 +150,7 @@ const ProjectToolbar: React.FC<Props> = ({
                 style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     cursor: 'pointer',
                     padding: 3,
                     fontSize: '0.65rem',

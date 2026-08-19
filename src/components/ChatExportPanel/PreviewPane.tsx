@@ -26,7 +26,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({ preview, hasChat, sour
                     style={{
                         padding: '1rem',
                         margin: 0,
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         fontFamily: 'monospace',
                         fontSize: '0.75rem',
                         whiteSpace: 'pre-wrap',
@@ -46,7 +46,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({ preview, hasChat, sour
                     padding: '1rem',
                     borderRadius: 8,
                     background: 'rgba(0,0,0,0.15)',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontSize: '0.8rem',
                 }}
             >

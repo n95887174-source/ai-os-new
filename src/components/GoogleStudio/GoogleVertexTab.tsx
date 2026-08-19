@@ -196,10 +196,10 @@ export function GoogleVertexTab({ model }: GoogleVertexTabProps) {
                     style={{
                         marginTop: 12,
                         padding: 8,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         borderRadius: 8,
                         fontSize: 12,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     }}
                 >
                     {error}
@@ -236,7 +236,7 @@ export function GoogleVertexTab({ model }: GoogleVertexTabProps) {
                         }}
                     >
                         {result.content || (
-                            <span style={{ color: '#ef4444' }}>
+                            <span style={{ color: 'var(--error)' }}>
                                 {result.error || 'No content returned'}
                             </span>
                         )}

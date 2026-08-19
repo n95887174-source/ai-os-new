@@ -96,10 +96,10 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem' }}>
                 <Users size={16} color="#a855f7" />
-                <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9rem' }}>
+                <span style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '0.9rem' }}>
                     Collaborative Mode
                 </span>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                     {participants.length} human participant{participants.length !== 1 ? 's' : ''}
                 </span>
             </div>
@@ -122,7 +122,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             width: 140,
                         }}
@@ -174,9 +174,9 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
                                 width: '100%',
                                 padding: '0.4rem 0.75rem',
                                 borderRadius: 8,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 border: '1px solid rgba(239,68,68,0.2)',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 fontSize: '0.75rem',
                             }}
                         >
@@ -219,7 +219,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
                             <span
                                 style={{
                                     fontSize: '0.8rem',
-                                    color: '#f59e0b',
+                                    color: 'var(--warning)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 4,
@@ -239,7 +239,7 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                     }}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -269,9 +269,9 @@ const CollabDebatePanel: React.FC<Props> = ({ session }) => {
                             padding: '0.35rem 0.75rem',
                             borderRadius: 8,
                             cursor: 'pointer',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             fontSize: '0.75rem',
                             display: 'flex',
                             alignItems: 'center',

@@ -31,7 +31,7 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                     left: 10,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
                 aria-hidden="true"
             />

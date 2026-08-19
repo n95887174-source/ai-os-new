@@ -177,7 +177,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
             <div
                 style={{
                     padding: '1rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.85rem',
                     textAlign: 'center',
                 }}
@@ -195,7 +195,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                     style={{
                         fontSize: '0.75rem',
                         fontWeight: 700,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginBottom: 8,
                         display: 'flex',
                         alignItems: 'center',
@@ -295,7 +295,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                     style={{
                                         fontSize: '0.82rem',
                                         fontWeight: 600,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         flex: 1,
                                     }}
                                 >
@@ -304,7 +304,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                 <span
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         padding: '2px 6px',
                                         borderRadius: 4,
                                         background: 'rgba(255,255,255,0.04)',
@@ -341,7 +341,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                         borderRadius: 6,
                                         border: '1px solid rgba(100,116,139,0.2)',
                                         background: 'transparent',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: restarting === agent.id ? 'not-allowed' : 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -371,14 +371,14 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: 2,
                                         }}
                                     >
                                         <span>
                                             <Thermometer size={10} /> Temperature
                                         </span>
-                                        <span style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                        <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>
                                             {temp.toFixed(1)}
                                         </span>
                                     </div>
@@ -400,14 +400,14 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: 2,
                                         }}
                                     >
                                         <span>
                                             <FileText size={10} /> Max Tokens
                                         </span>
-                                        <span style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                                        <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>
                                             {maxTokens}
                                         </span>
                                     </div>
@@ -453,7 +453,7 @@ export const AgentControlPanel: React.FC<AgentControlPanelProps> = ({ session })
                                         borderRadius: 6,
                                         border: '1px solid rgba(100,116,139,0.2)',
                                         background: 'rgba(15,23,42,0.4)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.75rem',
                                         outline: 'none',
                                     }}

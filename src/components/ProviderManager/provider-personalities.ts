@@ -66,7 +66,7 @@ const PERSONALITIES: Record<string, ProviderPersonality> = {
     groq: {
         name: 'Sprinter',
         icon: '\u26A1',
-        color: '#22c55e',
+        color: 'var(--success)',
         bg: 'rgba(34,197,94,0.12)',
         title: 'Speed',
         description: 'First to the finish line',
@@ -173,7 +173,7 @@ const PERSONALITIES: Record<string, ProviderPersonality> = {
 const FALLBACK: ProviderPersonality = {
     name: 'Guardian',
     icon: '\uD83D\uDEE1\uFE0F',
-    color: '#3b82f6',
+    color: 'var(--accent)',
     bg: 'rgba(59,130,246,0.12)',
     title: 'Security',
     description: 'Trust, but verify',

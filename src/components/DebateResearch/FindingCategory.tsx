@@ -69,7 +69,7 @@ const FindingCategory: React.FC<FindingCategoryProps> = ({
                 >
                     {type}
                 </span>
-                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                     {items.length} findings
                 </span>
             </div>

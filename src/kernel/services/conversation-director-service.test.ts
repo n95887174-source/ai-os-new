@@ -7,6 +7,7 @@ import type { TurnProposal } from '../contracts/conversation/turn';
 import type { TurnResult, IExecutionEngine } from '../contracts/conversation/execution';
 import type { ScenarioRepository } from '../dal/scenario-repository';
 import { ConversationDirectorService } from './conversation-director-service';
+import { eventBus as coreEventBus } from '../events/event-bus';
 
 function turn(participantId: string, description: string): TurnProposal {
     return {
@@ -73,6 +74,8 @@ describe('ConversationDirectorService (B3)', () => {
         const director = new ConversationDirectorService(
             { get: async () => undefined } as unknown as ScenarioRepository,
             makeEngine().engine,
+            undefined,
+            coreEventBus,
         );
         await expect(director.loadScenario('missing')).rejects.toThrow(/not found/);
     });
@@ -81,6 +84,8 @@ describe('ConversationDirectorService (B3)', () => {
         const director = new ConversationDirectorService(
             makeRepo(makeScenario([turn('a', 'one')])),
             makeEngine().engine,
+            undefined,
+            coreEventBus,
         );
         await expect(director.run()).rejects.toThrow(/no scenario loaded/);
     });
@@ -89,7 +94,12 @@ describe('ConversationDirectorService (B3)', () => {
         const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
         const scenario = makeScenario(turns);
         const { engine, executed } = makeEngine();
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         await director.run();
 
@@ -109,7 +119,12 @@ describe('ConversationDirectorService (B3)', () => {
                 if (call === 1) director.pause();
             },
         });
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         (globalThis as any).__director = director;
         await director.loadScenario('s1');
 
@@ -126,7 +141,12 @@ describe('ConversationDirectorService (B3)', () => {
         const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
         const scenario = makeScenario(turns);
         const { engine, executed } = makeEngine();
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         director.skipNext();
         await director.run();
@@ -139,7 +159,12 @@ describe('ConversationDirectorService (B3)', () => {
         const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
         const scenario = makeScenario(turns);
         const { engine, executed } = makeEngine();
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         director.overrideTurn(turn('OV', 'override'));
         await director.run();
@@ -157,7 +182,12 @@ describe('ConversationDirectorService (B3)', () => {
                 if (call === 1) director.abort();
             },
         });
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         (globalThis as any).__director = director;
         await director.loadScenario('s1');
 
@@ -170,7 +200,12 @@ describe('ConversationDirectorService (B3)', () => {
         const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
         const scenario = makeScenario(turns);
         const { engine } = makeEngine({ throwOnCall: 2 });
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
 
         await expect(director.run()).rejects.toThrow(/engine failure/);
@@ -184,7 +219,12 @@ describe('ConversationDirectorService (B3)', () => {
 
     it('creates a distinct Session entity separate from the Scenario blueprint', async () => {
         const scenario = makeScenario([turn('a', 'one'), turn('b', 'two')]);
-        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            makeEngine().engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
 
         const session = director.getSession();
@@ -201,7 +241,12 @@ describe('ConversationDirectorService (B3)', () => {
 
     it('each loadScenario launches a new Session (blueprint reused, runs separated)', async () => {
         const scenario = makeScenario([turn('a', 'one')]);
-        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            makeEngine().engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         const first = director.getSession()!.id;
         await director.loadScenario('s1');
@@ -213,7 +258,12 @@ describe('ConversationDirectorService (B3)', () => {
     it('the Session records the live run: events, results and progress', async () => {
         const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
         const scenario = makeScenario(turns);
-        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            makeEngine().engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         await director.run();
 
@@ -235,7 +285,12 @@ describe('ConversationDirectorService (B3)', () => {
         const turns = [turn('a', 'one'), turn('b', 'two')];
         const scenario = makeScenario(turns);
         const { engine } = makeEngine({ throwOnCall: 2 });
-        const director = new ConversationDirectorService(makeRepo(scenario), engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         await expect(director.run()).rejects.toThrow(/engine failure/);
 
@@ -248,7 +303,12 @@ describe('ConversationDirectorService (B3)', () => {
     it('checkpoint() captures a named snapshot of the live run', async () => {
         const turns = [turn('a', 'one'), turn('b', 'two')];
         const scenario = makeScenario(turns);
-        const director = new ConversationDirectorService(makeRepo(scenario), makeEngine().engine);
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            makeEngine().engine,
+            undefined,
+            coreEventBus,
+        );
         await director.loadScenario('s1');
         await director.run();
 
@@ -261,6 +321,45 @@ describe('ConversationDirectorService (B3)', () => {
         expect(checkpoints[0]!.status).toBe('completed');
         expect(checkpoints[0]!.results).toHaveLength(2);
         expect(checkpoints[0]!.history).toHaveLength(2);
+    });
+
+    it('B-10: getState() and Session.status share a single source of truth (no divergence)', async () => {
+        const turns = [turn('a', 'one'), turn('b', 'two'), turn('c', 'three')];
+        const scenario = makeScenario(turns);
+
+        // idle parity right after load
+        const director = new ConversationDirectorService(
+            makeRepo(scenario),
+            makeEngine().engine,
+            undefined,
+            coreEventBus,
+        );
+        await director.loadScenario('s1');
+        expect(director.getState()).toBe(director.getSession()!.status);
+
+        // completion: both must read 'completed'
+        await director.run();
+        expect(director.getState()).toBe('completed');
+        expect(director.getState()).toBe(director.getSession()!.status);
+
+        // abort path: both must read 'aborted'
+        const { engine, executed } = makeEngine({
+            onExecute: (call, _p, d) => {
+                if (call === 1) d.abort();
+            },
+        });
+        const director2 = new ConversationDirectorService(
+            makeRepo(scenario),
+            engine,
+            undefined,
+            coreEventBus,
+        );
+        (globalThis as any).__director = director2;
+        await director2.loadScenario('s1');
+        await director2.run();
+        expect(director2.getState()).toBe('aborted');
+        expect(director2.getState()).toBe(director2.getSession()!.status);
+        expect(executed()).toHaveLength(1);
     });
 
     it('has no Debate/Forum dependency', () => {

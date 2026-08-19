@@ -335,7 +335,7 @@ const ProviderTableRow: React.FC<
                                         borderRadius: 4,
                                         fontSize: '0.6rem',
                                         fontWeight: 700,
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         background: 'rgba(239,68,68,0.15)',
                                         border: '1px solid rgba(239,68,68,0.3)',
                                         display: 'inline-flex',
@@ -349,7 +349,7 @@ const ProviderTableRow: React.FC<
                                             width: 5,
                                             height: 5,
                                             borderRadius: '50%',
-                                            background: '#ef4444',
+                                            background: 'var(--error)',
                                             display: 'inline-block',
                                         }}
                                     />
@@ -453,7 +453,7 @@ const ProviderTableRow: React.FC<
                                     position: 'absolute',
                                     top: '100%',
                                     right: 0,
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     border: '1px solid rgba(239,68,68,0.3)',
                                     borderRadius: 8,
                                     padding: '0.5rem 0.75rem',
@@ -471,7 +471,7 @@ const ProviderTableRow: React.FC<
                                         setConfirmRemove(false);
                                     }}
                                     style={{
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         textDecoration: 'underline',
                                         marginLeft: 8,
                                         background: 'none',
@@ -507,7 +507,7 @@ const ProviderTableRow: React.FC<
                                     style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontSize: '0.65rem',
                                         fontWeight: 600,
                                     }}
@@ -552,7 +552,7 @@ const ProviderTableRow: React.FC<
                                     style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontSize: '0.65rem',
                                         fontWeight: 600,
                                         marginTop: 1,
@@ -636,7 +636,7 @@ const ProviderTableRow: React.FC<
                 <td style={textXs}>
                     {apiKey.notes && apiKey.notes.length > 0 ? (
                         <span
-                            style={{ color: '#94a3b8', cursor: 'default' }}
+                            style={{ color: 'var(--slate-400)', cursor: 'default' }}
                             title={apiKey.notes.map((n) => n.text).join(' | ')}
                         >
                             {apiKey.notes.length}
@@ -756,7 +756,7 @@ const ProviderTableRow: React.FC<
                                     style={{
                                         fontSize: '0.65rem',
                                         fontWeight: 700,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.25rem',
                                         textTransform: 'uppercase',
                                     }}
@@ -766,9 +766,9 @@ const ProviderTableRow: React.FC<
                                 {apiKey.notes.map((n) => (
                                     <div
                                         key={n.id}
-                                        style={{ color: '#94a3b8', marginBottom: '0.15rem' }}
+                                        style={{ color: 'var(--slate-400)', marginBottom: '0.15rem' }}
                                     >
-                                        <span style={{ color: '#64748b', fontSize: '0.65rem' }}>
+                                        <span style={{ color: 'var(--slate-500)', fontSize: '0.65rem' }}>
                                             {new Date(n.timestamp).toLocaleDateString()}
                                         </span>{' '}
                                         {n.text}

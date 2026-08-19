@@ -30,7 +30,7 @@ export const GlobalBudgetSection: React.FC<GlobalBudgetSectionProps> = ({
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
                 <TrendingUp size={18} color="#10b981" />
-                <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>
+                <span style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '1rem' }}>
                     {t('budget.global_section')}
                 </span>
             </div>
@@ -56,7 +56,7 @@ export const GlobalBudgetSection: React.FC<GlobalBudgetSectionProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.75rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         marginBottom: '0.25rem',
                     }}
                 >

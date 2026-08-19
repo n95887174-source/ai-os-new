@@ -72,7 +72,7 @@ const RoundTimeline: React.FC<RoundTimelineProps> = ({ session, args, t }) => {
                                     <div
                                         style={{
                                             fontSize: '0.6rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
@@ -108,7 +108,7 @@ const RoundTimeline: React.FC<RoundTimelineProps> = ({ session, args, t }) => {
                                 <div
                                     style={{
                                         fontSize: '0.58rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: '0.1rem',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -127,7 +127,7 @@ const RoundTimeline: React.FC<RoundTimelineProps> = ({ session, args, t }) => {
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     flexShrink: 0,
                                     textAlign: 'right',
                                 }}

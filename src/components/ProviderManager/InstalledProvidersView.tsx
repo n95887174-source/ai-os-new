@@ -218,7 +218,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                 }}
                                 className="btn-secondary"
                                 disabled={batchProbeLoading}
-                                style={{ color: '#3b82f6' }}
+                                style={{ color: 'var(--accent)' }}
                             >
                                 {batchProbeLoading ? (
                                     <Loader2 size={14} className="provider-spin" />
@@ -284,7 +284,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                 borderRadius: 6,
                                 background: 'rgba(0,0,0,0.2)',
                                 border: '1px solid rgba(255,255,255,0.06)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.75rem',
                             }}
                             aria-label="Filter by group"
@@ -316,12 +316,12 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                color: '#3b82f6',
+                                color: 'var(--accent)',
                                 marginBottom: '0.25rem',
                             }}
                         >
                             {t('provider.quick_test_results')}
-                            <span style={{ marginLeft: 8, color: '#64748b', fontWeight: 400 }}>
+                            <span style={{ marginLeft: 8, color: 'var(--slate-500)', fontWeight: 400 }}>
                                 {t('provider.batch_ready_count', {
                                     ready: Array.from(batchProbeResults.values()).filter(
                                         (r) => r.status === 'ready',
@@ -379,7 +379,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         />
                                         <span
                                             style={{
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontWeight: 600,
                                                 minWidth: 80,
                                                 flexShrink: 0,
@@ -402,7 +402,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         {r.latency > 0 && (
                                             <span
                                                 style={{
-                                                    color: '#475569',
+                                                    color: 'var(--slate-600)',
                                                     fontSize: '0.7rem',
                                                     minWidth: 35,
                                                     flexShrink: 0,
@@ -414,7 +414,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         {preview ? (
                                             <span
                                                 style={{
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontSize: '0.72rem',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
@@ -428,7 +428,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         ) : r.error ? (
                                             <span
                                                 style={{
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                     fontSize: '0.7rem',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
@@ -441,7 +441,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         ) : (
                                             <span
                                                 style={{
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     fontSize: '0.7rem',
                                                     fontStyle: 'italic',
                                                     flex: 1,
@@ -453,7 +453,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                         )}
                                         <span
                                             style={{
-                                                color: '#475569',
+                                                color: 'var(--slate-600)',
                                                 fontSize: '0.6rem',
                                                 flexShrink: 0,
                                             }}
@@ -470,7 +470,7 @@ const InstalledProvidersView: React.FC<InstalledProvidersViewProps> = React.memo
                                                 border: '1px solid rgba(59,130,246,0.12)',
                                                 borderTop: 'none',
                                                 fontSize: '0.78rem',
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 whiteSpace: 'pre-wrap',
                                                 wordBreak: 'break-word',
                                                 maxHeight: 150,

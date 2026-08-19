@@ -21,10 +21,10 @@ const AlertItem: React.FC<Props> = ({ alert: a }) => {
         >
             <span style={{ color: cfg.color, marginTop: 2, flexShrink: 0 }}>{cfg.icon}</span>
             <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.8rem', color: '#e2e8f0', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-200)', fontWeight: 600 }}>
                     {a.message}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
                     {new Date(a.timestamp).toLocaleTimeString()}
                 </div>
             </div>

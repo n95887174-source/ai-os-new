@@ -22,13 +22,13 @@ import type {
 } from '../kernel/contracts/model-distillation';
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
-    queued: { color: '#64748b', icon: <Clock size={14} /> },
-    preparing: { color: '#f59e0b', icon: <Loader size={14} /> },
-    distilling: { color: '#8b5cf6', icon: <Loader size={14} /> },
-    validating: { color: '#3b82f6', icon: <BarChart3 size={14} /> },
-    completed: { color: '#22c55e', icon: <CheckCircle size={14} /> },
-    failed: { color: '#ef4444', icon: <AlertCircle size={14} /> },
-    cancelled: { color: '#64748b', icon: <X size={14} /> },
+    queued: { color: 'var(--slate-500)', icon: <Clock size={14} /> },
+    preparing: { color: 'var(--warning)', icon: <Loader size={14} /> },
+    distilling: { color: 'var(--purple)', icon: <Loader size={14} /> },
+    validating: { color: 'var(--accent)', icon: <BarChart3 size={14} /> },
+    completed: { color: 'var(--success)', icon: <CheckCircle size={14} /> },
+    failed: { color: 'var(--error)', icon: <AlertCircle size={14} /> },
+    cancelled: { color: 'var(--slate-500)', icon: <X size={14} /> },
 };
 
 const DISTILLATION_PANEL: React.FC = () => {
@@ -85,7 +85,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                         borderRadius: 8,
                         border: '1px dashed rgba(139,92,246,0.3)',
                         background: 'transparent',
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                         cursor: 'pointer',
                         fontWeight: 600,
                         fontSize: '0.8rem',
@@ -117,7 +117,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.3rem',
                                 }}
                             >
@@ -133,7 +133,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             />
@@ -142,7 +142,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.3rem',
                                 }}
                             >
@@ -187,7 +187,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.3rem',
                                 }}
                             >
@@ -202,7 +202,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             >
@@ -218,7 +218,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.3rem',
                                 }}
                             >
@@ -233,7 +233,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             >
@@ -250,7 +250,7 @@ const DISTILLATION_PANEL: React.FC = () => {
 
                     <div>
                         <div
-                            style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.3rem' }}
+                            style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginBottom: '0.3rem' }}
                         >
                             Config
                         </div>
@@ -268,7 +268,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 { key: 'targetSize', label: 'Target Size', step: '1' },
                             ].map((f) => (
                                 <div key={f.key}>
-                                    <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                         {f.label}
                                     </div>
                                     <input
@@ -288,7 +288,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                             borderRadius: 4,
                                             border: '1px solid rgba(255,255,255,0.08)',
                                             background: 'rgba(0,0,0,0.3)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.75rem',
                                         }}
                                     />
@@ -319,8 +319,8 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 padding: '0.4rem 0.8rem',
                                 borderRadius: 8,
                                 border: 'none',
-                                background: 'rgba(239,68,68,0.1)',
-                                color: '#ef4444',
+                                background: 'var(--error-tint)',
+                                color: 'var(--error)',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
                             }}
@@ -357,7 +357,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                     {job.name}
                                 </div>
-                                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                     {job.teacherModel} → {job.studentModel} · Step {job.currentStep}
                                     /{job.config.maxSteps}
                                 </div>
@@ -421,8 +421,8 @@ const DISTILLATION_PANEL: React.FC = () => {
                                         padding: '0.3rem 0.6rem',
                                         borderRadius: 6,
                                         border: 'none',
-                                        background: 'rgba(239,68,68,0.1)',
-                                        color: '#ef4444',
+                                        background: 'var(--error-tint)',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -437,7 +437,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     cursor: 'pointer',
                                     padding: 2,
                                 }}
@@ -457,29 +457,29 @@ const DISTILLATION_PANEL: React.FC = () => {
                                 }}
                             >
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Teacher:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Teacher:</span>{' '}
                                     {job.teacherModel}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Student:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Student:</span>{' '}
                                     {job.studentModel}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Size Reduction:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Size Reduction:</span>{' '}
                                     {job.sizeReduction ? `${job.sizeReduction.toFixed(1)}x` : '—'}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Speedup:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Speedup:</span>{' '}
                                     {job.speedup ? `${job.speedup.toFixed(1)}x` : '—'}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Teacher Score:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Teacher Score:</span>{' '}
                                     {job.teacherScore
                                         ? (job.teacherScore * 100).toFixed(1) + '%'
                                         : '—'}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Student Score:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Student Score:</span>{' '}
                                     {job.studentScore
                                         ? (job.studentScore * 100).toFixed(1) + '%'
                                         : '—'}
@@ -493,7 +493,7 @@ const DISTILLATION_PANEL: React.FC = () => {
                         style={{
                             textAlign: 'center',
                             padding: '2rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.8rem',
                         }}
                     >

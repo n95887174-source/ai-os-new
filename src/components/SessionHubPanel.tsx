@@ -20,8 +20,8 @@ const container: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    background: '#0f172a',
-    color: '#e2e8f0',
+    background: 'var(--slate-900)',
+    color: 'var(--slate-200)',
     overflow: 'hidden',
 };
 
@@ -38,7 +38,7 @@ const searchInput: React.CSSProperties = {
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: 13,
     outline: 'none',
     width: 240,
@@ -49,7 +49,7 @@ const filterBtn: React.CSSProperties = {
     borderRadius: 12,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'transparent',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     fontSize: 12,
     cursor: 'pointer',
 };
@@ -57,7 +57,7 @@ const filterBtn: React.CSSProperties = {
 const filterBtnActive: React.CSSProperties = {
     ...filterBtn,
     background: 'rgba(59,130,246,0.2)',
-    borderColor: '#3b82f6',
+    borderColor: 'var(--accent)',
     color: '#60a5fa',
 };
 
@@ -86,7 +86,7 @@ const emptyState: React.CSSProperties = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#64748b',
+    color: 'var(--slate-500)',
     gap: 16,
 };
 
@@ -96,8 +96,8 @@ const renameInput: React.CSSProperties = {
     padding: '2px 8px',
     borderRadius: 4,
     border: '1px solid rgba(59,130,246,0.5)',
-    background: 'rgba(59,130,246,0.1)',
-    color: '#e2e8f0',
+    background: 'var(--accent-tint)',
+    color: 'var(--slate-200)',
     outline: 'none',
     width: '100%',
 };
@@ -417,7 +417,7 @@ export const SessionHubPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontSize: 12,
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -432,7 +432,7 @@ export const SessionHubPanel: React.FC = () => {
                                             gap: 8,
                                             alignItems: 'center',
                                             fontSize: 11,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         <span
@@ -459,7 +459,7 @@ export const SessionHubPanel: React.FC = () => {
                                         {item.linkedCount > 0 && item.linkedId && (
                                             <span
                                                 style={{
-                                                    color: '#8b5cf6',
+                                                    color: 'var(--purple)',
                                                     cursor: 'pointer',
                                                     textDecoration: 'underline',
                                                 }}
@@ -551,7 +551,7 @@ export const SessionHubPanel: React.FC = () => {
                     padding: '8px 20px',
                     borderTop: '1px solid rgba(255,255,255,0.06)',
                     fontSize: 11,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 {items.length} total sessions · {items.filter((i) => i.type === 'chat').length}{' '}

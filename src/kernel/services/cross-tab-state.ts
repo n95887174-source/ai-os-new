@@ -1,4 +1,5 @@
 import { eventBus } from '../events/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
@@ -70,8 +71,10 @@ class CrossTabStateSync implements ICrossTabStateSync {
         { updatedAt: number; phase: string; round: number; seq: number }
     > = new Map();
     private debateSeqCounter = 0;
+    private _eventBus: IEventBus;
 
-    constructor() {
+    constructor(eventBus: IEventBus) {
+        this._eventBus = eventBus;
         this.tabId = `${Date.now().toString(36)}-${crypto.randomUUID()}`;
         this.tabTimestamp = Date.now();
         this.knownTabTimestamps.set(this.tabId, this.tabTimestamp);
@@ -91,7 +94,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         // Without this, deleted keys leave orphaned entries keyed by `${provider}:${keyId}`
         // that block new keys with the same ID on re-add, and leak memory.
         this.unsubs.push(
-            eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
+            this._eventBus.onSafe<{ id: string }>(EVENTS.KEY_REMOVED, (data) => {
                 const keyId = data.id;
                 for (const key of this.localCircuitBreakers.keys()) {
                     if (key.endsWith(`:${keyId}`)) this.localCircuitBreakers.delete(key);
@@ -109,7 +112,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         );
 
         this.unsubs.push(
-            eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
+            this._eventBus.on(EVENTS.DEBATE_UPDATED, (raw: unknown) => {
                 const data = raw as { id: string; phase: string; round: number };
                 const seq = ++this.debateSeqCounter;
                 this.localDebateVersions.set(data.id, {
@@ -134,7 +137,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         );
 
         this.unsubs.push(
-            eventBus.on(EVENTS.KEY_UPDATED, () => {
+            this._eventBus.on(EVENTS.KEY_UPDATED, () => {
                 this.broadcast({
                     type: 'key-update',
                     timestamp: Date.now(),
@@ -145,7 +148,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         );
 
         this.unsubs.push(
-            eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
+            this._eventBus.on(EVENTS.SETTINGS_UPDATED, () => {
                 this.broadcast({
                     type: 'settings-update',
                     timestamp: Date.now(),
@@ -156,7 +159,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         );
 
         this.unsubs.push(
-            eventBus.on(EVENTS.KERNEL_UPDATED, () => {
+            this._eventBus.on(EVENTS.KERNEL_UPDATED, () => {
                 this.broadcast({
                     type: 'kernel-state-update',
                     timestamp: Date.now(),
@@ -167,7 +170,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
         );
 
         this.unsubs.push(
-            eventBus.on(EVENTS.CHAT_FORKED, () => {
+            this._eventBus.on(EVENTS.CHAT_FORKED, () => {
                 this.broadcast({
                     type: 'chat-session-update',
                     timestamp: Date.now(),
@@ -309,11 +312,11 @@ class CrossTabStateSync implements ICrossTabStateSync {
             case 'key-update': {
                 LOGGER.debug('CrossTabStateSync', 'Cross-tab key update, refreshing local state');
                 if (message.payload == null) {
-                    eventBus.emitOnce(EVENTS.KEY_UPDATED, 'cross-tab:key-update', []);
+                    this._eventBus.emitOnce(EVENTS.KEY_UPDATED, 'cross-tab:key-update', []);
                 } else {
                     const keyPayload = z.array(ApiKeySchema).safeParse(message.payload);
                     if (keyPayload.success)
-                        eventBus.emitOnce(
+                        this._eventBus.emitOnce(
                             EVENTS.KEY_UPDATED,
                             'cross-tab:key-update',
                             keyPayload.data,
@@ -331,11 +334,11 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'Cross-tab kernel update, refreshing local state',
                 );
                 if (message.payload == null) {
-                    eventBus.emitOnce(EVENTS.KERNEL_UPDATED, 'cross-tab:kernel-update', {});
+                    this._eventBus.emitOnce(EVENTS.KERNEL_UPDATED, 'cross-tab:kernel-update', {});
                 } else {
                     const kernelPayload = SystemStateSchema.safeParse(message.payload);
                     if (kernelPayload.success)
-                        eventBus.emitOnce(
+                        this._eventBus.emitOnce(
                             EVENTS.KERNEL_UPDATED,
                             'cross-tab:kernel-update',
                             kernelPayload.data,
@@ -352,7 +355,11 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'CrossTabStateSync',
                     'Cross-tab chat session update, refreshing local state',
                 );
-                eventBus.emitOnce(EVENTS.CHAT_FORKED, 'cross-tab:chat-forked', message.payload);
+                this._eventBus.emitOnce(
+                    EVENTS.CHAT_FORKED,
+                    'cross-tab:chat-forked',
+                    message.payload,
+                );
                 break;
             case 'settings-update': {
                 LOGGER.debug(
@@ -360,7 +367,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     'Cross-tab settings update, refreshing local state',
                 );
                 if (message.payload == null) {
-                    eventBus.emitOnce(EVENTS.SETTINGS_UPDATED, 'cross-tab:settings-update', {
+                    this._eventBus.emitOnce(EVENTS.SETTINGS_UPDATED, 'cross-tab:settings-update', {
                         settings: {},
                         changes: {},
                     });
@@ -368,7 +375,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                     const settingsSchema = EVENT_REGISTRY.SETTINGS_UPDATED.schema;
                     const settingsPayload = settingsSchema.safeParse(message.payload);
                     if (settingsPayload.success)
-                        eventBus.emitOnce(
+                        this._eventBus.emitOnce(
                             EVENTS.SETTINGS_UPDATED,
                             'cross-tab:settings-update',
                             settingsPayload.data,
@@ -399,7 +406,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 remote: payload,
             });
             if (typeof existing.round === 'number' && typeof payload.round === 'number') {
-                eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
+                this._eventBus.emit(EVENTS.DEBATE_SESSION_CONFLICT, {
                     sessionId: payload.sessionId,
                     currentVersion: existing.round,
                     attemptedVersion: payload.round,
@@ -491,7 +498,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
             tabId: this.tabId,
             payload: state, // H-36: Send full state so receiver sets, not deletes
         });
-        eventBus.emit(EVENTS.PROVIDER_STATE_CHANGED, {
+        this._eventBus.emit(EVENTS.PROVIDER_STATE_CHANGED, {
             provider: state.provider,
             status: state.status,
         });
@@ -506,7 +513,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
             tabId: this.tabId,
             payload: state, // H-36: Send full state so receiver sets, not deletes
         });
-        eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, {
+        this._eventBus.emit(EVENTS.PROVIDER_RATE_LIMIT_SYNCED, {
             provider: state.provider,
             keyId: state.keyId,
             remaining: state.remaining,
@@ -531,7 +538,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
                 statusCode: entry.statusCode,
             },
         });
-        eventBus.emit(EVENTS.PROVIDER_ERROR_SYNCED, {
+        this._eventBus.emit(EVENTS.PROVIDER_ERROR_SYNCED, {
             provider: entry.provider,
             keyId: entry.keyId,
             error: entry.error,
@@ -638,7 +645,7 @@ class CrossTabStateSync implements ICrossTabStateSync {
     }
 }
 
-export const crossTabStateSync = new CrossTabStateSync();
+export const crossTabStateSync = new CrossTabStateSync(eventBus);
 
 // H-18: Clean up event listeners on HMR
 if (import.meta.hot) {

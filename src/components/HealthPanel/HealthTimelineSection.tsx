@@ -97,7 +97,7 @@ export const HealthTimelineSection: React.FC<HealthTimelineSectionProps> = ({
                         borderRadius: 6,
                         padding: '3px 8px',
                         fontSize: '0.7rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <option value="all">All</option>
@@ -114,7 +114,7 @@ export const HealthTimelineSection: React.FC<HealthTimelineSectionProps> = ({
                         padding: '2rem',
                         textAlign: 'center',
                         fontSize: '0.8rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     {t('health.timeline_empty')}
@@ -162,7 +162,7 @@ export const HealthTimelineSection: React.FC<HealthTimelineSectionProps> = ({
                                         {getEventIcon(ev.type)}
                                     </span>
                                     <ProviderIcon provider={ev.provider} size={12} />
-                                    <span style={{ color: '#e2e8f0', fontWeight: 500 }}>
+                                    <span style={{ color: 'var(--slate-200)', fontWeight: 500 }}>
                                         {ev.provider}
                                     </span>
                                     <span
@@ -179,7 +179,7 @@ export const HealthTimelineSection: React.FC<HealthTimelineSectionProps> = ({
                                         style={{
                                             marginLeft: 'auto',
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         {agoStr} ago
@@ -187,7 +187,7 @@ export const HealthTimelineSection: React.FC<HealthTimelineSectionProps> = ({
                                     <span
                                         style={{
                                             fontSize: '0.65rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             maxWidth: 200,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',

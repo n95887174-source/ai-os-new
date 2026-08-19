@@ -67,7 +67,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                     style={{
                         background: 'none',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         padding: 4,
                     }}
@@ -81,7 +81,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                 </button>
             </div>
             {flows.length === 0 ? (
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--slate-500)', textAlign: 'center' }}>
                     No saved workflows. Use the AI generator or save from the canvas.
                 </p>
             ) : (
@@ -122,7 +122,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                                         style={{
                                             fontSize: '0.8rem',
                                             fontWeight: 600,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
@@ -130,7 +130,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                                     >
                                         {flow.title}
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                         {flow.nodes.length} nodes ·{' '}
                                         <span style={{ color: STATUS_COLORS[flow.status] }}>
                                             {flow.status}
@@ -144,7 +144,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                                     style={{
                                         background: 'none',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         cursor: 'pointer',
                                         padding: '2px 6px',
                                         borderRadius: 4,
@@ -160,7 +160,7 @@ const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({ onLoadManifest, o
                                         style={{
                                             background: 'none',
                                             border: '1px solid rgba(16,185,129,0.3)',
-                                            color: '#10b981',
+                                            color: 'var(--success)',
                                             cursor: 'pointer',
                                             padding: '2px 6px',
                                             borderRadius: 4,

@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import { PowerOff, Power, Copy, Check, RotateCcw } from 'lucide-react';
 import type { KeyExtendedStats } from '../../kernel/types/metrics-types';
 import type { ApiKey } from '../../types/metrics';
-import { btnGhostWithBorder, flexGap2 } from '../../styles/common';
+import { flexGap2 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface Props {
     stats: KeyExtendedStats;
@@ -96,9 +97,9 @@ const OverviewActionHeader: React.FC<Props> = ({
                 </div>
             </div>
             <div style={flexGap2}>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={onToggleStatus}
-                    style={btnGhostWithBorder}
                     aria-label={t(
                         apiKey.status === 'active'
                             ? 'overview.disable_provider'
@@ -111,10 +112,10 @@ const OverviewActionHeader: React.FC<Props> = ({
                         <Power size={16} aria-hidden="true" />
                     )}
                     {t(apiKey.status === 'active' ? 'overview.disable' : 'overview.enable')}
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
                     onClick={onCopyKey}
-                    style={btnGhostWithBorder}
                     aria-label={t('overview.copy_key_aria')}
                 >
                     {copied ? (
@@ -123,10 +124,10 @@ const OverviewActionHeader: React.FC<Props> = ({
                         <Copy size={16} aria-hidden="true" />
                     )}
                     {copied ? t('overview.copied') : t('overview.copy_key')}
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
                     onClick={onResetMetrics}
-                    style={btnGhostWithBorder}
                     disabled={resetting}
                     aria-label={t('overview.reset_metrics_aria')}
                 >
@@ -141,7 +142,7 @@ const OverviewActionHeader: React.FC<Props> = ({
                         <RotateCcw size={16} aria-hidden="true" />
                     )}
                     {t('overview.reset_metrics')}
-                </button>
+                </Button>
             </div>
         </div>
     );

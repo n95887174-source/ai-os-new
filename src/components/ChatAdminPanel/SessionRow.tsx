@@ -11,13 +11,8 @@ import {
     ExternalLink,
     Trash2,
 } from 'lucide-react';
-import {
-    tdPadding,
-    statBadgePill,
-    flexWrapGap4,
-    flexCenterGap8,
-    btnActionCompact,
-} from '../../styles/common';
+import { tdPadding, statBadgePill, flexWrapGap4, flexCenterGap8 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface SessionRowProps {
     session: {
@@ -96,7 +91,7 @@ const SessionRow: React.FC<SessionRowProps> = ({
                     <div
                         style={{
                             fontWeight: 700,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             fontSize: '1.1rem',
                             marginBottom: 6,
                         }}
@@ -109,7 +104,7 @@ const SessionRow: React.FC<SessionRowProps> = ({
                             alignItems: 'center',
                             gap: 8,
                             fontSize: '0.8rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontFamily: 'monospace',
                         }}
                     >
@@ -129,7 +124,7 @@ const SessionRow: React.FC<SessionRowProps> = ({
                 </div>
             </div>
         </td>
-        <td style={{ padding: '1.25rem', color: '#94a3b8', fontSize: '1rem' }}>
+        <td style={{ padding: '1.25rem', color: 'var(--slate-400)', fontSize: '1rem' }}>
             <div style={flexCenterGap8}>
                 <Clock size={18} />
                 {new Date(session.updatedAt).toLocaleString([], {
@@ -140,30 +135,30 @@ const SessionRow: React.FC<SessionRowProps> = ({
         </td>
         <td style={{ padding: '1.25rem', textAlign: 'right', borderRadius: '0 16px 16px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button
+                <Button
+                    variant="ghost"
                     onClick={onPreview}
                     className="btn-secondary"
-                    style={btnActionCompact}
                     title="Preview Session"
                     aria-label={`Preview session ${session.title}`}
                 >
                     <Eye size={20} aria-hidden="true" />
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="ghost"
                     onClick={onOpenChat}
                     className="btn-secondary"
-                    style={btnActionCompact}
                     title="Open in Terminal"
                     aria-label={`Open session ${session.title} in chat`}
                 >
                     <ExternalLink size={20} aria-hidden="true" />
-                </button>
+                </Button>
                 <button
                     onClick={onDelete}
                     className="btn-secondary"
                     style={{
                         padding: '0.75rem',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         borderColor: 'rgba(239,68,68,0.3)',
                         borderRadius: 12,
                         fontSize: '0.95rem',

@@ -21,10 +21,10 @@ import { GeminiPeerReviewTab } from './GeminiPeerReviewTab';
 type TabId = 'search' | 'analysis' | 'summary' | 'anomalies' | 'peer-review';
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
-    { id: 'search', label: 'Search', icon: <Search size={16} />, color: '#3b82f6' },
-    { id: 'analysis', label: 'Fact-Check', icon: <Shield size={16} />, color: '#f59e0b' },
+    { id: 'search', label: 'Search', icon: <Search size={16} />, color: 'var(--accent)' },
+    { id: 'analysis', label: 'Fact-Check', icon: <Shield size={16} />, color: 'var(--warning)' },
     { id: 'summary', label: 'Summary', icon: <FileText size={16} />, color: '#06b6d4' },
-    { id: 'anomalies', label: 'Anomalies', icon: <AlertTriangle size={16} />, color: '#ef4444' },
+    { id: 'anomalies', label: 'Anomalies', icon: <AlertTriangle size={16} />, color: 'var(--error)' },
     { id: 'peer-review', label: 'Peer Review', icon: <Users size={16} />, color: '#ec4899' },
 ];
 
@@ -55,7 +55,7 @@ const GeminiResearchPanel: React.FC = () => {
     const renderTab = () => {
         if (!geminiResearch) {
             return (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 40, color: '#64748b' }}>
+                <div style={{ ...cardStyle, textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                     <Sparkles size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
                     <div>Gemini Research service not available</div>
                     <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
@@ -90,8 +90,8 @@ const GeminiResearchPanel: React.FC = () => {
     return (
         <div style={{ padding: 24, height: '100%', overflow: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <Sparkles size={24} style={{ color: '#8b5cf6' }} />
-                <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <Sparkles size={24} style={{ color: 'var(--purple)' }} />
+                <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     Gemini Research
                 </h2>
                 <span
@@ -100,14 +100,14 @@ const GeminiResearchPanel: React.FC = () => {
                         padding: '2px 8px',
                         borderRadius: 4,
                         background: '#8b5cf620',
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                         fontWeight: 600,
                     }}
                 >
                     LLM-POWERED
                 </span>
                 {geminiResearch && !geminiResearch.isAvailable && (
-                    <span style={{ fontSize: '0.7rem', color: '#f59e0b', marginLeft: 8 }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--warning)', marginLeft: 8 }}>
                         ⚠ No Gemini key configured
                     </span>
                 )}
@@ -119,7 +119,7 @@ const GeminiResearchPanel: React.FC = () => {
                         ...cardStyle,
                         border: '1px solid rgba(239,68,68,0.3)',
                         background: 'rgba(239,68,68,0.08)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         fontSize: '0.85rem',
                     }}
                 >
@@ -140,9 +140,9 @@ const GeminiResearchPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid',
                             borderColor:
-                                activeTab === tab.id ? tab.color : 'rgba(255,255,255,0.08)',
+                                activeTab === tab.id ? tab.color : 'var(--border-subtle)',
                             background: activeTab === tab.id ? `${tab.color}20` : 'transparent',
-                            color: activeTab === tab.id ? tab.color : '#94a3b8',
+                            color: activeTab === tab.id ? tab.color : 'var(--slate-400)',
                             cursor: 'pointer',
                             fontSize: '0.8rem',
                             fontWeight: 500,
@@ -160,7 +160,7 @@ const GeminiResearchPanel: React.FC = () => {
                     <label
                         style={{
                             fontSize: '0.75rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'block',
                             marginBottom: 6,
                         }}
@@ -180,7 +180,7 @@ const GeminiResearchPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                         }}
                     >

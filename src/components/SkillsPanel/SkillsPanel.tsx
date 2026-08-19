@@ -20,10 +20,10 @@ import type { EventMap } from '../../kernel/instances';
 import { useAutoClearError } from '../../hooks/useAutoClearError';
 import { useTranslation } from '../../i18n/useTranslation';
 import ModuleInfo from '../ModuleInfo';
+import { Button } from '../Common';
 import {
     dismissBtnRed,
     errorBannerLg,
-    exportImportBtn,
     flexAlignCenterGap2,
     flexCenterGap3,
     flexCenterGap4,
@@ -217,20 +217,20 @@ const SkillsPanel: React.FC = () => {
                 </div>
 
                 <div style={flexCenterGap3}>
-                    <button
+                    <Button
+                        variant="ghost"
                         onClick={handleExportSkills}
-                        style={exportImportBtn}
                         aria-label={t('common.aria.export')}
                     >
                         <Download size={16} aria-hidden="true" /> {t('common.export')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => fileInputRef.current?.click()}
-                        style={exportImportBtn}
                         aria-label={t('common.aria.import')}
                     >
                         <Upload size={16} aria-hidden="true" /> {t('common.import')}
-                    </button>
+                    </Button>
                     <div
                         style={{
                             display: 'flex',
@@ -378,7 +378,7 @@ const SkillsPanel: React.FC = () => {
                                         fontSize: '0.75rem',
                                         background: 'none',
                                         border: '1px solid rgba(239,68,68,0.3)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                     }}
                                     aria-label={t('skills.clear')}
@@ -413,7 +413,7 @@ const SkillsPanel: React.FC = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '100%',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 padding: '4rem 0',
                             }}
                         >
@@ -432,7 +432,7 @@ const SkillsPanel: React.FC = () => {
                             <p
                                 style={{
                                     fontSize: '0.85rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginTop: '0.5rem',
                                 }}
                             >
@@ -497,7 +497,7 @@ const SkillsPanel: React.FC = () => {
                                                             fontSize: '1.1rem',
                                                             fontWeight: 800,
                                                             margin: '0 0 0.3rem',
-                                                            color: '#f8fafc',
+                                                            color: 'var(--slate-50)',
                                                         }}
                                                     >
                                                         {skill.name}
@@ -518,14 +518,14 @@ const SkillsPanel: React.FC = () => {
                                                                 width: 4,
                                                                 height: 4,
                                                                 borderRadius: '50%',
-                                                                background: '#64748b',
+                                                                background: 'var(--slate-500)',
                                                             }}
                                                             aria-hidden="true"
                                                         />
                                                         <span
                                                             style={{
                                                                 fontSize: '0.65rem',
-                                                                color: '#94a3b8',
+                                                                color: 'var(--slate-400)',
                                                                 fontFamily: 'monospace',
                                                             }}
                                                         >
@@ -602,7 +602,7 @@ const SkillsPanel: React.FC = () => {
                                                             style={{
                                                                 fontSize: '0.65rem',
                                                                 fontWeight: 800,
-                                                                color: '#f59e0b',
+                                                                color: 'var(--warning)',
                                                                 background: 'rgba(245,158,11,0.15)',
                                                                 padding: '0.2rem 0.6rem',
                                                                 borderRadius: 20,
@@ -643,7 +643,7 @@ const SkillsPanel: React.FC = () => {
                                         <p
                                             style={{
                                                 fontSize: '0.9rem',
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 lineHeight: 1.6,
                                                 margin: 0,
                                             }}
@@ -655,7 +655,7 @@ const SkillsPanel: React.FC = () => {
                                             <div
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     textTransform: 'uppercase',
                                                     fontWeight: 800,
                                                     marginBottom: '0.75rem',
@@ -673,7 +673,7 @@ const SkillsPanel: React.FC = () => {
                                                             background: 'rgba(255,255,255,0.05)',
                                                             padding: '0.3rem 0.75rem',
                                                             borderRadius: 8,
-                                                            color: '#e2e8f0',
+                                                            color: 'var(--slate-200)',
                                                             border: '1px solid rgba(255,255,255,0.05)',
                                                         }}
                                                     >
@@ -720,7 +720,7 @@ const SkillsPanel: React.FC = () => {
                                                 <span
                                                     style={{
                                                         fontSize: '0.75rem',
-                                                        color: '#94a3b8',
+                                                        color: 'var(--slate-400)',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: 6,
@@ -758,7 +758,7 @@ const SkillsPanel: React.FC = () => {
                 <div
                     style={{
                         padding: '0.5rem',
-                        background: 'rgba(245,158,11,0.1)',
+                        background: 'var(--warning-tint)',
                         borderRadius: 10,
                     }}
                 >
@@ -769,7 +769,7 @@ const SkillsPanel: React.FC = () => {
                         aria-hidden="true"
                     />
                 </div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--slate-300)', lineHeight: 1.6 }}>
                     <strong>Performance Notice:</strong> Cognitive Skills consume significantly more
                     context window tokens than basic tools. Enable them selectively based on the
                     agent's assigned role in the topology to prevent context starvation.

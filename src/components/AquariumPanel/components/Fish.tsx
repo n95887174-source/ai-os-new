@@ -62,34 +62,34 @@ const Fish: React.FC<FishProps> = ({ fish: f, isSelected, onSelect, t, providerD
                 background: 'rgba(15,23,42,0.95)', border: `1px solid ${f.color}44`,
                 boxShadow: `0 8px 24px rgba(0,0,0,0.5), 0 0 12px ${f.color}22`,
                 pointerEvents: 'none', zIndex: 200, whiteSpace: 'nowrap',
-                fontSize: '0.65rem', color: '#e2e8f0', lineHeight: 1.5,
+                fontSize: '0.65rem', color: 'var(--slate-200)', lineHeight: 1.5,
               }}
             >
               <div style={{ fontWeight: 700, fontSize: '0.75rem', color: f.color, marginBottom: 4 }}>
                 {f.provider}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
-                <span style={{ color: '#64748b' }}>Status:</span>
+                <span style={{ color: 'var(--slate-500)' }}>Status:</span>
                 <span style={{ color: f.status === 'active' ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                   {f.status === 'active' ? 'Online' : 'Offline'}
                 </span>
-                <span style={{ color: '#64748b' }}>Health:</span>
+                <span style={{ color: 'var(--slate-500)' }}>Health:</span>
                 <span style={{ color: successRate > 90 ? '#10b981' : successRate > 70 ? '#f59e0b' : '#ef4444', fontWeight: 600 }}>
                   {successRate}%
                 </span>
-                <span style={{ color: '#64748b' }}>Latency:</span>
+                <span style={{ color: 'var(--slate-500)' }}>Latency:</span>
                 <span>{Math.round(providerData.avgLatency || 0)}ms</span>
-                <span style={{ color: '#64748b' }}>Requests:</span>
+                <span style={{ color: 'var(--slate-500)' }}>Requests:</span>
                 <span>{totalRequests.toLocaleString()}</span>
                 {providerData.model && (
                   <>
-                    <span style={{ color: '#64748b' }}>Model:</span>
-                    <span style={{ color: '#94a3b8' }}>{providerData.model.split('/').pop()}</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Model:</span>
+                    <span style={{ color: 'var(--slate-400)' }}>{providerData.model.split('/').pop()}</span>
                   </>
                 )}
               </div>
               {providerData.errorCount ? (
-                <div style={{ marginTop: 4, color: '#ef4444', fontSize: '0.6rem' }}>
+                <div style={{ marginTop: 4, color: 'var(--error)', fontSize: '0.6rem' }}>
                   {providerData.errorCount} error{providerData.errorCount !== 1 ? 's' : ''}
                 </div>
               ) : null}

@@ -62,7 +62,7 @@ export const BrokenItemsSection: React.FC<BrokenItemsSectionProps> = ({ items })
                                 style={{
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
                                     whiteSpace: 'nowrap',
@@ -70,7 +70,7 @@ export const BrokenItemsSection: React.FC<BrokenItemsSectionProps> = ({ items })
                             >
                                 {item.type}
                             </div>
-                            <div style={{ fontSize: '0.85rem', color: '#f1f5f9', ...textSm }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--slate-100)', ...textSm }}>
                                 {item.name}
                             </div>
                             <div style={textMutedXs}>{item.docFile}</div>
@@ -79,7 +79,7 @@ export const BrokenItemsSection: React.FC<BrokenItemsSectionProps> = ({ items })
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#f59e0b',
+                                    color: 'var(--warning)',
                                     fontStyle: 'italic',
                                 }}
                             >

@@ -276,7 +276,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
                         flex: 1,
                         background: 'transparent',
                         border: 'none',
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         fontSize: '0.85rem',
                         fontWeight: 700,
                         outline: 'none',
@@ -364,7 +364,7 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
                                     style={{
                                         padding: '0.4rem 0.75rem',
                                         fontSize: '0.75rem',
-                                        background: 'rgba(59,130,246,0.1)',
+                                        background: 'var(--accent-tint)',
                                         border: '1px solid rgba(59,130,246,0.2)',
                                         borderRadius: 8,
                                         color: '#60a5fa',
@@ -393,10 +393,10 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
                     <div
                         style={{
                             padding: '1rem',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 10,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             fontSize: '0.85rem',
                         }}
                     >
@@ -464,8 +464,8 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ apiKey, onClose }) => {
                     gap: '0.75rem',
                     padding: '0.8rem',
                     borderStyle: 'dashed',
-                    borderColor: '#3b82f6',
-                    color: '#3b82f6',
+                    borderColor: 'var(--accent)',
+                    color: 'var(--accent)',
                     opacity: messages.length === 0 ? 0.5 : 1,
                 }}
             >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, Loader2, Search, FileText, Zap, CheckCircle2, AlertCircle } from 'lucide-react';
+import { StatusBadge as CommonStatusBadge } from '../Common/status-vocabulary';
 
 export const SOURCE_COLORS: Record<string, string> = {
     duckduckgo: '#de5833',
@@ -57,33 +58,19 @@ export const STATUS_CONFIG: Record<
     string,
     { color: string; icon: React.ReactNode; label: string }
 > = {
-    idle: { color: '#64748b', icon: <Clock size={14} />, label: 'Idle' },
-    formulating: { color: '#f59e0b', icon: <Loader2 size={14} />, label: 'Formulating' },
-    searching: { color: '#3b82f6', icon: <Search size={14} />, label: 'Searching' },
-    extracting: { color: '#8b5cf6', icon: <FileText size={14} />, label: 'Extracting' },
-    synthesizing: { color: '#f59e0b', icon: <Zap size={14} />, label: 'Synthesizing' },
-    complete: { color: '#22c55e', icon: <CheckCircle2 size={14} />, label: 'Complete' },
-    error: { color: '#ef4444', icon: <AlertCircle size={14} />, label: 'Error' },
+    idle: { color: 'var(--slate-500)', icon: <Clock size={14} />, label: 'Idle' },
+    formulating: { color: 'var(--warning)', icon: <Loader2 size={14} />, label: 'Formulating' },
+    searching: { color: 'var(--accent)', icon: <Search size={14} />, label: 'Searching' },
+    extracting: { color: 'var(--purple)', icon: <FileText size={14} />, label: 'Extracting' },
+    synthesizing: { color: 'var(--warning)', icon: <Zap size={14} />, label: 'Synthesizing' },
+    complete: { color: 'var(--success)', icon: <CheckCircle2 size={14} />, label: 'Complete' },
+    error: { color: 'var(--error)', icon: <AlertCircle size={14} />, label: 'Error' },
 };
 
 export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     const cfg = (STATUS_CONFIG[status] || STATUS_CONFIG.idle)!;
     return (
-        <span
-            style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                borderRadius: 6,
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                background: `${cfg.color}20`,
-                color: cfg.color,
-            }}
-        >
-            {cfg.icon} {cfg.label}
-        </span>
+        <CommonStatusBadge status={status} color={cfg.color} icon={cfg.icon} label={cfg.label} />
     );
 };
 

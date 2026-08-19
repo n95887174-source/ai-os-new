@@ -46,7 +46,7 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                         <div
                             style={{
                                 fontSize: '0.65rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.4rem',
                                 textTransform: 'uppercase',
                                 fontWeight: 800,
@@ -54,7 +54,7 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                         >
                             {t('memory.entries_label')}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                             {totalEntries.toLocaleString()}
                         </div>
                     </div>
@@ -62,7 +62,7 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                         <div
                             style={{
                                 fontSize: '0.65rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.4rem',
                                 textTransform: 'uppercase',
                                 fontWeight: 800,
@@ -70,22 +70,22 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                         >
                             {t('memory.dimensions_label')}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                             {dimensions}
                         </div>
                     </div>
                 </div>
                 <div>
                     <div style={progressLabel}>
-                        <span style={{ color: '#94a3b8' }}>{t('memory.density_label')}</span>
-                        <span style={{ color: '#10b981' }}>{indexDensity.toFixed(0)}%</span>
+                        <span style={{ color: 'var(--slate-400)' }}>{t('memory.density_label')}</span>
+                        <span style={{ color: 'var(--success)' }}>{indexDensity.toFixed(0)}%</span>
                     </div>
                     <div style={progressBarSmall}>
                         <div
                             style={{
                                 width: `${indexDensity.toFixed(0)}%`,
                                 height: '100%',
-                                background: '#10b981',
+                                background: 'var(--success)',
                                 borderRadius: 3,
                                 boxShadow: '0 0 10px #10b981',
                             }}
@@ -94,15 +94,15 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                 </div>
                 <div>
                     <div style={progressLabel}>
-                        <span style={{ color: '#94a3b8' }}>{t('memory.clarity_label')}</span>
-                        <span style={{ color: '#3b82f6' }}>{semanticClarity}%</span>
+                        <span style={{ color: 'var(--slate-400)' }}>{t('memory.clarity_label')}</span>
+                        <span style={{ color: 'var(--accent)' }}>{semanticClarity}%</span>
                     </div>
                     <div style={progressBarSmall}>
                         <div
                             style={{
                                 width: `${semanticClarity}%`,
                                 height: '100%',
-                                background: '#3b82f6',
+                                background: 'var(--accent)',
                                 borderRadius: 3,
                                 boxShadow: '0 0 10px #3b82f6',
                             }}
@@ -123,15 +123,15 @@ const IndexStatsPanel: React.FC<IndexStatsPanelProps> = ({
                     <div
                         style={{
                             padding: '0.5rem',
-                            background: 'rgba(16,185,129,0.1)',
+                            background: 'var(--success-tint)',
                             borderRadius: 8,
                         }}
                     >
                         <Zap size={18} color="#10b981" aria-hidden="true" />
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-300)' }}>
                         {t('memory.retrieval_latency')}
-                        <strong style={{ color: '#10b981', fontSize: '0.9rem' }}>
+                        <strong style={{ color: 'var(--success)', fontSize: '0.9rem' }}>
                             {avgRetrievalMs || '—'}ms
                         </strong>
                     </div>

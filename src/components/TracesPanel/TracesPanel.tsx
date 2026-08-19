@@ -135,13 +135,13 @@ const TracesPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Activity size={28} color="#a855f7" aria-hidden="true" />{' '}
                         {t('traces.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('traces.subtitle')}
                     </p>
                 </div>
@@ -175,7 +175,7 @@ const TracesPanel: React.FC = () => {
                                 left: 14,
                                 top: '50%',
                                 transform: 'translateY(-50%)',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                             aria-hidden="true"
                         />
@@ -258,12 +258,12 @@ const TracesPanel: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                 {[
                     { label: t('traces.total'), value: stats.total, color: '#a855f7' },
-                    { label: t('traces.completed'), value: stats.completed, color: '#10b981' },
-                    { label: t('traces.failed'), value: stats.failed, color: '#ef4444' },
+                    { label: t('traces.completed'), value: stats.completed, color: 'var(--success)' },
+                    { label: t('traces.failed'), value: stats.failed, color: 'var(--error)' },
                     {
                         label: t('traces.avg_confidence'),
                         value: `${Math.round(stats.avgConfidence * 100)}%`,
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                     },
                 ].map((stat) => (
                     <div
@@ -280,7 +280,7 @@ const TracesPanel: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.65rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 textTransform: 'uppercase',
                                 fontWeight: 800,
                                 marginBottom: '0.25rem',
@@ -304,7 +304,7 @@ const TracesPanel: React.FC = () => {
                         exit={{ opacity: 0, y: -10 }}
                         style={{
                             padding: '0.5rem 1rem',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 10,
                             color: '#fca5a5',
@@ -370,7 +370,7 @@ const TracesPanel: React.FC = () => {
                         display: 'grid',
                         gridTemplateColumns: '150px 1fr 140px 120px 180px 100px',
                         gap: '1.5rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.75rem',
                         fontWeight: 800,
                         textTransform: 'uppercase',
@@ -430,7 +430,7 @@ const TracesPanel: React.FC = () => {
                                         style={{
                                             fontSize: '1rem',
                                             fontWeight: 600,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -441,7 +441,7 @@ const TracesPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: '0.4rem',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -460,7 +460,7 @@ const TracesPanel: React.FC = () => {
                                                     borderRadius: 4,
                                                     background: 'rgba(245,158,11,0.12)',
                                                     border: '1px solid rgba(245,158,11,0.2)',
-                                                    color: '#f59e0b',
+                                                    color: 'var(--warning)',
                                                     fontSize: '0.62rem',
                                                     fontWeight: 800,
                                                     textTransform: 'uppercase',
@@ -528,7 +528,7 @@ const TracesPanel: React.FC = () => {
                                             gap: 8,
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                         }}
                                     >
                                         <Cpu size={16} color="#64748b" aria-hidden="true" />{' '}
@@ -549,7 +549,7 @@ const TracesPanel: React.FC = () => {
                                                     gap: 8,
                                                     fontSize: '0.85rem',
                                                     fontWeight: 700,
-                                                    color: '#ef4444',
+                                                    color: 'var(--error)',
                                                 }}
                                             >
                                                 <AlertTriangle
@@ -579,7 +579,7 @@ const TracesPanel: React.FC = () => {
                                             fontWeight: 800,
                                         }}
                                     >
-                                        <span style={{ color: '#64748b' }}>
+                                        <span style={{ color: 'var(--slate-500)' }}>
                                             {t('traces.certainty_label')}
                                         </span>
                                         <span
@@ -649,7 +649,7 @@ const TracesPanel: React.FC = () => {
                                             borderRadius: 10,
                                             background: 'rgba(255,255,255,0.05)',
                                             border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             cursor: 'pointer',
                                         }}
                                         aria-label={t('traces.delete_aria')}

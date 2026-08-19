@@ -104,7 +104,7 @@ const CostAnalyticsPanel: React.FC = () => {
                     >
                         <div style={flexBetween}>
                             <span style={textXsMuted}>{t('cost_analytics.total_cost')}</span>
-                            <DollarSign size={16} style={{ color: '#10b981' }} />
+                            <DollarSign size={16} style={{ color: 'var(--success)' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
                             {formatCost(totalCost)}
@@ -116,7 +116,7 @@ const CostAnalyticsPanel: React.FC = () => {
                     >
                         <div style={flexBetween}>
                             <span style={textXsMuted}>{t('cost_analytics.this_month')}</span>
-                            <BarChart3 size={16} style={{ color: '#3b82f6' }} />
+                            <BarChart3 size={16} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
                             {formatCost(budget?.spentThisMonth ?? 0)}
@@ -150,7 +150,7 @@ const CostAnalyticsPanel: React.FC = () => {
                     >
                         <div style={flexBetween}>
                             <span style={textXsMuted}>{t('cost_analytics.projected')}</span>
-                            <TrendingUp size={16} style={{ color: '#f59e0b' }} />
+                            <TrendingUp size={16} style={{ color: 'var(--warning)' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
                             {formatCost(budget?.projectedMonthly ?? 0)}
@@ -172,7 +172,7 @@ const CostAnalyticsPanel: React.FC = () => {
                     >
                         <div style={flexBetween}>
                             <span style={textXsMuted}>{t('cost_analytics.daily_avg')}</span>
-                            <Activity size={16} style={{ color: '#8b5cf6' }} />
+                            <Activity size={16} style={{ color: 'var(--purple)' }} />
                         </div>
                         <div style={{ fontSize: 24, fontWeight: 700, color: '#e4e4e7' }}>
                             {formatCost(trend?.dailyAvg ?? 0)}
@@ -197,7 +197,7 @@ const CostAnalyticsPanel: React.FC = () => {
                     }}
                 >
                     <div style={flexBetween}>
-                        <span style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 600 }}>
                             {t('cost_analytics.trend')}
                         </span>
                         <select
@@ -262,7 +262,7 @@ const CostAnalyticsPanel: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.85rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontWeight: 600,
                                 marginBottom: 8,
                             }}
@@ -296,7 +296,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                                     style={{
                                                         ...progressBarSmall,
                                                         width: `${(c / totalCost) * 100}%`,
-                                                        background: '#3b82f6',
+                                                        background: 'var(--accent)',
                                                     }}
                                                 />
                                             </div>
@@ -310,7 +310,7 @@ const CostAnalyticsPanel: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.85rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontWeight: 600,
                                 marginBottom: 8,
                             }}
@@ -350,7 +350,7 @@ const CostAnalyticsPanel: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.85rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontWeight: 600,
                                 marginBottom: 8,
                             }}
@@ -390,11 +390,11 @@ const CostAnalyticsPanel: React.FC = () => {
                     <div className="glass-panel" style={{ ...glassPanelPad15r }}>
                         <div style={{ ...flexBetween, marginBottom: 8 }}>
                             <span
-                                style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}
+                                style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 600 }}
                             >
                                 {t('cost_analytics.anomalies')}
                             </span>
-                            <ShieldAlert size={16} style={{ color: '#f59e0b' }} />
+                            <ShieldAlert size={16} style={{ color: 'var(--warning)' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {anomalies.slice(0, 10).map((a) => (
@@ -437,7 +437,7 @@ const CostAnalyticsPanel: React.FC = () => {
                                             amount: formatCost(a.expected),
                                         })}
                                     </span>
-                                    <span style={{ color: '#f59e0b', fontSize: 11 }}>
+                                    <span style={{ color: 'var(--warning)', fontSize: 11 }}>
                                         {a.deviation.toFixed(1)}σ
                                     </span>
                                 </div>

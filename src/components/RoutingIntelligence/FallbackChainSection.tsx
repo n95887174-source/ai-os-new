@@ -47,7 +47,7 @@ const FallbackChainSection: React.FC<Props> = ({
                             style={{
                                 fontSize: '0.82rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 textTransform: 'capitalize',
                             }}
                         >
@@ -61,8 +61,8 @@ const FallbackChainSection: React.FC<Props> = ({
                                 height: 30,
                                 borderRadius: 6,
                                 border: '1px solid rgba(16,185,129,0.25)',
-                                background: 'rgba(16,185,129,0.1)',
-                                color: '#10b981',
+                                background: 'var(--success-tint)',
+                                color: 'var(--success)',
                                 cursor: 'pointer',
                                 display: 'grid',
                                 placeItems: 'center',
@@ -86,7 +86,7 @@ const FallbackChainSection: React.FC<Props> = ({
                                     borderRadius: 8,
                                 }}
                             >
-                                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                     {idx + 1}.
                                 </span>
                                 <input
@@ -107,7 +107,7 @@ const FallbackChainSection: React.FC<Props> = ({
                                         onUpdate(strategy, idx, { model: e.target.value })
                                     }
                                     placeholder="model"
-                                    style={{ ...inputDarkSm, color: '#cbd5e1' }}
+                                    style={{ ...inputDarkSm, color: 'var(--slate-300)' }}
                                 />
                                 <div
                                     style={{
@@ -123,7 +123,7 @@ const FallbackChainSection: React.FC<Props> = ({
                                             width: 24,
                                             height: 24,
                                             borderRadius: 6,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             background: 'transparent',
                                             border: 'none',
                                             cursor: 'pointer',
@@ -141,7 +141,7 @@ const FallbackChainSection: React.FC<Props> = ({
                                             width: 24,
                                             height: 24,
                                             borderRadius: 6,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             background: 'transparent',
                                             border: 'none',
                                             cursor: 'pointer',
@@ -158,7 +158,7 @@ const FallbackChainSection: React.FC<Props> = ({
                                             width: 24,
                                             height: 24,
                                             borderRadius: 6,
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             background: 'transparent',
                                             border: 'none',
                                             cursor: 'pointer',
@@ -177,8 +177,8 @@ const FallbackChainSection: React.FC<Props> = ({
                                 marginTop: '0.25rem',
                                 padding: '0.5rem',
                                 borderRadius: 8,
-                                background: 'rgba(16,185,129,0.1)',
-                                color: '#10b981',
+                                background: 'var(--success-tint)',
+                                color: 'var(--success)',
                                 border: '1px dashed rgba(16,185,129,0.3)',
                                 fontSize: '0.75rem',
                                 fontWeight: 600,

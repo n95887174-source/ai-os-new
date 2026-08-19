@@ -141,7 +141,7 @@ export const AgentGroupsSection: React.FC<AgentGroupsSectionProps> = ({ agents }
                                 }}
                             >
                                 <span style={{ fontWeight: 600 }}>{g.name}</span>
-                                <span style={{ color: '#64748b' }}>
+                                <span style={{ color: 'var(--slate-500)' }}>
                                     ({g.executionPattern || 'parallel'}, {g.agentIds.length} agents)
                                 </span>
                                 <button
@@ -158,7 +158,7 @@ export const AgentGroupsSection: React.FC<AgentGroupsSectionProps> = ({ agents }
                             <pre
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     margin: 0,
                                     whiteSpace: 'pre-wrap',
                                 }}
@@ -190,7 +190,7 @@ export const AgentGroupsSection: React.FC<AgentGroupsSectionProps> = ({ agents }
                         className="agents-search-input"
                         style={{ maxWidth: 120 }}
                     />
-                    <span style={{ color: '#64748b' }}>→</span>
+                    <span style={{ color: 'var(--slate-500)' }}>→</span>
                     <input
                         value={federationTarget}
                         onChange={(e) => setFederationTarget(e.target.value)}
@@ -214,7 +214,7 @@ export const AgentGroupsSection: React.FC<AgentGroupsSectionProps> = ({ agents }
                     </button>
                 </div>
                 {federationBridges.length > 0 && (
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                         {federationBridges.map((b) => (
                             <div key={b.id}>
                                 {b.sourceTopology} → {b.targetTopology} ({b.policy})

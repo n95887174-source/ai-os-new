@@ -10,6 +10,14 @@ export interface HttpResult {
     response: Response;
 }
 
+/**
+ * Max HTTP-layer timeout for provider calls. Must exceed the debate caller's
+ * large-model window (90s), otherwise the HTTP-layer timer fires first with a
+ * bare AbortError that the caller classifies as a no-retry user-abort → the
+ * agent silently loses its turn (see G-01 fix in AGENTS.md).
+ */
+export const PROVIDER_HTTP_TIMEOUT_MS = 120000;
+
 export class LLMHttpClient {
     readonly #baseUrl: string;
     readonly #defaultHeaders: Record<string, string>;

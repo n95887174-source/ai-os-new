@@ -42,7 +42,7 @@ const searchInput: React.CSSProperties = {
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: 13,
     outline: 'none',
 };
@@ -73,7 +73,7 @@ const badge: React.CSSProperties = {
 
 const phaseLabel: React.CSSProperties = {
     fontSize: 11,
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     marginTop: 2,
 };
 
@@ -84,7 +84,7 @@ const detailSection: React.CSSProperties = {
 
 const label: React.CSSProperties = {
     fontSize: 11,
-    color: '#64748b',
+    color: 'var(--slate-500)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     marginBottom: 4,
@@ -116,7 +116,7 @@ const emptyState: React.CSSProperties = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#64748b',
+    color: 'var(--slate-500)',
     gap: 16,
 };
 
@@ -263,7 +263,7 @@ export const DebatesManagerPanel: React.FC = () => {
     }, [active, linkInput]);
 
     return (
-        <div style={{ display: 'flex', height: '100%', background: '#0f172a', color: '#e2e8f0' }}>
+        <div style={{ display: 'flex', height: '100%', background: 'var(--slate-900)', color: 'var(--slate-200)' }}>
             <div style={sidebar}>
                 <div
                     style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}
@@ -277,7 +277,7 @@ export const DebatesManagerPanel: React.FC = () => {
                     <button
                         style={{
                             ...btn,
-                            background: '#3b82f6',
+                            background: 'var(--accent)',
                             whiteSpace: 'nowrap',
                             padding: '8px 14px',
                         }}
@@ -288,11 +288,11 @@ export const DebatesManagerPanel: React.FC = () => {
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
                     {!isLoaded ? (
-                        <div style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                        <div style={{ textAlign: 'center', padding: 32, color: 'var(--slate-500)' }}>
                             {t('common.loading')}
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                        <div style={{ textAlign: 'center', padding: 32, color: 'var(--slate-500)' }}>
                             {search ? t('common.no_results') : t('common.empty')}
                         </div>
                     ) : (
@@ -301,7 +301,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.5px',
                                         padding: '8px 4px 4px',
@@ -405,13 +405,13 @@ export const DebatesManagerPanel: React.FC = () => {
                         />
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button
-                                style={{ ...btn, background: '#3b82f6' }}
+                                style={{ ...btn, background: 'var(--accent)' }}
                                 onClick={handleCreate}
                             >
                                 Create
                             </button>
                             <button
-                                style={{ ...btn, background: '#475569' }}
+                                style={{ ...btn, background: 'var(--slate-600)' }}
                                 onClick={() => setShowCreate(false)}
                             >
                                 Cancel
@@ -471,7 +471,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                 <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
                                     {(active.phase === 'paused' || active.phase === 'created') && (
                                         <button
-                                            style={{ ...btn, background: '#22c55e' }}
+                                            style={{ ...btn, background: 'var(--success)' }}
                                             onClick={() => resumeSession(active.id)}
                                         >
                                             ▶ Resume
@@ -480,14 +480,14 @@ export const DebatesManagerPanel: React.FC = () => {
                                     {active.phase === 'active' ||
                                     active.phase === 'deliberating' ? (
                                         <button
-                                            style={{ ...btn, background: '#f59e0b' }}
+                                            style={{ ...btn, background: 'var(--warning)' }}
                                             onClick={() => pauseSession(active.id)}
                                         >
                                             ⏸ Pause
                                         </button>
                                     ) : null}
                                     <button
-                                        style={{ ...btn, background: '#3b82f6' }}
+                                        style={{ ...btn, background: 'var(--accent)' }}
                                         onClick={() =>
                                             navigate(`/debate?mode=runtime&sessionId=${active.id}`)
                                         }
@@ -496,21 +496,21 @@ export const DebatesManagerPanel: React.FC = () => {
                                     </button>
                                     {active.isArchived ? (
                                         <button
-                                            style={{ ...btn, background: '#64748b' }}
+                                            style={{ ...btn, background: 'var(--slate-500)' }}
                                             onClick={() => unarchiveSession(active.id)}
                                         >
                                             Unarchive
                                         </button>
                                     ) : (
                                         <button
-                                            style={{ ...btn, background: '#64748b' }}
+                                            style={{ ...btn, background: 'var(--slate-500)' }}
                                             onClick={() => archiveSession(active.id)}
                                         >
                                             Archive
                                         </button>
                                     )}
                                     <button
-                                        style={{ ...btn, background: '#ef4444' }}
+                                        style={{ ...btn, background: 'var(--error)' }}
                                         onClick={async () => {
                                             if (window.confirm(`Delete "${active.topic}"?`)) {
                                                 await deleteSession(active.id);
@@ -534,7 +534,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                 }}
                             >
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Status:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Status:</span>{' '}
                                     <span
                                         style={{ color: STATUS_COLORS[active.phase] || '#e2e8f0' }}
                                     >
@@ -542,22 +542,22 @@ export const DebatesManagerPanel: React.FC = () => {
                                     </span>
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Strategy:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Strategy:</span>{' '}
                                     {active.strategy}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Round:</span> {active.round}
+                                    <span style={{ color: 'var(--slate-500)' }}>Round:</span> {active.round}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Participants:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Participants:</span>{' '}
                                     {active.participants.length}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Created:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Created:</span>{' '}
                                     {new Date(active.createdAt).toLocaleString()}
                                 </div>
                                 <div>
-                                    <span style={{ color: '#64748b' }}>Updated:</span>{' '}
+                                    <span style={{ color: 'var(--slate-500)' }}>Updated:</span>{' '}
                                     {new Date(active.updatedAt).toLocaleString()}
                                 </div>
                             </div>
@@ -605,7 +605,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#3b82f6' }}
+                                    style={{ ...btn, background: 'var(--accent)' }}
                                     onClick={handleAddTag}
                                 >
                                     Add
@@ -629,7 +629,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#3b82f6' }}
+                                    style={{ ...btn, background: 'var(--accent)' }}
                                     onClick={handleSetFolder}
                                 >
                                     Set
@@ -651,11 +651,11 @@ export const DebatesManagerPanel: React.FC = () => {
                                         }}
                                     >
                                         {p.name}{' '}
-                                        <span style={{ color: '#64748b' }}>({p.role})</span>
+                                        <span style={{ color: 'var(--slate-500)' }}>({p.role})</span>
                                     </span>
                                 ))}
                                 {active.participants.length === 0 && (
-                                    <span style={{ color: '#64748b', fontSize: 13 }}>
+                                    <span style={{ color: 'var(--slate-500)', fontSize: 13 }}>
                                         No participants saved in metadata
                                     </span>
                                 )}
@@ -668,12 +668,12 @@ export const DebatesManagerPanel: React.FC = () => {
                                 links.map((l) => (
                                     <div
                                         key={l.id}
-                                        style={{ fontSize: 12, padding: '4px 0', color: '#94a3b8' }}
+                                        style={{ fontSize: 12, padding: '4px 0', color: 'var(--slate-400)' }}
                                     >
                                         <span style={{ color: '#60a5fa' }}>
                                             {l.toId.slice(0, 12)}...
                                         </span>
-                                        <span style={{ color: '#64748b', marginLeft: 8 }}>
+                                        <span style={{ color: 'var(--slate-500)', marginLeft: 8 }}>
                                             {l.linkType}
                                         </span>
                                         {l.context && (
@@ -682,7 +682,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                     </div>
                                 ))
                             ) : (
-                                <div style={{ fontSize: 13, color: '#64748b' }}>
+                                <div style={{ fontSize: 13, color: 'var(--slate-500)' }}>
                                     No linked sessions
                                 </div>
                             )}
@@ -697,7 +697,7 @@ export const DebatesManagerPanel: React.FC = () => {
                                     }}
                                 />
                                 <button
-                                    style={{ ...btn, background: '#8b5cf6' }}
+                                    style={{ ...btn, background: 'var(--purple)' }}
                                     onClick={handleLink}
                                 >
                                     Link Chat

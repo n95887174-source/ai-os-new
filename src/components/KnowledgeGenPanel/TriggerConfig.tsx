@@ -169,7 +169,7 @@ const TriggerConfig: React.FC<TriggerConfigProps> = ({ onTrigger, running }) => 
                         padding: '0.45rem 1rem',
                         borderRadius: 7,
                         border: 'none',
-                        background: '#22c55e',
+                        background: 'var(--success)',
                         color: '#06210f',
                         cursor: running ? 'wait' : 'pointer',
                         fontWeight: 700,
@@ -186,10 +186,10 @@ const TriggerConfig: React.FC<TriggerConfigProps> = ({ onTrigger, running }) => 
 
 const inputStyle: React.CSSProperties = {
     flex: 1,
-    background: '#0f172a',
+    background: 'var(--slate-900)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 6,
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.72rem',
     padding: '0.35rem 0.6rem',
     width: '100%',

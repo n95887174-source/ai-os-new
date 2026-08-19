@@ -51,7 +51,7 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({
                         style={{
                             fontSize: '0.6rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.08em',
                             padding: '0.25rem 0.5rem',
@@ -95,7 +95,7 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     cursor: 'pointer',
                                     padding: 4,
                                 }}
@@ -113,7 +113,7 @@ export const QuickAccess: React.FC<QuickAccessProps> = ({
                         style={{
                             fontSize: '0.6rem',
                             fontWeight: 700,
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.08em',
                             padding: '0.25rem 0.5rem',

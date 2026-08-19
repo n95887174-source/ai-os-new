@@ -72,8 +72,8 @@ export const PerfOverlay: React.FC<PerfOverlayProps> = ({ entityCount, visible =
             }}
         >
             <div style={{ color: fpsColor, fontWeight: 700 }}>{stats.fps} FPS</div>
-            <div style={{ color: '#94a3b8' }}>{entityCount} entities</div>
-            <div style={{ color: '#64748b' }}>{stats.frameTime}ms/frame</div>
+            <div style={{ color: 'var(--slate-400)' }}>{entityCount} entities</div>
+            <div style={{ color: 'var(--slate-500)' }}>{stats.frameTime}ms/frame</div>
         </div>
     );
 };

@@ -61,7 +61,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontWeight: 700,
                                         marginBottom: '0.25rem',
                                         textTransform: 'uppercase',
@@ -98,7 +98,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                                 alignItems: 'center',
                                                 gap: 3,
                                                 fontSize: '0.65rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                             }}
                                         >
                                             <span
@@ -149,7 +149,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                     <span
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontFamily: 'monospace',
                                         }}
                                     >
@@ -160,7 +160,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                             fontSize: '0.7rem',
                                             padding: '0.2rem 0.5rem',
                                             borderRadius: 4,
-                                            background: 'rgba(139,92,246,0.1)',
+                                            background: 'var(--purple-tint)',
                                             color: '#a855f7',
                                             fontWeight: 600,
                                         }}
@@ -198,7 +198,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                             gap: '0.75rem',
                                             marginTop: '0.5rem',
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         <span>Score: {top.score.toFixed(3)}</span>
@@ -229,14 +229,14 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                             style={{
                                 fontSize: '1rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: '1rem',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
                             }}
                         >
-                            <Info size={18} style={{ color: '#8b5cf6' }} /> Why this route
+                            <Info size={18} style={{ color: 'var(--purple)' }} /> Why this route
                         </div>
 
                         <div
@@ -248,13 +248,13 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                             }}
                         >
                             <div style={detailRow}>
-                                <Zap size={16} style={{ color: '#f59e0b' }} />
+                                <Zap size={16} style={{ color: 'var(--warning)' }} />
                                 <div>
                                     <div style={textXsSecondary}>Strategy</div>
                                     <div
                                         style={{
                                             fontSize: '0.85rem',
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -263,7 +263,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                 </div>
                             </div>
                             <div style={detailRow}>
-                                <TrendingUp size={16} style={{ color: '#3b82f6' }} />
+                                <TrendingUp size={16} style={{ color: 'var(--accent)' }} />
                                 <div>
                                     <div style={textXsSecondary}>
                                         {t('routing.detail.selected')}
@@ -281,7 +281,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                             </div>
                             {selected.secondBest && (
                                 <div style={detailRow}>
-                                    <Shield size={16} style={{ color: '#10b981' }} />
+                                    <Shield size={16} style={{ color: 'var(--success)' }} />
                                     <div>
                                         <div style={textXsSecondary}>
                                             {t('routing.detail.fallback')}
@@ -300,7 +300,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                             )}
                             {selected.estimatedCost && (
                                 <div style={detailRow}>
-                                    <DollarSign size={16} style={{ color: '#10b981' }} />
+                                    <DollarSign size={16} style={{ color: 'var(--success)' }} />
                                     <div>
                                         <div style={textXsSecondary}>
                                             {t('routing.detail.estimated_cost')}
@@ -322,7 +322,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                         <div
                             style={{
                                 fontSize: '0.85rem',
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 fontWeight: 700,
                                 marginBottom: '0.75rem',
                             }}
@@ -339,7 +339,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                             <thead>
                                 <tr
                                     style={{
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         borderBottom: '1px solid rgba(255,255,255,0.05)',
                                     }}
                                 >
@@ -371,7 +371,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                             key={s.provider}
                                             style={{
                                                 borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             <td
@@ -437,7 +437,7 @@ function HistoryTab({ decisions, selected, onSelect }: Props) {
                                     margin: 0,
                                     padding: '0 0 0 1rem',
                                     fontSize: '0.75rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     lineHeight: 1.8,
                                 }}
                             >

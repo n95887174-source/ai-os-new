@@ -80,7 +80,7 @@ const TracesTab: React.FC<Props> = ({ keyId, stats }) => {
                                     <td
                                         style={{
                                             padding: '0.75rem',
-                                            color: '#3b82f6',
+                                            color: 'var(--accent)',
                                             fontFamily: 'monospace',
                                         }}
                                     >

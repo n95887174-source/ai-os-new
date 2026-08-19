@@ -64,7 +64,7 @@ const PluginSdkPanelContent: React.FC = () => {
             style={{
                 padding: '10px 12px',
                 borderRadius: 8,
-                background: '#0f172a',
+                background: 'var(--slate-900)',
                 border: '1px solid rgba(255,255,255,0.04)',
             }}
         >
@@ -74,7 +74,7 @@ const PluginSdkPanelContent: React.FC = () => {
                 ) : (
                     <PowerOff size={14} color="#64748b" />
                 )}
-                <span style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}>
+                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}>
                     {p.manifest.name}
                 </span>
                 <span
@@ -90,15 +90,15 @@ const PluginSdkPanelContent: React.FC = () => {
                 >
                     {p.manifest.type}
                 </span>
-                <span style={{ fontSize: 10, color: '#64748b' }}>v{p.manifest.version}</span>
+                <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>v{p.manifest.version}</span>
             </div>
-            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
+            <div style={{ fontSize: 11, color: 'var(--slate-500)', marginBottom: 2 }}>
                 {p.manifest.description}
             </div>
             <div
                 style={{
                     fontSize: 10,
-                    color: '#475569',
+                    color: 'var(--slate-600)',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -107,7 +107,7 @@ const PluginSdkPanelContent: React.FC = () => {
                 <span>
                     {p.manifest.author} · {p.manifest.permissions.join(', ')}
                 </span>
-                <span style={{ fontSize: 10, color: '#475569' }}>
+                <span style={{ fontSize: 10, color: 'var(--slate-600)' }}>
                     {new Date(p.installedAt).toLocaleDateString()}
                 </span>
             </div>
@@ -139,7 +139,7 @@ const PluginSdkPanelContent: React.FC = () => {
                             cursor: 'pointer',
                             fontSize: 10,
                             background: 'rgba(59,130,246,0.15)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                         }}
                     >
                         Config
@@ -153,7 +153,7 @@ const PluginSdkPanelContent: React.FC = () => {
                             cursor: 'pointer',
                             fontSize: 10,
                             background: 'rgba(239,68,68,0.15)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             marginLeft: 'auto',
                         }}
                     >
@@ -172,8 +172,8 @@ const PluginSdkPanelContent: React.FC = () => {
                             padding: 8,
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 11,
                             fontFamily: 'monospace',
                             outline: 'none',
@@ -190,7 +190,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 10,
                                 background: 'rgba(16,185,129,0.2)',
-                                color: '#10b981',
+                                color: 'var(--success)',
                             }}
                         >
                             Save
@@ -204,7 +204,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 10,
                                 background: 'rgba(100,116,139,0.2)',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             Cancel
@@ -238,7 +238,7 @@ const PluginSdkPanelContent: React.FC = () => {
                     >
                         <Puzzle size={20} color="#a855f7" /> Plugin SDK
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Extend the platform with custom plugins
                     </p>
                 </div>
@@ -251,7 +251,7 @@ const PluginSdkPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Installed ({installed.length})
@@ -263,7 +263,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                 style={{
                                     padding: 16,
                                     textAlign: 'center',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: 13,
                                 }}
                             >
@@ -279,7 +279,7 @@ const PluginSdkPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Available ({available.length})
@@ -304,7 +304,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                     }}
                                 >
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}
                                     >
                                         {m.name}
                                     </span>
@@ -321,14 +321,14 @@ const PluginSdkPanelContent: React.FC = () => {
                                     >
                                         {m.type}
                                     </span>
-                                    <span style={{ fontSize: 10, color: '#64748b' }}>
+                                    <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                                         v{m.version}
                                     </span>
                                 </div>
-                                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
+                                <div style={{ fontSize: 11, color: 'var(--slate-500)', marginBottom: 2 }}>
                                     {m.description}
                                 </div>
-                                <div style={{ fontSize: 10, color: '#475569' }}>
+                                <div style={{ fontSize: 10, color: 'var(--slate-600)' }}>
                                     {m.author} · min v{m.minAppVersion}
                                 </div>
                                 <button
@@ -343,7 +343,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 10,
                                         background: 'rgba(139,92,246,0.15)',
-                                        color: '#8b5cf6',
+                                        color: 'var(--purple)',
                                         marginTop: 6,
                                     }}
                                 >
@@ -356,7 +356,7 @@ const PluginSdkPanelContent: React.FC = () => {
                                 style={{
                                     padding: 16,
                                     textAlign: 'center',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: 13,
                                 }}
                             >

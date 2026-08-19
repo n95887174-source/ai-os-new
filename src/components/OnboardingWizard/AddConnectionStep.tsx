@@ -81,7 +81,7 @@ const AddConnectionStep: React.FC<Props> = ({
                         padding: '0.65rem 0.75rem',
                         background:
                             selectedProvider === p.id ? `${p.color}20` : 'rgba(255,255,255,0.04)',
-                        border: `1.5px solid ${selectedProvider === p.id ? p.color : 'rgba(255,255,255,0.1)'}`,
+                        border: `1.5px solid ${selectedProvider === p.id ? p.color : 'var(--border-default)'}`,
                         borderRadius: 10,
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -136,7 +136,7 @@ const AddConnectionStep: React.FC<Props> = ({
                 }}
             />
             {error && (
-                <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: '0.35rem 0 0' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--error)', margin: '0.35rem 0 0' }}>
                     {error}
                 </p>
             )}

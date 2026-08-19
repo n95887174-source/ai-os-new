@@ -76,13 +76,13 @@ const TopicStep: React.FC<TopicStepProps> = ({
                         gap: 6,
                         marginBottom: 6,
                         fontSize: '0.75rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontWeight: 600,
                     }}
                 >
                     <Zap size={14} color="#a855f7" />
                     {t('debate.templates')}
-                    <span style={{ fontWeight: 400, color: '#64748b', marginLeft: 4 }}>
+                    <span style={{ fontWeight: 400, color: 'var(--slate-500)', marginLeft: 4 }}>
                         — {t('debate.templates_desc')}
                     </span>
                 </div>
@@ -126,10 +126,10 @@ const TopicStep: React.FC<TopicStepProps> = ({
                             }}
                             aria-label={`${t('debate.template.' + tmpl.id)} template`}
                         >
-                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>
                                 {t('debate.template.' + tmpl.id)}
                             </span>
-                            <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                 {t('debate.template.' + tmpl.id + '_desc')}
                             </span>
                         </div>
@@ -191,7 +191,7 @@ const TopicStep: React.FC<TopicStepProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: 11,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginTop: 2,
                     }}
                 >

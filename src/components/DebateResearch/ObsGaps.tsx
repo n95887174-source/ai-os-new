@@ -113,11 +113,11 @@ const ObsGaps: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Eye size={20} color="#06b6d4" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Observability Gaps
                     </span>
                     {wsAttached && scanned && (
-                        <span style={{ fontSize: '0.65rem', color: '#10b981' }}>Live scan</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--success)' }}>Live scan</span>
                     )}
                 </div>
                 <button
@@ -199,7 +199,7 @@ const ObsGaps: React.FC = () => {
                             background: 'none',
                             border: 'none',
                             outline: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.68rem',
                         }}
                     />
@@ -209,7 +209,7 @@ const ObsGaps: React.FC = () => {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 0,
                             }}
@@ -226,7 +226,7 @@ const ObsGaps: React.FC = () => {
                             borderRadius: 5,
                             border: '1px solid rgba(255,255,255,0.08)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.68rem',
@@ -248,7 +248,7 @@ const ObsGaps: React.FC = () => {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         gap: 8,
                     }}
                 >
@@ -265,7 +265,7 @@ const ObsGaps: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         gap: 8,
                     }}
                 >
@@ -320,7 +320,7 @@ const ObsGaps: React.FC = () => {
                                 >
                                     Events.md Cross-Reference
                                 </span>
-                                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                                     {docEvents.length} documented events
                                 </span>
                             </div>
@@ -351,7 +351,7 @@ const ObsGaps: React.FC = () => {
                                     </span>
                                 ))}
                                 {docEvents.length > 30 && (
-                                    <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         +{docEvents.length - 30} more
                                     </span>
                                 )}
@@ -363,7 +363,7 @@ const ObsGaps: React.FC = () => {
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.4rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.04em',

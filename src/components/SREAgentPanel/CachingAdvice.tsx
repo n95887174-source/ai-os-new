@@ -21,7 +21,7 @@ const CachingAdvice: React.FC<Props> = ({ estimatedSavings, details }) => {
         >
             <div style={flexAlignCenterGap2Mb03}>
                 <Layers size={14} color="#10b981" />
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                     {t('sre.caching_title')}
                 </span>
             </div>
@@ -29,7 +29,7 @@ const CachingAdvice: React.FC<Props> = ({ estimatedSavings, details }) => {
                 <div
                     style={{
                         fontSize: '0.8rem',
-                        color: '#10b981',
+                        color: 'var(--success)',
                         fontWeight: 600,
                         marginBottom: '0.25rem',
                     }}
@@ -37,7 +37,7 @@ const CachingAdvice: React.FC<Props> = ({ estimatedSavings, details }) => {
                     {estimatedSavings}
                 </div>
             )}
-            {details && <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{details}</div>}
+            {details && <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>{details}</div>}
         </div>
     );
 };

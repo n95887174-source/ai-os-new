@@ -61,7 +61,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                     <div
                         style={{
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -69,7 +69,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                     >
                         {loop.question.text.slice(0, 100)}
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 1 }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginTop: 1 }}>
                         {loop.sources.length} sources · {loop.claims.length} claims
                         {loop.completedAt &&
                             ` · ${((loop.completedAt - loop.startedAt) / 1000).toFixed(1)}s`}
@@ -104,14 +104,14 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                     <div>
                                         <div
                                             style={{
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 fontWeight: 600,
                                                 marginBottom: 4,
                                             }}
                                         >
                                             Summary
                                         </div>
-                                        <div style={{ color: '#cbd5e1', lineHeight: 1.5 }}>
+                                        <div style={{ color: 'var(--slate-300)', lineHeight: 1.5 }}>
                                             {loop.synthesis.summary}
                                         </div>
                                     </div>
@@ -119,7 +119,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                         <div>
                                             <div
                                                 style={{
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontWeight: 600,
                                                     marginBottom: 4,
                                                 }}
@@ -133,10 +133,10 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                         display: 'flex',
                                                         gap: 6,
                                                         marginBottom: 3,
-                                                        color: '#cbd5e1',
+                                                        color: 'var(--slate-300)',
                                                     }}
                                                 >
-                                                    <span style={{ color: '#22c55e' }}>•</span> {f}
+                                                    <span style={{ color: 'var(--success)' }}>•</span> {f}
                                                 </div>
                                             ))}
                                         </div>
@@ -145,7 +145,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                         <div>
                                             <div
                                                 style={{
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontWeight: 600,
                                                     marginBottom: 4,
                                                 }}
@@ -159,7 +159,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                         display: 'flex',
                                                         gap: 6,
                                                         marginBottom: 3,
-                                                        color: '#f59e0b',
+                                                        color: 'var(--warning)',
                                                     }}
                                                 >
                                                     <AlertCircle size={12} /> {g}
@@ -171,7 +171,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                         <div>
                                             <div
                                                 style={{
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     fontWeight: 600,
                                                     marginBottom: 4,
                                                 }}
@@ -185,7 +185,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                         display: 'flex',
                                                         gap: 6,
                                                         marginBottom: 3,
-                                                        color: '#a78bfa',
+                                                        color: 'var(--purple-muted)',
                                                     }}
                                                 >
                                                     <Lightbulb size={12} /> {q}
@@ -199,7 +199,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                 <div>
                                     <div
                                         style={{
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontWeight: 600,
                                             marginBottom: 4,
                                         }}
@@ -213,7 +213,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                 display: 'flex',
                                                 gap: 6,
                                                 marginBottom: 2,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 alignItems: 'center',
                                             }}
                                         >
@@ -249,7 +249,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                 <span
                                                     style={{
                                                         fontSize: '0.6rem',
-                                                        color: '#475569',
+                                                        color: 'var(--slate-600)',
                                                         maxWidth: 100,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -260,7 +260,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                                     {src.authors.length > 1 ? ' et al.' : ''}
                                                 </span>
                                             )}
-                                            <span style={{ fontSize: '0.65rem', color: '#475569' }}>
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--slate-600)' }}>
                                                 {(src.relevanceScore * 100).toFixed(0)}%
                                             </span>
                                         </div>
@@ -268,7 +268,7 @@ const LoopCard: React.FC<LoopCardProps> = ({ loop, index }) => {
                                 </div>
                             )}
                             {loop.error && (
-                                <div style={{ color: '#ef4444', fontSize: '0.72rem' }}>
+                                <div style={{ color: 'var(--error)', fontSize: '0.72rem' }}>
                                     Error: {loop.error}
                                 </div>
                             )}

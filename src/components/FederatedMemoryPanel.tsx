@@ -97,7 +97,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                     >
                         <Server size={20} color="#3b82f6" /> Federated Memory
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Distributed memory synchronization across nodes
                     </p>
                 </div>
@@ -135,7 +135,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                             fontSize: 13,
                             fontWeight: 600,
                             background: 'rgba(16,185,129,0.15)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             opacity: syncing ? 0.6 : 1,
                         }}
                     >
@@ -147,7 +147,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
             {showAdd && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -164,8 +164,8 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -179,8 +179,8 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -196,8 +196,8 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -209,8 +209,8 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -232,7 +232,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                             border: 'none',
                             cursor: 'pointer',
                             background: 'rgba(59,130,246,0.2)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             fontSize: 13,
                             fontWeight: 600,
                             opacity:
@@ -251,7 +251,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Nodes ({nodes.length})
@@ -263,7 +263,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 style={{
                                     padding: '10px 12px',
                                     borderRadius: 8,
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     border: '1px solid rgba(255,255,255,0.04)',
                                 }}
                             >
@@ -279,7 +279,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                         <WifiOff size={14} color="#64748b" />
                                     )}
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}
                                     >
                                         {n.name}
                                     </span>
@@ -310,7 +310,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                     }}
@@ -325,7 +325,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 10,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         marginTop: 2,
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -391,7 +391,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                 margin: '0 0 8px',
                                 fontSize: 13,
                                 fontWeight: 600,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                             }}
                         >
                             Config
@@ -400,14 +400,14 @@ const FederatedMemoryPanelContent: React.FC = () => {
                             style={{
                                 padding: '10px 12px',
                                 borderRadius: 8,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: '1px solid rgba(255,255,255,0.04)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: 12,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     display: 'grid',
                                     gridTemplateColumns: '1fr 1fr',
                                     gap: 8,
@@ -425,7 +425,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                     Payload: {(config.maxPayloadSize / 1024 / 1024).toFixed(1)}MB
                                 </span>
                             </div>
-                            <div style={{ fontSize: 11, color: '#475569', marginTop: 6 }}>
+                            <div style={{ fontSize: 11, color: 'var(--slate-600)', marginTop: 6 }}>
                                 Peers: {config.allowedPeers.join(', ')}
                             </div>
                         </div>
@@ -438,7 +438,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Sync History ({syncHistory.length})
@@ -451,7 +451,7 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                     padding: '8px 10px',
                                     borderRadius: 6,
                                     fontSize: 11,
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     border: '1px solid rgba(255,255,255,0.04)',
                                     borderLeft: `3px solid ${s.status === 'completed' ? '#10b981' : s.status === 'in_progress' ? '#f59e0b' : '#ef4444'}`,
                                 }}
@@ -463,17 +463,17 @@ const FederatedMemoryPanelContent: React.FC = () => {
                                         marginBottom: 2,
                                     }}
                                 >
-                                    <span style={{ color: '#94a3b8', fontWeight: 600 }}>
+                                    <span style={{ color: 'var(--slate-400)', fontWeight: 600 }}>
                                         {s.peerNodeId}
                                     </span>
-                                    <span style={{ color: '#64748b', textTransform: 'capitalize' }}>
+                                    <span style={{ color: 'var(--slate-500)', textTransform: 'capitalize' }}>
                                         {s.direction}
                                     </span>
                                 </div>
-                                <div style={{ color: '#64748b' }}>
+                                <div style={{ color: 'var(--slate-500)' }}>
                                     {s.memoriesTransferred} memories · {s.status}
                                 </div>
-                                <div style={{ marginTop: 2, color: '#475569' }}>
+                                <div style={{ marginTop: 2, color: 'var(--slate-600)' }}>
                                     {new Date(s.startedAt).toLocaleString()}
                                 </div>
                             </div>

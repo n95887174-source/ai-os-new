@@ -168,7 +168,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
                                 borderRadius: 8,
                                 fontSize: '0.65rem',
                                 fontFamily: 'monospace',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 maxHeight: 120,
                                 overflow: 'auto',
                                 whiteSpace: 'pre-wrap',
@@ -223,7 +223,7 @@ const ProviderDetailModal: React.FC<ProviderDetailModalProps> = ({
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#f59e0b',
+                                            color: 'var(--warning)',
                                             padding: '0.5rem',
                                             textAlign: 'center',
                                         }}

@@ -155,7 +155,7 @@ export const AgentCard: React.FC<AgentCardProps> = memo(
                                 className={`agents-card-stat-value${latency < 500 ? ' agents-card-stat-value--good' : latency < 1000 ? ' agents-card-stat-value--warn' : ' agents-card-stat-value--bad'}`}
                             >
                                 {latency}
-                                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>ms</span>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>ms</span>
                             </span>
                         </div>
                     </div>

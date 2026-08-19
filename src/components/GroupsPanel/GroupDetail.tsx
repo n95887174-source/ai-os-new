@@ -79,7 +79,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                         border: '1px solid rgba(148,163,184,0.2)',
                                         borderRadius: 6,
                                         padding: '0.3rem 0.6rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '1rem',
                                         outline: 'none',
                                         width: 250,
@@ -93,7 +93,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                         borderRadius: 6,
                                         padding: '0.3rem 0.5rem',
                                         cursor: 'pointer',
-                                        color: '#22c55e',
+                                        color: 'var(--success)',
                                     }}
                                 >
                                     <Check size={14} />
@@ -106,7 +106,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                         borderRadius: 6,
                                         padding: '0.3rem 0.5rem',
                                         cursor: 'pointer',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                     }}
                                 >
                                     <X size={14} />
@@ -129,7 +129,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                             borderRadius: 6,
                                             padding: '0.25rem',
                                             cursor: 'pointer',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                         aria-label={t('common.aria.edit')}
                                     >
@@ -138,11 +138,11 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 )}
                             </div>
                         )}
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: 4 }}>
                             {group.keyIds.length} {t('groups.keys_count')}
                             {isDefault && (
                                 <span
-                                    style={{ marginLeft: 12, color: '#f59e0b', fontSize: '0.7rem' }}
+                                    style={{ marginLeft: 12, color: 'var(--warning)', fontSize: '0.7rem' }}
                                 >
                                     <AlertTriangle
                                         size={11}
@@ -162,7 +162,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 borderRadius: 6,
                                 padding: '0.3rem 0.5rem',
                                 cursor: 'pointer',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                             title="Refresh"
                         >
@@ -183,12 +183,12 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                     }
                                 }}
                                 style={{
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     border: 'none',
                                     borderRadius: 6,
                                     padding: '0.3rem 0.5rem',
                                     cursor: 'pointer',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                 }}
                                 title={t('groups.delete')}
                             >
@@ -221,15 +221,15 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 <span style={{ fontWeight: 600, color: '#93c5fd' }}>
                                     {provider}
                                 </span>
-                                <span style={{ color: '#94a3b8' }}>
+                                <span style={{ color: 'var(--slate-400)' }}>
                                     Burst:{' '}
-                                    <span style={{ color: '#e2e8f0' }}>{burst.availableBurst}</span>
-                                    <span style={{ color: '#64748b' }}> / {burst.totalQuota}</span>
+                                    <span style={{ color: 'var(--slate-200)' }}>{burst.availableBurst}</span>
+                                    <span style={{ color: 'var(--slate-500)' }}> / {burst.totalQuota}</span>
                                 </span>
-                                <span style={{ color: '#94a3b8' }}>
+                                <span style={{ color: 'var(--slate-400)' }}>
                                     Shared:{' '}
-                                    <span style={{ color: '#e2e8f0' }}>{quota.available}</span>
-                                    <span style={{ color: '#64748b' }}>
+                                    <span style={{ color: 'var(--slate-200)' }}>{quota.available}</span>
+                                    <span style={{ color: 'var(--slate-500)' }}>
                                         {' '}
                                         (pool {Math.round(quota.sharedPool)})
                                     </span>
@@ -259,7 +259,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                         style={{
                             textAlign: 'center',
                             padding: 20,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.8rem',
                         }}
                     >
@@ -274,7 +274,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 gap: 8,
                                 padding: '0.4rem 0.75rem',
                                 fontSize: '0.7rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontWeight: 600,
                             }}
                         >
@@ -305,7 +305,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 >
                                     <span
                                         style={{
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
@@ -315,7 +315,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                     </span>
                                     <span
                                         style={{
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontSize: '0.7rem',
                                             fontFamily: 'monospace',
                                             overflow: 'hidden',
@@ -325,7 +325,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                     >
                                         {m}
                                     </span>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                    <span style={{ color: 'var(--slate-400)', fontSize: '0.75rem' }}>
                                         {k.provider}
                                     </span>
                                     <span
@@ -345,7 +345,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                             border: '1px solid rgba(148,163,184,0.15)',
                                             borderRadius: 6,
                                             padding: '0.25rem 0.4rem',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.75rem',
                                             outline: 'none',
                                             cursor: 'pointer',
@@ -406,7 +406,7 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                 >
                                     <span
                                         style={{
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
@@ -414,14 +414,14 @@ const GroupDetail: React.FC<GroupDetailProps> = ({
                                     >
                                         {k.label}
                                     </span>
-                                    <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                    <span style={{ color: 'var(--slate-500)', fontSize: '0.7rem' }}>
                                         {k.provider}
                                     </span>
                                 </div>
                                 <button
                                     onClick={() => onMoveKey(k.id, group.name)}
                                     style={{
-                                        background: 'rgba(59,130,246,0.1)',
+                                        background: 'var(--accent-tint)',
                                         border: 'none',
                                         borderRadius: 6,
                                         padding: '0.25rem 0.6rem',

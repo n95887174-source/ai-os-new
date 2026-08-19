@@ -124,10 +124,10 @@ export const MessageSearchPanel: React.FC = () => {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', overflow: 'hidden' }}>
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: '#f8fafc' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--slate-50)' }}>
             <Search size={26} color="#06b6d4" /> {t('message_search.title')}
           </h2>
-          <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>{t('message_search.subtitle', { total })}</p>
+          <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>{t('message_search.subtitle', { total })}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           <button onClick={() => setShowFilters(!showFilters)} style={btnSecondary}><Filter size={12} /> {t('message_search.filters')}</button>
@@ -145,12 +145,12 @@ export const MessageSearchPanel: React.FC = () => {
 
       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, position: 'relative', minWidth: 240 }}>
-          <Search size={14} style={{ position: 'absolute', left: 8, top: 8, color: '#94a3b8' }} />
+          <Search size={14} style={{ position: 'absolute', left: 8, top: 8, color: 'var(--slate-400)' }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={t('message_search.search_placeholder')}
-            style={{ width: '100%', padding: '0.4rem 0.5rem 0.4rem 28px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.85rem' }}
+            style={{ width: '100%', padding: '0.4rem 0.5rem 0.4rem 28px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'var(--slate-200)', fontSize: '0.85rem' }}
           />
         </div>
         <label style={checkLabel}>
@@ -223,14 +223,14 @@ export const MessageSearchPanel: React.FC = () => {
           ))}
         </AnimatePresence>
         {total === 0 && (
-          <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--slate-400)' }}>
             <MessageSquare size={48} color="#475569" />
             <p style={{ marginTop: '1rem' }}>{t('message_search.empty')}</p>
             <p style={textMutedXs}>{t('message_search.empty_hint')}</p>
           </div>
         )}
         {total > 0 && results.length === 0 && (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-400)' }}>
             <AlertCircle size={32} color="#475569" />
             <p style={{ marginTop: '0.5rem' }}>{t('message_search.no_match')}</p>
           </div>
@@ -251,7 +251,7 @@ const StatBox: React.FC<{ icon: React.ReactNode; label: string; value: string | 
 const FilterSelect: React.FC<{ label: string; value: string; onChange: (v: string) => void; options: Array<{ v: string; l: string }> }> = ({ label, value, onChange, options }) => (
   <div>
     <div style={{ ...textMutedXs, marginBottom: 2 }}>{label}</div>
-    <select value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', padding: '0.3rem 0.4rem', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.75rem' }}>
+    <select value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', padding: '0.3rem 0.4rem', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'var(--slate-200)', fontSize: '0.75rem' }}>
       {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
   </div>
@@ -260,7 +260,7 @@ const FilterSelect: React.FC<{ label: string; value: string; onChange: (v: strin
 const FilterInput: React.FC<{ label: string; type: string; value: string; onChange: (v: string) => void }> = ({ label, type, value, onChange }) => (
   <div>
     <div style={{ ...textMutedXs, marginBottom: 2 }}>{label}</div>
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', padding: '0.3rem 0.4rem', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.75rem' }} />
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} style={{ width: '100%', padding: '0.3rem 0.4rem', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'var(--slate-200)', fontSize: '0.75rem' }} />
   </div>
 );
 
@@ -269,7 +269,7 @@ const btnSecondary: React.CSSProperties = {
   borderRadius: 6,
   border: '1px solid rgba(255,255,255,0.1)',
   background: 'transparent',
-  color: '#94a3b8',
+  color: 'var(--slate-400)',
   cursor: 'pointer',
   fontSize: '0.75rem',
   display: 'flex',
@@ -287,7 +287,7 @@ const checkLabel: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   fontSize: '0.75rem',
-  color: '#94a3b8',
+  color: 'var(--slate-400)',
   cursor: 'pointer',
   userSelect: 'none',
 };
@@ -295,7 +295,7 @@ const checkLabel: React.CSSProperties = {
 const chipColor: React.CSSProperties = {
   padding: '0.05rem 0.4rem',
   borderRadius: 4,
-  background: 'rgba(168,85,247,0.1)',
+  background: 'var(--purple-tint)',
   color: '#c4b5fd',
   fontSize: '0.65rem',
 };
@@ -304,7 +304,7 @@ const chipMuted: React.CSSProperties = {
   padding: '0.05rem 0.4rem',
   borderRadius: 4,
   background: 'rgba(255,255,255,0.05)',
-  color: '#94a3b8',
+  color: 'var(--slate-400)',
   fontSize: '0.65rem',
 };
 

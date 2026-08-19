@@ -39,10 +39,10 @@ const ComingSoonPanel: React.FC<Props> = ({ routeId, serviceName }) => {
                 }}
             >
                 <Construction size={48} color="#f59e0b" />
-                <h2 style={{ color: '#f8fafc', margin: 0, fontSize: 18, fontWeight: 700 }}>
+                <h2 style={{ color: 'var(--slate-50)', margin: 0, fontSize: 18, fontWeight: 700 }}>
                     {route.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                 </h2>
-                <p style={{ color: '#64748b', margin: 0, fontSize: 13 }}>
+                <p style={{ color: 'var(--slate-500)', margin: 0, fontSize: 13 }}>
                     This panel is coming soon. It will display data from{' '}
                     <code style={{ color: '#a5b4fc', fontSize: 11 }}>{svc}</code>.
                 </p>
@@ -52,7 +52,7 @@ const ComingSoonPanel: React.FC<Props> = ({ routeId, serviceName }) => {
                         borderRadius: 8,
                         padding: '12px 16px',
                         fontSize: 11,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontFamily: 'monospace',
                         maxWidth: '100%',
                         overflow: 'auto',

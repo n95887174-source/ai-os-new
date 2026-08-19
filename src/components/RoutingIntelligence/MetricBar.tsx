@@ -19,7 +19,7 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: Props
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: '0.75rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontWeight: 600,
                 }}
             >
@@ -55,7 +55,7 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: Props
                 <span
                     style={{
                         fontSize: '0.72rem',
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         fontWeight: 700,
                         width: 70,
                         textAlign: 'right',
@@ -88,7 +88,7 @@ function MetricBar({ label, control, experiment, higherIsBetter, format }: Props
                 <span
                     style={{
                         fontSize: '0.72rem',
-                        color: '#8b5cf6',
+                        color: 'var(--purple)',
                         fontWeight: 700,
                         width: 70,
                         textAlign: 'right',

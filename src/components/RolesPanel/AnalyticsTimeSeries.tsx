@@ -31,7 +31,7 @@ const AnalyticsTimeSeries: React.FC<AnalyticsTimeSeriesProps> = ({ data }) => {
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                     }}
@@ -72,7 +72,7 @@ const AnalyticsTimeSeries: React.FC<AnalyticsTimeSeriesProps> = ({ data }) => {
                                 style={{
                                     width: '50%',
                                     height: `${(d.invocations / maxDaily) * 100}%`,
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                     borderRadius: '2px 2px 0 0',
                                     minHeight: d.invocations > 0 ? 4 : 0,
                                     transition: 'height 0.3s',
@@ -82,7 +82,7 @@ const AnalyticsTimeSeries: React.FC<AnalyticsTimeSeriesProps> = ({ data }) => {
                                 style={{
                                     width: '50%',
                                     height: `${(d.errors / Math.max(maxDaily, 1)) * 100}%`,
-                                    background: '#ef4444',
+                                    background: 'var(--error)',
                                     borderRadius: '2px 2px 0 0',
                                     minHeight: d.errors > 0 ? 4 : 0,
                                     transition: 'height 0.3s',
@@ -92,7 +92,7 @@ const AnalyticsTimeSeries: React.FC<AnalyticsTimeSeriesProps> = ({ data }) => {
                         <span
                             style={{
                                 fontSize: '0.5rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 writingMode: 'vertical-lr',
                                 textOrientation: 'mixed',
                                 height: 14,
@@ -109,16 +109,16 @@ const AnalyticsTimeSeries: React.FC<AnalyticsTimeSeriesProps> = ({ data }) => {
                     display: 'flex',
                     gap: 12,
                     fontSize: '0.6rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginTop: 4,
                 }}
             >
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#3b82f6' }} />{' '}
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent)' }} />{' '}
                     Invocations
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} />{' '}
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--error)' }} />{' '}
                     Errors
                 </span>
             </div>

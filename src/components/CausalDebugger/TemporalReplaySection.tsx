@@ -19,7 +19,7 @@ const ScoreBar: React.FC<{
     isLeader: boolean;
 }> = ({ provider, score, maxScore, isLeader }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem' }}>
-        <span style={{ fontWeight: 600, color: '#e2e8f0', minWidth: 70 }}>{provider}</span>
+        <span style={{ fontWeight: 600, color: 'var(--slate-200)', minWidth: 70 }}>{provider}</span>
         <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
             <div
                 style={{
@@ -32,7 +32,7 @@ const ScoreBar: React.FC<{
             />
         </div>
         <span
-            style={{ color: '#cbd5e1', minWidth: 50, textAlign: 'right', fontFamily: 'monospace' }}
+            style={{ color: 'var(--slate-300)', minWidth: 50, textAlign: 'right', fontFamily: 'monospace' }}
         >
             {score.toFixed(3)}
         </span>
@@ -87,7 +87,7 @@ const TimelineScrubber: React.FC<{
                         background: f.rescored ? '#22d3ee' : 'rgba(255,255,255,0.15)',
                         transform: 'translateX(-50%)',
                         ...(flipFrame === f.index
-                            ? { background: '#f59e0b', width: 8, height: 10, top: -1 }
+                            ? { background: 'var(--warning)', width: 8, height: 10, top: -1 }
                             : {}),
                     }}
                 />
@@ -131,7 +131,7 @@ const ScoreEvolution: React.FC<{ replayTrace: TemporalTrace; replayFrame: number
     const maxScore = Math.max(...Object.values(cf.scoreState.scores), 1);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--slate-400)' }}>
                 Score Evolution
             </div>
             {Object.entries(cf.scoreState.scores).map(([provider, score]) => (
@@ -193,8 +193,8 @@ const TemporalReplaySection: React.FC<Props> = ({
                         style={{
                             ...SMALL_BUTTON,
                             border: '1px solid rgba(239,68,68,0.3)',
-                            background: 'rgba(239,68,68,0.1)',
-                            color: '#ef4444',
+                            background: 'var(--error-tint)',
+                            color: 'var(--error)',
                         }}
                     >
                         Clear
@@ -229,7 +229,7 @@ const TemporalReplaySection: React.FC<Props> = ({
                     <span style={textXxsMuted}>
                         Frame {replayFrame + 1}/{replayTrace.frames.length}
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-400)' }}>
                         {replayTrace.frames[replayFrame]?.event.eventName ?? '—'}
                     </span>
                     {replayTrace.flipFrame !== null && (
@@ -238,8 +238,8 @@ const TemporalReplaySection: React.FC<Props> = ({
                                 fontSize: '0.6rem',
                                 padding: '0.1rem 0.35rem',
                                 borderRadius: 4,
-                                background: 'rgba(245,158,11,0.1)',
-                                color: '#f59e0b',
+                                background: 'var(--warning-tint)',
+                                color: 'var(--warning)',
                             }}
                         >
                             Flip: Frame {replayTrace.flipFrame + 1}
@@ -256,7 +256,7 @@ const TemporalReplaySection: React.FC<Props> = ({
                             padding: '0.3rem 0.5rem',
                             borderRadius: 4,
                             background: 'rgba(245,158,11,0.08)',
-                            color: '#fbbf24',
+                            color: 'var(--warning)',
                         }}
                     >
                         Flip point reached at Frame {replayTrace.flipFrame + 1} —{' '}
@@ -267,7 +267,7 @@ const TemporalReplaySection: React.FC<Props> = ({
                 <div style={{ ...textXxsMuted, display: 'flex', gap: 12 }}>
                     <span>
                         Initial leader:{' '}
-                        <strong style={{ color: '#e2e8f0' }}>
+                        <strong style={{ color: 'var(--slate-200)' }}>
                             {replayTrace.initialLeader || '(none)'}
                         </strong>
                     </span>

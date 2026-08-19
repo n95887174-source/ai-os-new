@@ -16,7 +16,7 @@ export const NavBadge: React.FC<NavBadgeProps> = ({ routeId }) => {
                 minWidth: 16,
                 height: 16,
                 borderRadius: 8,
-                background: '#ef4444',
+                background: 'var(--error)',
                 color: '#fff',
                 fontSize: 10,
                 fontWeight: 700,

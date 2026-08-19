@@ -211,7 +211,7 @@ const ChatAdminPanel: React.FC = () => {
                             alignItems: 'center',
                             gap: 16,
                             padding: '1rem 1.5rem',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 16,
                             color: '#fca5a5',

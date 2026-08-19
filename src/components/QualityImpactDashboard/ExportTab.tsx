@@ -77,7 +77,7 @@ const ExportTab: React.FC = () => {
                     style={{
                         fontSize: '16px',
                         fontWeight: 600,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginBottom: '20px',
                     }}
                 >
@@ -111,7 +111,7 @@ const ExportTab: React.FC = () => {
                             background: 'rgba(34, 197, 94, 0.15)',
                             border: '1px solid rgba(34, 197, 94, 0.3)',
                             borderRadius: '8px',
-                            color: '#22c55e',
+                            color: 'var(--success)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '13px',
@@ -141,7 +141,7 @@ const ExportTab: React.FC = () => {
                     </button>
                 </div>
 
-                <div style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '8px' }}>
+                <div style={{ fontSize: '14px', color: 'var(--slate-400)', marginBottom: '8px' }}>
                     {t('quality_impact.export_desc') ??
                         'Export metrics and session history for external analysis.'}
                 </div>
@@ -186,14 +186,14 @@ const ExportTab: React.FC = () => {
                             <div
                                 style={{
                                     fontWeight: 600,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     marginBottom: '4px',
                                     fontSize: '13px',
                                 }}
                             >
                                 {item.label}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>{item.desc}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--slate-500)' }}>{item.desc}</div>
                         </div>
                     ))}
                 </div>

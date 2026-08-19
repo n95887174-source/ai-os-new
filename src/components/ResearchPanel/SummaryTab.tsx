@@ -53,8 +53,8 @@ export const SummaryTab: React.FC<Props> = ({ engine, session }) => {
                         padding: '6px 10px',
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
-                        background: '#0f172a',
-                        color: '#e2e8f0',
+                        background: 'var(--slate-900)',
+                        color: 'var(--slate-200)',
                         fontSize: '0.72rem',
                         outline: 'none',
                     }}
@@ -70,8 +70,8 @@ export const SummaryTab: React.FC<Props> = ({ engine, session }) => {
                         padding: '6px 10px',
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
-                        background: '#0f172a',
-                        color: '#e2e8f0',
+                        background: 'var(--slate-900)',
+                        color: 'var(--slate-200)',
                         fontSize: '0.72rem',
                         outline: 'none',
                     }}
@@ -115,7 +115,7 @@ export const SummaryTab: React.FC<Props> = ({ engine, session }) => {
                             <div
                                 style={{
                                     fontSize: '0.68rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     lineHeight: 1.5,
                                     whiteSpace: 'pre-wrap',
                                 }}
@@ -130,7 +130,7 @@ export const SummaryTab: React.FC<Props> = ({ engine, session }) => {
                                             key={kp}
                                             style={{
                                                 fontSize: '0.65rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 padding: '2px 0',
                                             }}
                                         >

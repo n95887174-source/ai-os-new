@@ -18,7 +18,7 @@ const RuleList: React.FC<RuleListProps> = ({ rules, selectedId, onSelect, onTogg
                 <div
                     style={{
                         fontSize: 10,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontStyle: 'italic',
                         padding: 8,
                         textAlign: 'center',
@@ -55,21 +55,21 @@ const RuleList: React.FC<RuleListProps> = ({ rules, selectedId, onSelect, onTogg
                             >
                                 {rule.enabled ? <Power size={11} /> : <PowerOff size={11} />}
                             </button>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#e2e8f0' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--slate-200)' }}>
                                 {rule.name || rule.id.slice(0, 16)}
                             </span>
                         </div>
                         <span
                             style={{
                                 fontSize: 9,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontFamily: 'monospace',
                             }}
                         >
                             P{rule.priority}
                         </span>
                     </div>
-                    <div style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>
+                    <div style={{ fontSize: 9, color: 'var(--slate-400)', marginBottom: 2 }}>
                         {conditionSummary(rule.condition)}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

@@ -64,6 +64,16 @@ export class EventBus implements IEventBus {
     private unsubCallbacks: Set<() => void> = new Set(); // H-06: track all unsubs for reset cleanup
     private _unsubWarned = false; // P0-2: one-shot warn flag for unsubCallbacks capacity
 
+    // B-03: dead-letter sink for events the bus drops (strict-validation failures and
+    // overload backpressure drops). The bus is fire-and-forget and MAY drop events;
+    // observers that need guaranteed delivery should hydrate from state/Dexie on mount
+    // and treat events as a live delta (the `invocationStore.loadHistory()` pattern).
+    // This sink lets tooling/diagnostics recover or alert on dropped events instead of
+    // silent loss, without changing the lossy/async contract.
+    private deadLetterQueue: Array<{ event: string; data: unknown; reason: string; at: number }> =
+        [];
+    private static readonly MAX_DEAD_LETTER = 1000;
+
     // HIGH-K3: replay buffer removed — nobody called replay() and STREAM_END payloads
     // (up to 1MB each × 100 = 100MB memory leak). If replay is needed later, implement with
     // structuredClone + size cap. See git history for removed code.
@@ -153,6 +163,7 @@ export class EventBus implements IEventBus {
         this.emitCount = 0;
         this.emitDepth = 0;
         this._unsubWarned = false;
+        this.deadLetterQueue = [];
         this.logger?.warn('EventBus', 'clearAllSubscriptions');
     }
 
@@ -206,6 +217,21 @@ export class EventBus implements IEventBus {
         }
     }
 
+    /**
+     * Emit an event to all subscribers.
+     *
+     * **Contract (B-03):** `emit` is FIRE-AND-FORGET. It is not a synchronous
+     * broadcast — under recursion the dispatch defers to a FIFO microtask queue
+     * (`_deferQueue`), so a subscriber may observe events in a different order than
+     * they were emitted, and handlers MUST NOT assume "emit ⇒ handlers ran".
+     * The bus is also LOSSY: events with a failed Zod validator are blocked in
+     * strict mode, and under overload (recursion/backlog limits) events are dropped
+     * after emitting `EVENTBUS_BACKPRESSURE`. Dropped events are recorded in the
+     * dead-letter sink (`getDeadLetterQueue()` / `drainDeadLetterQueue()`) so tooling
+     * can alert or heal — but the bus itself makes NO delivery guarantee. Observers
+     * that need authoritative state should hydrate from state/Dexie on mount and
+     * treat events as a live delta (see `invocationStore.loadHistory()`).
+     */
     emit<K extends keyof EventMap>(event: K, data: EventMap[K]) {
         this.emitCount++;
 
@@ -233,6 +259,7 @@ export class EventBus implements IEventBus {
                     this.logger?.error('EventBus', `Blocked event ${String(event)} - strict mode`, {
                         issues: result.error?.issues,
                     });
+                    this.pushDeadLetter(eventStr, data, 'strict-validation');
                     return;
                 }
             } else if (result.data !== undefined) {
@@ -274,6 +301,27 @@ export class EventBus implements IEventBus {
                 [...this.listenerMap.entries()].map(([k, v]) => [k, v.length]),
             ),
         };
+    }
+
+    // B-03: read-only snapshot of dropped events (oldest-first). Empty unless the bus
+    // has dropped something this instance's lifetime (cleared by clearAllSubscriptions).
+    getDeadLetterQueue(): Array<{ event: string; data: unknown; reason: string; at: number }> {
+        return this.deadLetterQueue.slice();
+    }
+
+    // B-03: return and clear the dead-letter sink. Callers that must not lose a dropped
+    // event (e.g. a supervisor re-emitting it after healing) drain here.
+    drainDeadLetterQueue(): Array<{ event: string; data: unknown; reason: string; at: number }> {
+        const copy = this.deadLetterQueue.slice();
+        this.deadLetterQueue = [];
+        return copy;
+    }
+
+    private pushDeadLetter(event: string, data: unknown, reason: string): void {
+        this.deadLetterQueue.push({ event, data, reason, at: Date.now() });
+        if (this.deadLetterQueue.length > EventBus.MAX_DEAD_LETTER) {
+            this.deadLetterQueue.shift();
+        }
     }
 
     subscribeAll(callback: (payload: { event: string; data: unknown }) => void) {
@@ -342,6 +390,7 @@ export class EventBus implements IEventBus {
                     depth: this.hotEmitDepth,
                     pending: 1,
                 });
+                this.pushDeadLetter(event, data, 'hot-recursion-limit');
                 return;
             }
             this.hotEmitDepth++;
@@ -388,6 +437,7 @@ export class EventBus implements IEventBus {
                 depth: this.emitDepth,
                 pending: this._pendingCount,
             });
+            this.pushDeadLetter(event, data, 'max-pending');
             return;
         }
         if (this.emitDepth > 32) {
@@ -404,6 +454,7 @@ export class EventBus implements IEventBus {
                     pending: this.deferCounts.size + 1,
                 });
                 this.deferCounts.delete(event);
+                this.pushDeadLetter(event, data, 'max-defer-chain');
                 return;
             }
             if (count === 100) {

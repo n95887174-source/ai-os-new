@@ -56,7 +56,7 @@ const StatCard: React.FC<{
         }}
     >
         <div style={{ fontSize: '1.5rem', fontWeight: 800, color: valueColor }}>{value}</div>
-        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>{label}</div>
+        <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>{label}</div>
     </div>
 );
 

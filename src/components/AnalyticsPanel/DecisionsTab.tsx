@@ -24,7 +24,7 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                 animate="show"
                 style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
             >
-                <div style={{ textAlign: 'center', padding: '5rem', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--slate-500)' }}>
                     <ZapOff
                         size={48}
                         style={{ marginBottom: '1rem', opacity: 0.2 }}
@@ -69,13 +69,13 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                                 flexWrap: 'wrap',
                             }}
                         >
-                            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#f8fafc' }}>
+                            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--slate-50)' }}>
                                 {d.selected}
                             </span>
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    background: 'rgba(59,130,246,0.1)',
+                                    background: 'var(--accent-tint)',
                                     color: '#60a5fa',
                                     padding: '0.2rem 0.6rem',
                                     borderRadius: 8,
@@ -91,8 +91,8 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.6rem',
-                                        background: 'rgba(139,92,246,0.1)',
-                                        color: '#a78bfa',
+                                        background: 'var(--purple-tint)',
+                                        color: 'var(--purple-muted)',
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: 6,
                                         fontWeight: 700,
@@ -106,8 +106,8 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.6rem',
-                                        background: 'rgba(16,185,129,0.1)',
-                                        color: '#10b981',
+                                        background: 'var(--success-tint)',
+                                        color: 'var(--success)',
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: 6,
                                         fontWeight: 700,
@@ -120,8 +120,8 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.6rem',
-                                        background: 'rgba(245,158,11,0.1)',
-                                        color: '#f59e0b',
+                                        background: 'var(--warning-tint)',
+                                        color: 'var(--warning)',
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: 6,
                                         fontWeight: 700,
@@ -131,12 +131,12 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                                 </span>
                             )}
                             <span
-                                style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}
+                                style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}
                             >
                                 {new Date(d.timestamp || currentTime).toLocaleTimeString()}
                             </span>
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                             {d.secondBest
                                 ? t('analytics.decision_chosen', {
                                       provider: d.secondBest,
@@ -147,7 +147,7 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginTop: '0.3rem',
                                 }}
                             >
@@ -160,7 +160,7 @@ export const DecisionsTab: React.FC<DecisionsTabProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
                                     marginBottom: '0.3rem',

@@ -112,7 +112,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                             fontSize: '1.15rem',
                             fontWeight: 800,
                             margin: '0 0 0.2rem',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         {role.name}
@@ -123,7 +123,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                             gap: 8,
                             alignItems: 'center',
                             fontSize: '0.75rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontFamily: 'monospace',
                         }}
                     >
@@ -145,7 +145,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                             borderRadius: 10,
                             background: 'rgba(16,185,129,0.05)',
                             border: '1px solid rgba(16,185,129,0.2)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             cursor: 'pointer',
                             fontSize: '0.65rem',
                             fontWeight: 700,
@@ -165,7 +165,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         borderRadius: 10,
                         background: 'rgba(59,130,246,0.05)',
                         border: '1px solid rgba(59,130,246,0.2)',
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         cursor: 'pointer',
                     }}
                     aria-label={`Duplicate role ${role.name}`}
@@ -179,7 +179,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         borderRadius: 10,
                         background: 'rgba(239,68,68,0.05)',
                         border: '1px solid rgba(239,68,68,0.2)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                     }}
                     aria-label={`Delete role ${role.name}`}
@@ -189,7 +189,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
             </div>
         </div>
 
-        <p style={{ fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.5, margin: 0, flex: 1 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--slate-300)', lineHeight: 1.5, margin: 0, flex: 1 }}>
             {role.description}
         </p>
 
@@ -200,7 +200,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                     gap: 8,
                     alignItems: 'center',
                     fontSize: '0.75rem',
-                    color: '#3b82f6',
+                    color: 'var(--accent)',
                     background: 'rgba(59,130,246,0.08)',
                     padding: '0.3rem 0.6rem',
                     borderRadius: 8,
@@ -225,11 +225,11 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                 }}
             >
                 <div>
-                    <span style={{ color: '#64748b' }}>Calls: </span>
-                    <span style={{ color: '#e2e8f0', fontWeight: 700 }}>{stats.invocations}</span>
+                    <span style={{ color: 'var(--slate-500)' }}>Calls: </span>
+                    <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>{stats.invocations}</span>
                 </div>
                 <div>
-                    <span style={{ color: '#64748b' }}>Errors: </span>
+                    <span style={{ color: 'var(--slate-500)' }}>Errors: </span>
                     <span
                         style={{ color: stats.errors > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}
                     >
@@ -237,8 +237,8 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                     </span>
                 </div>
                 <div>
-                    <span style={{ color: '#64748b' }}>Avg: </span>
-                    <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                    <span style={{ color: 'var(--slate-500)' }}>Avg: </span>
+                    <span style={{ color: 'var(--slate-200)', fontWeight: 700 }}>
                         {stats.avgLatency.toFixed(0)}ms
                     </span>
                 </div>
@@ -261,7 +261,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                                 borderRadius: 6,
                                 border: '1px solid rgba(16,185,129,0.3)',
                                 background: 'rgba(16,185,129,0.08)',
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 cursor: 'pointer',
                                 fontSize: '0.7rem',
                                 display: 'flex',
@@ -284,7 +284,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                                 borderRadius: 6,
                                 border: '1px solid rgba(239,68,68,0.3)',
                                 background: 'rgba(239,68,68,0.08)',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 cursor: 'pointer',
                                 fontSize: '0.7rem',
                                 display: 'flex',
@@ -308,10 +308,10 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                     gap: 6,
                     alignItems: 'center',
                     padding: '0.4rem 0.6rem',
-                    background: 'rgba(245,158,11,0.1)',
+                    background: 'var(--warning-tint)',
                     borderRadius: 8,
                     fontSize: '0.7rem',
-                    color: '#fbbf24',
+                    color: 'var(--warning)',
                 }}
             >
                 <AlertTriangle size={12} aria-hidden="true" /> Missing tools:{' '}
@@ -334,7 +334,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         style={{
                             fontSize: '0.65rem',
                             textTransform: 'uppercase',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontWeight: 800,
                             marginBottom: '0.4rem',
                             display: 'block',
@@ -349,8 +349,8 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                                 style={{
                                     fontSize: '0.65rem',
                                     fontWeight: 800,
-                                    color: '#f59e0b',
-                                    background: 'rgba(245,158,11,0.1)',
+                                    color: 'var(--warning)',
+                                    background: 'var(--warning-tint)',
                                     border: '1px solid rgba(245,158,11,0.2)',
                                     padding: '0.2rem 0.5rem',
                                     borderRadius: 8,
@@ -366,7 +366,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     background: 'rgba(255,255,255,0.05)',
                                     padding: '0.2rem 0.5rem',
                                     borderRadius: 8,
@@ -384,7 +384,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                     style={{
                         fontSize: '0.65rem',
                         textTransform: 'uppercase',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 800,
                         marginBottom: '0.4rem',
                         display: 'block',
@@ -412,7 +412,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                                     background: 'rgba(255,255,255,0.05)',
                                     padding: '0.3rem 0.6rem',
                                     borderRadius: 8,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 6,
@@ -425,7 +425,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
                         ))
                     ) : (
                         <span
-                            style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}
+                            style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontStyle: 'italic' }}
                         >
                             {t('roles.no_tools')}
                         </span>

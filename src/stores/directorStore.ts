@@ -5,6 +5,9 @@ import type { ConversationSession } from '../kernel/contracts/conversation/sessi
 
 export type DirectorStatus = 'idle' | 'running' | 'paused' | 'aborted' | 'completed' | 'error';
 
+/** Safety cap so a long/looping run cannot grow the turn log without bound (FA-05). */
+const MAX_TURN_LOG = 200;
+
 export interface DirectorTurnLogEntry {
     participantId: string;
     status: 'running' | 'complete' | 'error';
@@ -17,50 +20,43 @@ export interface DirectorTurnLogEntry {
     injected?: boolean;
 }
 
-export interface DirectorStoreState {
-    sessionId: string;
-    status: DirectorStatus;
-    currentParticipantId: string | null;
-    turnLog: DirectorTurnLogEntry[];
-    /** Past Director runs (live ConversationSession records) persisted to Dexie. */
-    history: ConversationSession[];
-    loadHistory: () => Promise<void>;
-    reset: () => void;
-}
+const EMPTY_STATE = {
+    sessionId: '',
+    status: 'idle' as DirectorStatus,
+    currentParticipantId: null as string | null,
+    turnLog: [] as DirectorTurnLogEntry[],
+};
 
-/**
- * Application-layer observer for the generic `conversation:*` lifecycle events
- * emitted by `ConversationOrchestrator`. It is intentionally OUTSIDE the kernel:
- * Core only emits observable events; this store decides how to present them.
- * Any policy (Scripted/Hybrid/Debate/Future) driven through the orchestrator is
- * observable here without the Core knowing about the Director, UI, or Debate.
- */
-export const useDirectorStore = create<DirectorStoreState>((set) => {
-    const subs = [
+// Subscription handles are retained (FA-04) so the store can be torn down and
+// re-subscribed instead of leaking an always-on event-bus subscription.
+let _unsubs: Array<() => void> = [];
+let _subscribed = false;
+
+function subscribeDirectorStore() {
+    if (_subscribed) return;
+    _unsubs = [
         eventBus.onSafe<{
             sessionId: string;
             participantId: string;
             turnIndex?: number;
             injected?: boolean;
         }>(EVENTS.CONVERSATION_TURN_START, (d) =>
-            set((s) => {
+            useDirectorStore.setState((s) => {
                 // A turn starting while paused/aborted (an in-flight turn resuming)
                 // must not resurrect `running` — the lifecycle status wins.
                 const status =
                     s.status === 'paused' || s.status === 'aborted' ? s.status : 'running';
+                const entry: DirectorTurnLogEntry = {
+                    participantId: d.participantId,
+                    status: 'running',
+                    turnIndex: d.turnIndex,
+                    injected: d.injected,
+                };
                 return {
                     sessionId: d.sessionId,
                     status,
                     currentParticipantId: d.participantId,
-                    turnLog: [
-                        ...s.turnLog,
-                        {
-                            participantId: d.participantId,
-                            status: 'running',
-                            turnIndex: d.turnIndex,
-                            injected: d.injected,
-                        },
-                    ],
+                    turnLog: [...s.turnLog, entry].slice(-MAX_TURN_LOG),
                 };
             }),
         ),
@@ -72,7 +68,7 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
             turnIndex?: number;
             injected?: boolean;
         }>(EVENTS.CONVERSATION_TURN_COMPLETE, (d) =>
-            set((s) => {
+            useDirectorStore.setState((s) => {
                 const log = [...s.turnLog];
                 const idx = log.findIndex(
                     (e) => e.participantId === d.participantId && e.status === 'running',
@@ -101,7 +97,7 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
             turnIndex?: number;
             injected?: boolean;
         }>(EVENTS.CONVERSATION_TURN_ERROR, (d) =>
-            set((s) => {
+            useDirectorStore.setState((s) => {
                 const log = [...s.turnLog];
                 const idx = log.findIndex(
                     (e) => e.participantId === d.participantId && e.status === 'running',
@@ -122,26 +118,56 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
             }),
         ),
         eventBus.onSafe<{ sessionId: string }>(EVENTS.CONVERSATION_PAUSED, (d) =>
-            set({ status: 'paused', sessionId: d.sessionId }),
+            useDirectorStore.setState({ status: 'paused', sessionId: d.sessionId }),
         ),
         eventBus.onSafe<{ sessionId: string }>(EVENTS.CONVERSATION_RESUMED, (d) =>
-            set({ status: 'running', sessionId: d.sessionId }),
+            useDirectorStore.setState({ status: 'running', sessionId: d.sessionId }),
         ),
         eventBus.onSafe<{ sessionId: string }>(EVENTS.CONVERSATION_ABORTED, (d) =>
-            set({ status: 'aborted', sessionId: d.sessionId }),
+            useDirectorStore.setState({ status: 'aborted', sessionId: d.sessionId }),
         ),
         eventBus.onSafe<{ sessionId: string }>(EVENTS.CONVERSATION_COMPLETED, (d) =>
-            set({ status: 'completed', sessionId: d.sessionId }),
+            useDirectorStore.setState({ status: 'completed', sessionId: d.sessionId }),
         ),
     ];
-    // Keep the reference so a future HMR dispose can unsubscribe if needed.
-    void subs;
+    _subscribed = true;
+}
+
+function unsubscribeDirectorStore() {
+    _unsubs.forEach((u) => u());
+    _unsubs = [];
+    _subscribed = false;
+}
+
+export interface DirectorStoreState {
+    sessionId: string;
+    status: DirectorStatus;
+    currentParticipantId: string | null;
+    turnLog: DirectorTurnLogEntry[];
+    /** Past Director runs (live ConversationSession records) persisted to Dexie. */
+    history: ConversationSession[];
+    loadHistory: () => Promise<void>;
+    reset: () => void;
+    /** Ensures the event-bus subscriptions are active (idempotent, FA-04). */
+    ensureSubscribed: () => void;
+    /** Tears down event-bus subscriptions + resets state (FA-04). */
+    destroy: () => void;
+}
+
+/**
+ * Application-layer observer for the generic `conversation:*` lifecycle events
+ * emitted by `ConversationOrchestrator`. It is intentionally OUTSIDE the kernel:
+ * Core only emits observable events; this store decides how to present them.
+ * Any policy (Scripted/Hybrid/Debate/Future) driven through the orchestrator is
+ * observable here without the Core knowing about the Director, UI, or Debate.
+ */
+export const useDirectorStore = create<DirectorStoreState>((set) => {
+    // Subscribe at module load (retained behaviour) but keep the handles so the
+    // store can be torn down and re-subscribed by its consuming panel (FA-04).
+    subscribeDirectorStore();
 
     return {
-        sessionId: '',
-        status: 'idle',
-        currentParticipantId: null,
-        turnLog: [],
+        ...EMPTY_STATE,
         history: [],
         loadHistory: async () => {
             let all: ConversationSession[] = [];
@@ -159,5 +185,10 @@ export const useDirectorStore = create<DirectorStoreState>((set) => {
                 currentParticipantId: null,
                 turnLog: [],
             }),
+        ensureSubscribed: () => subscribeDirectorStore(),
+        destroy: () => {
+            unsubscribeDirectorStore();
+            set({ ...EMPTY_STATE, history: useDirectorStore.getState().history });
+        },
     };
 });

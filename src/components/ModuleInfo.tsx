@@ -237,12 +237,12 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
                     background: 'rgba(139,92,246,0.04)',
                     border: '1px solid rgba(139,92,246,0.12)',
                     fontSize: '0.75rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontWeight: 600,
                     letterSpacing: '0.03em',
                 }}
             >
-                <span style={{ color: '#a78bfa' }}>{MODULE_ICONS[moduleKey]}</span>
+                <span style={{ color: 'var(--purple-muted)' }}>{MODULE_ICONS[moduleKey]}</span>
                 {t(MODULE_NAV_KEY[moduleKey])}
             </summary>
             <div
@@ -254,7 +254,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
                     border: '1px solid rgba(139,92,246,0.12)',
                     borderLeft: '3px solid rgba(139,92,246,0.4)',
                     fontSize: '0.8rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     lineHeight: 1.6,
                 }}
             >
@@ -291,7 +291,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
                     >
                         <span
                             style={{
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 4,
@@ -306,7 +306,7 @@ const ModuleInfo: React.FC<ModuleInfoProps> = ({ moduleKey, relatedModules }) =>
                                     padding: '0.15rem 0.5rem',
                                     borderRadius: 4,
                                     background: 'rgba(139,92,246,0.08)',
-                                    color: '#a78bfa',
+                                    color: 'var(--purple-muted)',
                                     fontSize: '0.7rem',
                                     fontWeight: 600,
                                     display: 'flex',

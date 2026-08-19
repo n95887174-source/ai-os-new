@@ -88,7 +88,7 @@ const ConnectorCard: React.FC<Props> = memo(({ connector: c, onConnect, onDiscon
                         <div
                             style={{
                                 fontSize: '0.6rem',
-                                color: '#f59e0b',
+                                color: 'var(--warning)',
                                 textAlign: 'center',
                                 opacity: 0.8,
                             }}

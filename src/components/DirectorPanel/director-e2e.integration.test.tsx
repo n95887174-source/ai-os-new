@@ -118,7 +118,7 @@ describe('Conversation Director — B6.1 E2E integration gate', () => {
         };
 
         const engine = new ChatExecutionEngine(chatService, coreEventBus);
-        director = new ConversationDirectorService(repo, engine);
+        director = new ConversationDirectorService(repo, engine, undefined, coreEventBus);
 
         // Bind the real service so the real `directorController` (used by RunTab)
         // resolves to it through the global lazyService.

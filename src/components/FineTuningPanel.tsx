@@ -24,13 +24,13 @@ import type {
 } from '../kernel/contracts/fine-tuning';
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
-    queued: { color: '#64748b', icon: <Clock size={14} /> },
-    preparing: { color: '#f59e0b', icon: <Loader size={14} /> },
-    training: { color: '#3b82f6', icon: <Loader size={14} className="animate-spin" /> },
-    evaluating: { color: '#8b5cf6', icon: <BarChart3 size={14} /> },
-    completed: { color: '#22c55e', icon: <CheckCircle size={14} /> },
-    failed: { color: '#ef4444', icon: <AlertCircle size={14} /> },
-    cancelled: { color: '#64748b', icon: <X size={14} /> },
+    queued: { color: 'var(--slate-500)', icon: <Clock size={14} /> },
+    preparing: { color: 'var(--warning)', icon: <Loader size={14} /> },
+    training: { color: 'var(--accent)', icon: <Loader size={14} className="animate-spin" /> },
+    evaluating: { color: 'var(--purple)', icon: <BarChart3 size={14} /> },
+    completed: { color: 'var(--success)', icon: <CheckCircle size={14} /> },
+    failed: { color: 'var(--error)', icon: <AlertCircle size={14} /> },
+    cancelled: { color: 'var(--slate-500)', icon: <X size={14} /> },
 };
 
 const METHOD_COLORS: Record<FineTuningMethod, string> = {
@@ -190,7 +190,7 @@ const FineTuningPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.3rem',
                                         }}
                                     >
@@ -206,7 +206,7 @@ const FineTuningPanel: React.FC = () => {
                                             borderRadius: 6,
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             background: 'rgba(0,0,0,0.3)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.8rem',
                                         }}
                                     />
@@ -215,7 +215,7 @@ const FineTuningPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.3rem',
                                         }}
                                     >
@@ -230,7 +230,7 @@ const FineTuningPanel: React.FC = () => {
                                             borderRadius: 6,
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             background: 'rgba(0,0,0,0.3)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.8rem',
                                         }}
                                     >
@@ -246,7 +246,7 @@ const FineTuningPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.3rem',
                                         }}
                                     >
@@ -292,7 +292,7 @@ const FineTuningPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginBottom: '0.3rem',
                                         }}
                                     >
@@ -308,7 +308,7 @@ const FineTuningPanel: React.FC = () => {
                                                 borderRadius: 6,
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 background: 'rgba(0,0,0,0.3)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.8rem',
                                             }}
                                         >
@@ -326,7 +326,7 @@ const FineTuningPanel: React.FC = () => {
                                                 borderRadius: 6,
                                                 border: '1px dashed rgba(16,185,129,0.3)',
                                                 background: 'transparent',
-                                                color: '#10b981',
+                                                color: 'var(--success)',
                                                 cursor: 'pointer',
                                             }}
                                         >
@@ -340,7 +340,7 @@ const FineTuningPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.3rem',
                                     }}
                                 >
@@ -386,7 +386,7 @@ const FineTuningPanel: React.FC = () => {
                                         },
                                     ].map((field) => (
                                         <div key={field.key}>
-                                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                                 {field.label}
                                             </div>
                                             <input
@@ -407,7 +407,7 @@ const FineTuningPanel: React.FC = () => {
                                                     borderRadius: 4,
                                                     border: '1px solid rgba(255,255,255,0.08)',
                                                     background: 'rgba(0,0,0,0.3)',
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                     fontSize: '0.75rem',
                                                 }}
                                             />
@@ -438,8 +438,8 @@ const FineTuningPanel: React.FC = () => {
                                         padding: '0.4rem 0.8rem',
                                         borderRadius: 8,
                                         border: 'none',
-                                        background: 'rgba(239,68,68,0.1)',
-                                        color: '#ef4444',
+                                        background: 'var(--error-tint)',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                         fontSize: '0.8rem',
                                     }}
@@ -478,7 +478,7 @@ const FineTuningPanel: React.FC = () => {
                                         <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                             {job.name}
                                         </div>
-                                        <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                             {job.baseModel} · {job.method.toUpperCase()} · Epoch{' '}
                                             {job.currentEpoch}/{job.totalEpochs}
                                         </div>
@@ -519,7 +519,7 @@ const FineTuningPanel: React.FC = () => {
                                         {job.status}
                                     </span>
                                     {job.loss !== null && (
-                                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                             loss: {job.loss.toFixed(4)}
                                         </span>
                                     )}
@@ -551,8 +551,8 @@ const FineTuningPanel: React.FC = () => {
                                                 padding: '0.3rem 0.6rem',
                                                 borderRadius: 6,
                                                 border: 'none',
-                                                background: 'rgba(239,68,68,0.1)',
-                                                color: '#ef4444',
+                                                background: 'var(--error-tint)',
+                                                color: 'var(--error)',
                                                 cursor: 'pointer',
                                             }}
                                         >
@@ -567,7 +567,7 @@ const FineTuningPanel: React.FC = () => {
                                         style={{
                                             background: 'none',
                                             border: 'none',
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             cursor: 'pointer',
                                             padding: 2,
                                         }}
@@ -587,37 +587,37 @@ const FineTuningPanel: React.FC = () => {
                                         }}
                                     >
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Created:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Created:</span>{' '}
                                             {new Date(job.createdAt).toLocaleString()}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Started:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Started:</span>{' '}
                                             {job.startedAt
                                                 ? new Date(job.startedAt).toLocaleString()
                                                 : '—'}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Completed:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Completed:</span>{' '}
                                             {job.completedAt
                                                 ? new Date(job.completedAt).toLocaleString()
                                                 : '—'}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Eval Score:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Eval Score:</span>{' '}
                                             {job.evalScore !== null
                                                 ? (job.evalScore * 100).toFixed(1) + '%'
                                                 : '—'}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Output Model:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Output Model:</span>{' '}
                                             {job.outputModelId || '—'}
                                         </div>
                                         <div>
-                                            <span style={{ color: '#64748b' }}>Dataset:</span>{' '}
+                                            <span style={{ color: 'var(--slate-500)' }}>Dataset:</span>{' '}
                                             {job.datasetId.slice(-8)}
                                         </div>
                                         {job.error && (
-                                            <div style={{ gridColumn: '1 / -1', color: '#ef4444' }}>
+                                            <div style={{ gridColumn: '1 / -1', color: 'var(--error)' }}>
                                                 Error: {job.error}
                                             </div>
                                         )}
@@ -630,7 +630,7 @@ const FineTuningPanel: React.FC = () => {
                                 style={{
                                     textAlign: 'center',
                                     padding: '2rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.8rem',
                                 }}
                             >
@@ -651,7 +651,7 @@ const FineTuningPanel: React.FC = () => {
                                 borderRadius: 8,
                                 border: '1px dashed rgba(16,185,129,0.3)',
                                 background: 'transparent',
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 cursor: 'pointer',
                                 fontWeight: 600,
                                 fontSize: '0.8rem',
@@ -684,7 +684,7 @@ const FineTuningPanel: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             />
@@ -697,7 +697,7 @@ const FineTuningPanel: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             />
@@ -711,7 +711,7 @@ const FineTuningPanel: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             />
@@ -723,7 +723,7 @@ const FineTuningPanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: 'none',
                                         background: 'rgba(16,185,129,0.15)',
-                                        color: '#10b981',
+                                        color: 'var(--success)',
                                         cursor: 'pointer',
                                         fontWeight: 600,
                                     }}
@@ -736,8 +736,8 @@ const FineTuningPanel: React.FC = () => {
                                         padding: '0.3rem 0.6rem',
                                         borderRadius: 6,
                                         border: 'none',
-                                        background: 'rgba(239,68,68,0.1)',
-                                        color: '#ef4444',
+                                        background: 'var(--error-tint)',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -764,7 +764,7 @@ const FineTuningPanel: React.FC = () => {
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                         {d.name}
                                     </div>
-                                    <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                         {d.sampleCount.toLocaleString()} samples · {d.format} ·{' '}
                                         {d.category}
                                     </div>
@@ -777,7 +777,7 @@ const FineTuningPanel: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -790,7 +790,7 @@ const FineTuningPanel: React.FC = () => {
                                 style={{
                                     padding: '1rem',
                                     textAlign: 'center',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.8rem',
                                 }}
                             >

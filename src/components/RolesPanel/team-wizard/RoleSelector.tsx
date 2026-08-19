@@ -43,7 +43,7 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ team, setTeam, roles }) => 
 
     return (
         <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 10 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 10 }}>
                 Select at least one role for your team. Roles define the expertise of each team
                 member.
             </div>
@@ -56,7 +56,7 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ team, setTeam, roles }) => 
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -74,7 +74,7 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ team, setTeam, roles }) => 
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         outline: 'none',
                     }}
@@ -147,7 +147,7 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({ team, setTeam, roles }) => 
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',

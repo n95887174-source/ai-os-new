@@ -109,7 +109,7 @@ const DebateReplayControls: React.FC<Props> = ({
                 style={{
                     width: 1,
                     height: 20,
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--border-default)',
                     margin: '0 0.3rem',
                 }}
             />
@@ -139,7 +139,7 @@ const DebateReplayControls: React.FC<Props> = ({
                 style={{
                     width: 1,
                     height: 20,
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--border-default)',
                     margin: '0 0.3rem',
                 }}
             />

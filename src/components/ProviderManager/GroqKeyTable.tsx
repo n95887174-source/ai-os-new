@@ -177,7 +177,7 @@ export default function GroqKeyTable() {
                         padding: 16,
                         background: 'rgba(255,255,255,0.03)',
                         borderRadius: 12,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontSize: '0.85rem',
                     }}
                 >
@@ -214,7 +214,7 @@ export default function GroqKeyTable() {
                                 >
                                     <span
                                         style={{
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.85rem',
                                             fontWeight: 600,
                                             minWidth: 100,
@@ -235,7 +235,7 @@ export default function GroqKeyTable() {
                                     >
                                         {k.status}
                                     </span>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                    <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>
                                         {k.latency ? `${k.latency}ms` : '—'}
                                     </span>
                                     <select
@@ -246,7 +246,7 @@ export default function GroqKeyTable() {
                                             background: 'rgba(0,0,0,0.2)',
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             borderRadius: 8,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.75rem',
                                             outline: 'none',
                                             cursor: 'pointer',
@@ -340,7 +340,7 @@ export default function GroqKeyTable() {
                                         >
                                             <span
                                                 style={{
-                                                    color: '#22c55e',
+                                                    color: 'var(--success)',
                                                     fontSize: '0.75rem',
                                                     fontWeight: 600,
                                                 }}
@@ -351,13 +351,13 @@ export default function GroqKeyTable() {
                                                 />
                                                 {test.result.model}
                                             </span>
-                                            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                            <span style={{ color: 'var(--slate-400)', fontSize: '0.75rem' }}>
                                                 {test.result.latency}ms
                                             </span>
                                         </div>
                                         <div
                                             style={{
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 whiteSpace: 'pre-wrap',
                                                 maxHeight: 80,
                                                 overflowY: 'auto',
@@ -383,7 +383,7 @@ export default function GroqKeyTable() {
                                     >
                                         <div
                                             style={{
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 fontSize: '0.75rem',
                                                 fontWeight: 600,
                                                 marginBottom: 2,

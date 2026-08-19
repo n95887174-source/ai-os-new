@@ -62,20 +62,20 @@ const HistoryArgumentRow: React.FC<HistoryArgumentRowProps> = ({ arg }) => (
                     marginBottom: '0.2rem',
                 }}
             >
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--slate-200)' }}>
                     {arg.agentName || arg.agentId}
                 </span>
-                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Round {arg.round}</span>
-                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>Round {arg.round}</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                     {Math.round((arg.confidence ?? 0) * 100)}%
                 </span>
                 {arg.provider && (
-                    <span style={{ fontSize: '0.62rem', color: '#475569' }}>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--slate-600)' }}>
                         {arg.provider}/{arg.model}
                     </span>
                 )}
             </div>
-            <div style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--slate-300)', lineHeight: 1.5 }}>
                 {arg.content.length > 200 ? arg.content.slice(0, 200) + '...' : arg.content}
             </div>
         </div>

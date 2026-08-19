@@ -50,7 +50,7 @@ const RoutingActivitySection: React.FC<RoutingActivitySectionProps> = ({
                             >
                                 <span
                                     style={{
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         fontFamily: 'monospace',
                                         minWidth: 60,
                                     }}
@@ -61,8 +61,8 @@ const RoutingActivitySection: React.FC<RoutingActivitySectionProps> = ({
                                     style={{
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: 4,
-                                        background: 'rgba(245,158,11,0.1)',
-                                        color: '#f59e0b',
+                                        background: 'var(--warning-tint)',
+                                        color: 'var(--warning)',
                                         fontWeight: 700,
                                         fontSize: '0.6rem',
                                     }}
@@ -70,14 +70,14 @@ const RoutingActivitySection: React.FC<RoutingActivitySectionProps> = ({
                                     {d.strategy}
                                 </span>
                                 <span style={textSecondary}>→</span>
-                                <span style={{ color: '#10b981', fontWeight: 700 }}>
+                                <span style={{ color: 'var(--success)', fontWeight: 700 }}>
                                     {d.selected}
                                 </span>
                                 {d.secondBest && (
                                     <span style={textSecondary}>(fallback: {d.secondBest})</span>
                                 )}
                                 {top && (
-                                    <span style={{ marginLeft: 'auto', color: '#64748b' }}>
+                                    <span style={{ marginLeft: 'auto', color: 'var(--slate-500)' }}>
                                         score: {top.score.toFixed(3)}
                                     </span>
                                 )}
@@ -90,7 +90,7 @@ const RoutingActivitySection: React.FC<RoutingActivitySectionProps> = ({
                     style={{
                         textAlign: 'center',
                         padding: '1.5rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.75rem',
                         fontStyle: 'italic',
                     }}

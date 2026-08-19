@@ -59,7 +59,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                 style={{
                     textAlign: 'center',
                     padding: '6rem 0',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 <Clock size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} />
@@ -121,7 +121,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                         <span
                             style={{
                                 fontSize: '0.65rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             {group.entries.length}{' '}
@@ -174,7 +174,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                                 style={{
                                                     fontSize: '0.6rem',
                                                     fontWeight: 700,
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                     background: 'rgba(16,185,129,0.12)',
                                                     padding: '0.2rem 0.5rem',
                                                     borderRadius: 4,
@@ -187,7 +187,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                             <span
                                                 style={{
                                                     fontSize: '0.65rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 4,
@@ -199,7 +199,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                             <span
                                                 style={{
                                                     fontSize: '0.65rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 4,
@@ -237,7 +237,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                         <div
                                             style={{
                                                 fontSize: '0.85rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 lineHeight: 1.5,
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
@@ -254,7 +254,7 @@ const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ entries, onDelete }) =>
                                         style={{
                                             padding: '0.3rem',
                                             borderRadius: 6,
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             flexShrink: 0,
                                             opacity: 0.5,
                                             transition: 'opacity 0.15s',

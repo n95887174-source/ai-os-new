@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { btnSecondaryLg, btnDangerLg } from '../../styles/common';
 import { ModalShell } from '../ModalShell';
+import { Button } from '../Common';
 import { useTranslation } from '../../i18n/useTranslation';
 
 interface Props {
@@ -35,12 +35,12 @@ const DisconnectModal: React.FC<Props> = ({ connectorName, onConfirm, onClose })
                     at any time.
                 </p>
                 <div className="connector-modal-actions">
-                    <button onClick={onClose} className="btn-secondary" style={btnSecondaryLg}>
+                    <Button variant="secondary" onClick={onClose}>
                         {t('common.cancel')}
-                    </button>
-                    <button onClick={onConfirm} style={btnDangerLg}>
+                    </Button>
+                    <Button variant="danger" onClick={onConfirm}>
                         Yes, Revoke
-                    </button>
+                    </Button>
                 </div>
             </div>
         </ModalShell>

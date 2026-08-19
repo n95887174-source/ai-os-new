@@ -80,10 +80,10 @@ const PromptsTab: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Debate System Prompts
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
                         Customize the system prompts for each agent role in debates
                     </div>
                 </div>
@@ -92,9 +92,9 @@ const PromptsTab: React.FC = () => {
                     style={{
                         padding: '0.5rem 1rem',
                         borderRadius: 8,
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.2)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         fontWeight: 700,
                         fontSize: '0.8rem',
@@ -135,7 +135,7 @@ const PromptsTab: React.FC = () => {
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
                             }}
@@ -152,7 +152,7 @@ const PromptsTab: React.FC = () => {
                                 borderRadius: 10,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.08)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.85rem',
                                 fontFamily: '"JetBrains Mono", monospace',
                                 resize: 'vertical',

@@ -107,7 +107,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                         label: 'Total Invocations',
                         value: summary.totalInvocations.toLocaleString(),
                         icon: <Zap size={14} />,
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                     },
                     {
                         label: 'Success Rate',
@@ -158,7 +158,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                                 {card.label}
                             </span>
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-200)' }}>
                             {card.value}
                         </div>
                     </div>
@@ -179,7 +179,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -196,7 +196,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         width: 90,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -215,7 +215,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         width: 36,
                                         textAlign: 'right',
                                     }}
@@ -228,7 +228,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textAlign: 'center',
                                     padding: '1rem',
                                 }}
@@ -254,7 +254,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -280,7 +280,7 @@ const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                                     alignItems: 'center',
                                     gap: 4,
                                     fontSize: '0.6rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 <div

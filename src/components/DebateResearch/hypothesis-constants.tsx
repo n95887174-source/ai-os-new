@@ -17,17 +17,17 @@ export const CATEGORY_CONFIG: Record<HypothesisCategory, CategoryConfig> = {
     },
     prompt: {
         icon: <BookOpen size={14} />,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         labelKey: 'hypothesis_generator.category_prompt',
     },
     routing: {
         icon: <Route size={14} />,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         labelKey: 'hypothesis_generator.category_routing',
     },
     gov: {
         icon: <Shield size={14} />,
-        color: '#10b981',
+        color: 'var(--success)',
         labelKey: 'hypothesis_generator.category_gov',
     },
 };
@@ -40,12 +40,12 @@ export interface StatusConfig {
 
 export const STATUS_CONFIG: Record<HypothesisStatus, StatusConfig> = {
     proposed: {
-        color: '#64748b',
+        color: 'var(--slate-500)',
         labelKey: 'hypothesis_generator.status_proposed',
         nextStates: ['active'],
     },
     active: {
-        color: '#3b82f6',
+        color: 'var(--accent)',
         labelKey: 'hypothesis_generator.status_active',
         nextStates: ['debating'],
     },
@@ -55,12 +55,12 @@ export const STATUS_CONFIG: Record<HypothesisStatus, StatusConfig> = {
         nextStates: ['accepted', 'rejected'],
     },
     accepted: {
-        color: '#10b981',
+        color: 'var(--success)',
         labelKey: 'hypothesis_generator.status_accepted',
         nextStates: [],
     },
     rejected: {
-        color: '#ef4444',
+        color: 'var(--error)',
         labelKey: 'hypothesis_generator.status_rejected',
         nextStates: [],
     },

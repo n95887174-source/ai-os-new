@@ -164,7 +164,7 @@ const ConnectorsPanel: React.FC = () => {
             name: newName.trim(),
             type: newType.trim() || 'Custom REST',
             description: `Custom integrated API endpoint for ${newName.trim()}.`,
-            color: '#3b82f6',
+            color: 'var(--accent)',
             status: 'disconnected',
         };
         setConnectors((prev) => {

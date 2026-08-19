@@ -108,7 +108,7 @@ export const EdgeEditor: React.FC<EdgeEditorProps> = ({ edges, agents, onChange 
                         </option>
                     ))}
                 </select>
-                <span style={{ color: '#64748b', fontSize: 9 }}>→</span>
+                <span style={{ color: 'var(--slate-500)', fontSize: 9 }}>→</span>
                 <select
                     value={e.to}
                     onChange={(v) => {

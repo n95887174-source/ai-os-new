@@ -8,8 +8,8 @@ interface Props {
 }
 
 const ERROR_TYPES = [
-    { labelKey: 'overview.error_rate_limit', field: 'rateLimit' as const, color: '#ef4444' },
-    { labelKey: 'overview.error_timeout', field: 'timeout' as const, color: '#f59e0b' },
+    { labelKey: 'overview.error_rate_limit', field: 'rateLimit' as const, color: 'var(--error)' },
+    { labelKey: 'overview.error_timeout', field: 'timeout' as const, color: 'var(--warning)' },
     { labelKey: 'overview.error_server', field: 'serverError' as const, color: '#ec4899' },
     { labelKey: 'overview.error_validation', field: 'validationError' as const, color: '#a855f7' },
 ];

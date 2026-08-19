@@ -48,7 +48,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
             >
                 <Activity size={20} color="#f59e0b" aria-hidden="true" />
                 <h3 style={h3White}>{t('health.rate_limit_introspection')}</h3>
-                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#64748b' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                     {t('health.quota_subtitle')}
                 </span>
             </div>
@@ -100,7 +100,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                             {limitRequests > 0 && (
                                 <>
                                     <div style={flexBetweenXsMargin}>
-                                        <span style={{ color: '#94a3b8' }}>
+                                        <span style={{ color: 'var(--slate-400)' }}>
                                             {t('health.rate_limit_requests')}
                                         </span>
                                         <span
@@ -137,7 +137,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                             {limitTokens > 0 && (
                                 <>
                                     <div style={flexBetweenXsMargin}>
-                                        <span style={{ color: '#94a3b8' }}>
+                                        <span style={{ color: 'var(--slate-400)' }}>
                                             {t('health.rate_limit_tokens')}
                                         </span>
                                         <span
@@ -177,7 +177,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                     display: 'flex',
                                     gap: '0.75rem',
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginTop: '0.25rem',
                                 }}
                             >
@@ -199,7 +199,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                             background: 'rgba(0,0,0,0.25)',
                                             borderRadius: 6,
                                             fontSize: '0.6rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontFamily: 'monospace',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -234,7 +234,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                     style={{
                                         marginTop: '0.4rem',
                                         fontSize: '0.6rem',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                     }}
                                 >
                                     introspection: {String(introspectionResults[key.id]!.error)}
@@ -245,7 +245,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                                     style={{
                                         marginTop: '0.4rem',
                                         fontSize: '0.6rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     {t('health.loading_introspection')}
@@ -260,7 +260,7 @@ export const RateLimitIntrospection: React.FC<RateLimitIntrospectionProps> = ({
                             gridColumn: '1 / -1',
                             textAlign: 'center',
                             padding: '2rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.8rem',
                         }}
                     >

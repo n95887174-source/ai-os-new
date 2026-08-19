@@ -22,28 +22,28 @@ const STRATEGIES: StrategyInfo[] = [
     {
         id: 'round_robin',
         icon: ArrowLeftRight,
-        color: '#8b5cf6',
+        color: 'var(--purple)',
         bg: 'rgba(139,92,246,0.08)',
         border: 'rgba(139,92,246,0.25)',
     },
     {
         id: 'socratic',
         icon: HelpCircle,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         bg: 'rgba(59,130,246,0.08)',
         border: 'rgba(59,130,246,0.25)',
     },
     {
         id: 'argument_tree',
         icon: GitBranch,
-        color: '#10b981',
+        color: 'var(--success)',
         bg: 'rgba(16,185,129,0.08)',
         border: 'rgba(16,185,129,0.25)',
     },
     {
         id: 'constrained',
         icon: Shield,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         bg: 'rgba(245,158,11,0.08)',
         border: 'rgba(245,158,11,0.25)',
     },
@@ -121,12 +121,12 @@ const StrategySelector: React.FC<StrategySelectorProps> = ({ value, onChange, t 
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Icon size={18} color={isSelected ? s.color : '#64748b'} />
+                            <Icon size={18} color={isSelected ? s.color : 'var(--slate-500)'} />
                             <span
                                 style={{
                                     fontWeight: 700,
                                     fontSize: '0.8rem',
-                                    color: isSelected ? s.color : '#cbd5e1',
+                                    color: isSelected ? s.color : 'var(--slate-300)',
                                 }}
                             >
                                 {t(`debate.strategy.${s.id}`)}

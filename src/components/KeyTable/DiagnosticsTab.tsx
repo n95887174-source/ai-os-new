@@ -8,9 +8,9 @@ interface DiagnosticsTabProps {
 }
 
 const SEVERITY_CONFIG = {
-  critical: { icon: <AlertTriangle size={18} />, color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', label: 'Critical' },
-  warning: { icon: <Zap size={18} />, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', label: 'Warning' },
-  info: { icon: <Info size={18} />, color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.2)', label: 'Info' },
+  critical: { icon: <AlertTriangle size={18} />, color: 'var(--error)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', label: 'Critical' },
+  warning: { icon: <Zap size={18} />, color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', label: 'Warning' },
+  info: { icon: <Info size={18} />, color: 'var(--accent)', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.2)', label: 'Info' },
 };
 
 const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
@@ -35,17 +35,17 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
             />
           </svg>
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>{healthScore}</div>
-            <div style={{ fontSize: '0.55rem', color: '#64748b', textTransform: 'uppercase' }}>Health</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--slate-50)' }}>{healthScore}</div>
+            <div style={{ fontSize: '0.55rem', color: 'var(--slate-500)', textTransform: 'uppercase' }}>Health</div>
           </div>
         </div>
         <div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.25rem' }}>Diagnostic Summary</div>
-          <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{summary}</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-200)', marginBottom: '0.25rem' }}>Diagnostic Summary</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', lineHeight: 1.5 }}>{summary}</div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.7rem' }}>
-            <span style={{ color: '#ef4444' }}>{findings.filter(f => f.severity === 'critical').length} critical</span>
-            <span style={{ color: '#f59e0b' }}>{findings.filter(f => f.severity === 'warning').length} warnings</span>
-            <span style={{ color: '#3b82f6' }}>{findings.filter(f => f.severity === 'info').length} info</span>
+            <span style={{ color: 'var(--error)' }}>{findings.filter(f => f.severity === 'critical').length} critical</span>
+            <span style={{ color: 'var(--warning)' }}>{findings.filter(f => f.severity === 'warning').length} warnings</span>
+            <span style={{ color: 'var(--accent)' }}>{findings.filter(f => f.severity === 'info').length} info</span>
           </div>
         </div>
       </div>
@@ -69,25 +69,25 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
                   <span style={{ color: cfg.color, flexShrink: 0, marginTop: 2 }}>{cfg.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>{f.message}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-50)' }}>{f.message}</span>
                       <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', background: `${cfg.color}20`, color: cfg.color }}>
                         {cfg.label}
                       </span>
-                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 700, background: 'rgba(255,255,255,0.05)', color: '#64748b' }}>
+                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontWeight: 700, background: 'rgba(255,255,255,0.05)', color: 'var(--slate-500)' }}>
                         {f.category}
                       </span>
                       {f.metric && (
-                        <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', color: '#94a3b8' }}>
+                        <span style={{ padding: '0.15rem 0.4rem', borderRadius: 4, fontSize: '0.6rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', color: 'var(--slate-400)' }}>
                           {f.metric}
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)', lineHeight: 1.6, marginBottom: '0.5rem' }}>
                       {f.explanation}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
                       <Activity size={14} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>{f.suggestion}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--slate-300)', lineHeight: 1.4 }}>{f.suggestion}</span>
                     </div>
                   </div>
                 </div>
@@ -96,7 +96,7 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
           })}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--slate-500)' }}>
           <CheckCircle size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
           <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Issues Found</div>
           <div style={{ fontSize: '0.85rem' }}>This key is operating within normal parameters.</div>
@@ -120,7 +120,7 @@ const DiagnosticsTab: React.FC<DiagnosticsTabProps> = ({ apiKey }) => {
             const url = DOCS[apiKey.provider];
             if (url) window.open(url, '_blank', 'noopener,noreferrer');
           }}
-          style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none' }}
+          style={{ fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none' }}
           onFocus={e => e.currentTarget.style.outline = '1px solid #3b82f6'}
           onBlur={e => e.currentTarget.style.outline = 'none'}
         >

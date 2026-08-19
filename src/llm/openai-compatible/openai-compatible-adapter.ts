@@ -8,7 +8,7 @@ import type {
 } from '../core/types';
 import { LLMError } from '../core/errors';
 import { parseSSEStream } from '../http/sse-parser';
-import { LLMHttpClient } from '../http/llm-http-client';
+import { LLMHttpClient, PROVIDER_HTTP_TIMEOUT_MS } from '../http/llm-http-client';
 import { OpenAiCompatibleResponseSchema } from './openai-compatible-types';
 import { rootLogger } from '../../kernel/services/logger-service';
 
@@ -62,6 +62,7 @@ export class OpenAiCompatibleAdapter extends BaseLLMAdapter {
             },
             'authorization',
             this.id,
+            PROVIDER_HTTP_TIMEOUT_MS,
         );
     }
 

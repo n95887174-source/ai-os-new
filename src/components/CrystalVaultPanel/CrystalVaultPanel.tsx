@@ -104,10 +104,10 @@ const CrystalVaultPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Gem size={18} color="#10b981" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('lenses_crystal.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {crystals.length} {t('lenses_crystal.total')}
                     </span>
                 </div>
@@ -120,7 +120,7 @@ const CrystalVaultPanel: React.FC = () => {
                             borderRadius: 7,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -135,7 +135,7 @@ const CrystalVaultPanel: React.FC = () => {
                             padding: '0.45rem 0.9rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#10b981',
+                            background: 'var(--success)',
                             color: '#022c22',
                             cursor: 'pointer',
                             fontWeight: 700,
@@ -183,7 +183,7 @@ const CrystalVaultPanel: React.FC = () => {
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
                                 background: active ? `${color}20` : 'transparent',
-                                color: active ? color : '#64748b',
+                                color: active ? color : 'var(--slate-500)',
                             }}
                         >
                             {s === 'all'
@@ -215,7 +215,7 @@ const CrystalVaultPanel: React.FC = () => {
                             background: 'none',
                             border: 'none',
                             outline: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.75rem',
                             minWidth: 180,
                         }}
@@ -226,7 +226,7 @@ const CrystalVaultPanel: React.FC = () => {
             {/* List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1rem' }}>
                 {filtered.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                         <Gem size={40} opacity={0.25} style={{ marginBottom: '0.75rem' }} />
                         <div style={{ fontSize: '0.9rem' }}>{t('lenses_crystal.empty')}</div>
                     </div>
@@ -288,7 +288,7 @@ const SupersedeModal: React.FC<{
                 style={{
                     width: 460,
                     maxWidth: '90vw',
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     borderRadius: 12,
                     border: '1px solid rgba(255,255,255,0.08)',
                     padding: '1.25rem',
@@ -298,13 +298,13 @@ const SupersedeModal: React.FC<{
                     style={{
                         fontSize: '0.9rem',
                         fontWeight: 700,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         marginBottom: '0.75rem',
                     }}
                 >
                     {t('lenses_crystal.supersede')}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)', marginBottom: '0.5rem' }}>
                     {crystal.content.statement}
                 </div>
                 <textarea
@@ -319,7 +319,7 @@ const SupersedeModal: React.FC<{
                         border: '1px solid rgba(255,255,255,0.08)',
                         borderRadius: 6,
                         padding: '0.5rem 0.6rem',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         outline: 'none',
                         resize: 'vertical',
@@ -336,8 +336,8 @@ const SupersedeModal: React.FC<{
                             padding: '0.5rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#f59e0b',
-                            color: '#1e293b',
+                            background: 'var(--warning)',
+                            color: 'var(--slate-800)',
                             fontWeight: 700,
                             fontSize: '0.8rem',
                             cursor: 'pointer',
@@ -353,7 +353,7 @@ const SupersedeModal: React.FC<{
                             borderRadius: 7,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontSize: '0.8rem',
                             cursor: 'pointer',
                         }}

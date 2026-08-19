@@ -44,7 +44,7 @@ const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)', marginBottom: '0.5rem' }}>
         Resource pools group providers by capability profile. Keys are hidden inside each pool — routing selects from the pool, not individual keys.
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.25rem' }}>
@@ -69,30 +69,30 @@ const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
                   {pool.icon}
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{pool.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{pool.description}</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-50)' }}>{pool.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>{pool.description}</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                 <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: activeKeys > 0 ? '#10b981' : '#64748b' }}>{activeKeys}/{kps.length}</div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active</div>
                 </div>
                 <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: avgLatency > 0 ? avgLatency < 500 ? '#10b981' : avgLatency < 1500 ? '#f59e0b' : '#ef4444' : '#64748b' }}>{avgLatency > 0 ? `${avgLatency}ms` : '--'}</div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Latency</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Latency</div>
                 </div>
                 <div style={{ flex: 1, padding: '0.75rem', borderRadius: 10, background: 'rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>{kps.length}</div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Keys</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}>{kps.length}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Keys</div>
                 </div>
               </div>
 
               {(totalQuota > 0 || maxLimit > 0) && (
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Quota Burn</span>
+                    <span style={{ color: 'var(--slate-400)' }}>Quota Burn</span>
                     <span style={{ color: usagePct > 80 ? '#ef4444' : usagePct > 50 ? '#f59e0b' : '#94a3b8' }}>{usagePct}%</span>
                   </div>
                   <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
@@ -105,20 +105,20 @@ const ResourcePoolsView: React.FC<ResourcePoolsViewProps> = ({ keys }) => {
                 {kps.slice(0, 4).map(k => (
                   <div key={k.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', borderRadius: 8, background: 'rgba(0,0,0,0.15)' }}>
                     <ProviderIcon provider={k.provider} size={12} />
-                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-300)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={k.label}>
                       {k.label}
                     </span>
                     <span style={{ fontSize: '0.65rem', color: canonicalHealthColor(k.status), fontWeight: 700 }}>{canonicalHealthLabel(k.status)}</span>
-                    {k.latency && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{k.latency}ms</span>}
+                    {k.latency && <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>{k.latency}ms</span>}
                   </div>
                 ))}
                 {kps.length > 4 && (
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textAlign: 'center', padding: '0.3rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', textAlign: 'center', padding: '0.3rem' }}>
                     +{kps.length - 4} more keys hidden inside pool
                   </div>
                 )}
                 {kps.length === 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
                     No providers in this pool
                   </div>
                 )}

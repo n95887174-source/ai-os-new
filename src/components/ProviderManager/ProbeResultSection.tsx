@@ -65,7 +65,7 @@ export const ProbeResultSection: React.FC<ProbeResultSectionProps> = ({ probeRes
                 )}
                 <span style={textSecondary}>quota: {probeResult.quotaRemaining ?? '?'}</span>
                 {probeResult.error && (
-                    <span style={{ color: '#ef4444', marginLeft: 'auto', fontSize: '0.7rem' }}>
+                    <span style={{ color: 'var(--error)', marginLeft: 'auto', fontSize: '0.7rem' }}>
                         {probeResult.error.slice(0, 40)}
                     </span>
                 )}
@@ -74,7 +74,7 @@ export const ProbeResultSection: React.FC<ProbeResultSectionProps> = ({ probeRes
                 )}
                 <span
                     style={{
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         fontSize: '0.65rem',
                         marginLeft: probeResult.error ? 4 : 'auto',
                     }}
@@ -90,7 +90,7 @@ export const ProbeResultSection: React.FC<ProbeResultSectionProps> = ({ probeRes
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.15)',
                         fontSize: '0.78rem',
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                         maxHeight: 150,

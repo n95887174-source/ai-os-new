@@ -218,7 +218,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                             width: '90%',
                             maxWidth: 520,
                             maxHeight: '80vh',
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 16,
                             overflow: 'hidden',
@@ -243,7 +243,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                     padding: 4,
                                 }}
@@ -268,7 +268,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                             style={{
                                                 fontSize: '0.65rem',
                                                 fontWeight: 800,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.08em',
                                                 marginBottom: '0.5rem',
@@ -302,13 +302,13 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                                                 alignItems: 'center',
                                                                 gap: 8,
                                                                 fontSize: '0.85rem',
-                                                                color: '#e2e8f0',
+                                                                color: 'var(--slate-200)',
                                                             }}
                                                         >
                                                             {s.icon && (
                                                                 <span
                                                                     style={{
-                                                                        color: '#64748b',
+                                                                        color: 'var(--slate-500)',
                                                                         display: 'flex',
                                                                     }}
                                                                 >
@@ -320,7 +320,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
                                                                 <span
                                                                     style={{
                                                                         fontSize: '0.6rem',
-                                                                        color: '#64748b',
+                                                                        color: 'var(--slate-500)',
                                                                         background:
                                                                             'rgba(100,116,139,0.15)',
                                                                         padding: '0.1rem 0.35rem',

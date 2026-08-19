@@ -30,7 +30,7 @@ const LatencyBreakdownSection: React.FC<Props> = ({ latencyBreakdown, t }) => {
                     <div
                         style={{
                             width: `${((latencyBreakdown.dns || 0) / latencyBreakdown.total) * 100}%`,
-                            background: '#3b82f6',
+                            background: 'var(--accent)',
                         }}
                         title="DNS"
                     />
@@ -51,7 +51,7 @@ const LatencyBreakdownSection: React.FC<Props> = ({ latencyBreakdown, t }) => {
                     <div
                         style={{
                             width: `${(Math.max(0, latencyBreakdown.ttft - ((latencyBreakdown.dns || 0) + (latencyBreakdown.tls || 0) + (latencyBreakdown.connect || 0))) / latencyBreakdown.total) * 100}%`,
-                            background: '#10b981',
+                            background: 'var(--success)',
                         }}
                         title="Processing"
                     />

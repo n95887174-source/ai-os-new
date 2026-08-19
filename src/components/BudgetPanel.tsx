@@ -7,7 +7,8 @@ import { budgetService } from '../kernel/instances';
 import type { SpendSummary, BudgetAlert } from '../kernel/contracts/budget';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, buttonSm } from '../styles/common';
+import { errorContainer, dismissBtnRed } from '../styles/common';
+import { Button } from './Common';
 import { GlobalBudgetSection } from './BudgetPanel/GlobalBudgetSection';
 import { ProviderBudgetSection } from './BudgetPanel/ProviderBudgetSection';
 import { AgentBudgetSection } from './BudgetPanel/AgentBudgetSection';
@@ -94,28 +95,19 @@ const BudgetPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <DollarSign size={28} color="#10b981" /> {t('budget.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('budget.subtitle')}
                     </p>
                 </div>
                 {alerts.length > 0 && (
-                    <button
-                        onClick={handleClearAlerts}
-                        style={{
-                            ...buttonSm,
-                            background: '#64748b',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                        }}
-                    >
+                    <Button variant="neutral" size="sm" onClick={handleClearAlerts}>
                         <X size={14} /> {t('budget.clear_alerts')}
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -140,7 +132,7 @@ const BudgetPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '4rem 2rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                         fontStyle: 'italic',
                         border: '1px dashed rgba(255,255,255,0.1)',
@@ -148,7 +140,7 @@ const BudgetPanel: React.FC = () => {
                     }}
                 >
                     <BarChart3 size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--slate-400)' }}>
                         {t('budget.empty')}
                     </div>
                     <div>{t('budget.empty_desc')}</div>
@@ -171,7 +163,7 @@ const BudgetPanel: React.FC = () => {
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     padding: '0.5rem',
                     borderTop: '1px solid rgba(255,255,255,0.05)',
                 }}

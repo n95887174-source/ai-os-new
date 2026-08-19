@@ -16,7 +16,7 @@ export const AGENT_TEMPLATES: UiAgentTemplate[] = [
         name: 'Research',
         description: 'Deep research agent with web search and summarization tools.',
         icon: <BookOpen size={20} />,
-        color: '#8b5cf6',
+        color: 'var(--purple)',
         config: {
             roleName: 'Research Analyst',
             prompt: 'You are a thorough research analyst. Search the web, analyze documents, and provide comprehensive summaries with citations.',
@@ -29,7 +29,7 @@ export const AGENT_TEMPLATES: UiAgentTemplate[] = [
         name: 'Coding',
         description: 'Code generation and review specialist with sandbox execution.',
         icon: <Code size={20} />,
-        color: '#10b981',
+        color: 'var(--success)',
         config: {
             roleName: 'Software Engineer',
             prompt: 'You are an expert software engineer. Write clean, efficient code with tests. Review code for bugs and security issues.',
@@ -42,7 +42,7 @@ export const AGENT_TEMPLATES: UiAgentTemplate[] = [
         name: 'Support',
         description: 'Customer-facing support agent with ticket management.',
         icon: <HeadphonesIcon size={20} />,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         config: {
             roleName: 'Customer Support Agent',
             prompt: 'You are a helpful customer support agent. Be empathetic, resolve issues quickly, and escalate when needed.',
@@ -55,7 +55,7 @@ export const AGENT_TEMPLATES: UiAgentTemplate[] = [
         name: 'Data Analyst',
         description: 'Analyzes data, generates charts, and produces reports.',
         icon: <BarChart3 size={20} />,
-        color: '#3b82f6',
+        color: 'var(--accent)',
         config: {
             roleName: 'Data Analyst',
             prompt: 'You are a senior data analyst. Import datasets, generate visualizations, and produce actionable insights with statistical rigor.',
@@ -133,7 +133,7 @@ export const AGENT_TEMPLATES: UiAgentTemplate[] = [
         name: 'DevOps Engineer',
         description: 'Manages CI/CD pipelines, infrastructure, and deployment automation.',
         icon: <Cpu size={20} />,
-        color: '#22c55e',
+        color: 'var(--success)',
         config: {
             roleName: 'DevOps Engineer',
             prompt: 'You are a DevOps engineer. Manage CI/CD pipelines, infrastructure as code, and automate deployments for reliability and scalability.',

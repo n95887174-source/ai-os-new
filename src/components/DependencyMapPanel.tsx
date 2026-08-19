@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n/useTranslation';
 
 const nodeStyle = {
   background: 'rgba(15, 23, 42, 0.9)',
-  color: '#f8fafc',
+  color: 'var(--slate-50)',
   border: '1px solid rgba(59, 130, 246, 0.5)',
   borderRadius: '8px',
   padding: '10px 15px',
@@ -128,20 +128,20 @@ const DependencyMapPanel: React.FC = () => {
   }, [selectedNode, calculateImpact]);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', color: '#f8fafc' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--slate-50)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
           <Network size={28} color="#3b82f6" /> {t('nav.dependency_graph') || 'Dependency Graph'}
         </h2>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {selectedNode && (
-            <div style={{ fontSize: '0.85rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: 8 }}>
-              <span style={{ color: '#ef4444', fontWeight: 700 }}>Impact Analysis:</span> {impactedNodes.size} downstream services affected by <strong style={{ color: '#f8fafc' }}>{selectedNode}</strong>
+            <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: 8 }}>
+              <span style={{ color: 'var(--error)', fontWeight: 700 }}>Impact Analysis:</span> {impactedNodes.size} downstream services affected by <strong style={{ color: 'var(--slate-50)' }}>{selectedNode}</strong>
             </div>
           )}
           <button
             onClick={generateGraph}
-            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
+            style={{ padding: '0.5rem 1rem', borderRadius: 8, background: 'var(--accent-tint)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
           >
             <RefreshCw size={16} /> Refresh
           </button>

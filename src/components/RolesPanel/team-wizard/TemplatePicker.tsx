@@ -24,7 +24,7 @@ const TemplatePicker: React.FC<TemplatePickerProps> = ({
 
     return (
         <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
                 {selectedDomain && selectedDomain !== 'custom'
                     ? `Templates in ${selectedDomain} domain (${filtered.length}):`
                     : 'All templates — pick one to start:'}
@@ -52,13 +52,13 @@ const TemplatePicker: React.FC<TemplatePickerProps> = ({
                         }}
                     >
                         <div style={{ fontSize: '1.3rem', marginBottom: 4 }}>{tpl.icon}</div>
-                        <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--slate-200)', fontSize: '0.85rem' }}>
                             {tpl.name}
                         </div>
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginTop: 2,
                                 lineHeight: 1.3,
                             }}
@@ -100,7 +100,7 @@ const TemplatePicker: React.FC<TemplatePickerProps> = ({
                     }}
                 >
                     <Plus size={24} color="#64748b" />
-                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)' }}>
                         Custom Team (no template)
                     </span>
                 </div>

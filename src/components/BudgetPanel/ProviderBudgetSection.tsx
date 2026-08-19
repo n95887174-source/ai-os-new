@@ -30,7 +30,7 @@ export const ProviderBudgetSection: React.FC<ProviderBudgetSectionProps> = ({
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
                 <Shield size={18} color="#a855f7" />
-                <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1rem' }}>
+                <span style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '1rem' }}>
                     {t('budget.providers_section')}
                 </span>
             </div>
@@ -52,11 +52,11 @@ export const ProviderBudgetSection: React.FC<ProviderBudgetSectionProps> = ({
                             }}
                         >
                             <span
-                                style={{ fontWeight: 600, fontSize: '0.85rem', color: '#e2e8f0' }}
+                                style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--slate-200)' }}
                             >
                                 {p.provider}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                                 {fmtUSD(p.spent, lang)} / {fmtUSD(p.budget, lang)}
                             </span>
                         </div>
@@ -65,7 +65,7 @@ export const ProviderBudgetSection: React.FC<ProviderBudgetSectionProps> = ({
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 fontSize: '0.7rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.2rem',
                             }}
                         >

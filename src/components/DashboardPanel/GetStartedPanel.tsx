@@ -49,13 +49,13 @@ const GetStartedPanel: React.FC<GetStartedPanelProps> = ({ show, onNavigate }) =
                             style={{
                                 fontSize: '1.05rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: '0.25rem',
                             }}
                         >
                             {t('onboarding.dashboard_get_started_title')}
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)', lineHeight: 1.5 }}>
                             {t('onboarding.dashboard_get_started_body')}
                         </div>
                     </div>
@@ -68,7 +68,7 @@ const GetStartedPanel: React.FC<GetStartedPanelProps> = ({ show, onNavigate }) =
                                 border: '1px solid rgba(255,255,255,0.12)',
                                 borderRadius: 10,
                                 cursor: 'pointer',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.85rem',
                                 fontWeight: 600,
                                 display: 'flex',

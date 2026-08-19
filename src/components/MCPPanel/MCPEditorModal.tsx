@@ -60,7 +60,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             fontSize: '1.25rem',
                             fontWeight: 800,
                             margin: 0,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         {editing.id ? t('mcp.edit_title') : t('mcp.add_title')}
@@ -72,7 +72,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                         }}
                     >
@@ -93,7 +93,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             style={{
                                 padding: '0.75rem',
                                 borderRadius: 8,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 border: '1px solid rgba(239,68,68,0.2)',
                                 color: '#fca5a5',
                                 fontSize: '0.85rem',
@@ -107,7 +107,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 800,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.5rem',
                                 display: 'block',
                                 textTransform: 'uppercase',
@@ -137,7 +137,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 800,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.5rem',
                                 display: 'block',
                                 textTransform: 'uppercase',
@@ -169,7 +169,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                                 style={{
                                     fontSize: '0.75rem',
                                     fontWeight: 800,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.5rem',
                                     display: 'block',
                                     textTransform: 'uppercase',
@@ -183,7 +183,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     borderRadius: 10,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.85rem',
                                     fontFamily: 'monospace',
                                 }}
@@ -211,7 +211,7 @@ export function MCPEditorModal({ server: editing, onClose, onSaved }: MCPEditorM
                             fontWeight: 700,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                         }}
                     >

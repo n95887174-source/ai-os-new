@@ -210,7 +210,7 @@ export const AppLayout: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         cursor: 'pointer',
                                         padding: '0.25rem',
                                         marginRight: '0.5rem',
@@ -273,7 +273,7 @@ export const AppLayout: React.FC = () => {
                                     style={{
                                         background: 'rgba(255,255,255,0.05)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         borderRadius: 6,
                                         padding: '0.25rem 0.5rem',
                                         fontSize: '0.75rem',
@@ -295,7 +295,7 @@ export const AppLayout: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                         padding: '0.25rem 0.5rem',
                                         fontSize: '0.85rem',

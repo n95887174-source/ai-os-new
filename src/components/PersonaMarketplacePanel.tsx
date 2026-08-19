@@ -65,7 +65,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
             >
                 <Store size={20} color="#a855f7" /> Persona Marketplace
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Browse, install, and manage AI personas
             </p>
 
@@ -73,7 +73,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                 <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
                     <Search
                         size={14}
-                        style={{ position: 'absolute', left: 10, top: 9, color: '#64748b' }}
+                        style={{ position: 'absolute', left: 10, top: 9, color: 'var(--slate-500)' }}
                     />
                     <input
                         value={search}
@@ -84,8 +84,8 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                             padding: '7px 10px 7px 30px',
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 13,
                             outline: 'none',
                         }}
@@ -156,7 +156,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                     }}
                                 >
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 14, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 14, color: 'var(--slate-200)' }}
                                     >
                                         {p.name}
                                     </span>
@@ -177,7 +177,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                         <span
                                             style={{
                                                 fontSize: 10,
-                                                color: '#10b981',
+                                                color: 'var(--success)',
                                                 fontWeight: 600,
                                             }}
                                         >
@@ -185,7 +185,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                         </span>
                                     )}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                                <div style={{ fontSize: 12, color: 'var(--slate-500)', marginBottom: 4 }}>
                                     {p.description}
                                 </div>
                                 <div
@@ -194,7 +194,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                         alignItems: 'center',
                                         gap: 12,
                                         fontSize: 11,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                     }}
                                 >
                                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -218,7 +218,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 12,
                                         background: 'rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                     }}
                                 >
                                     <Trash2 size={12} /> Uninstall
@@ -236,7 +236,7 @@ const PersonaMarketplacePanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 12,
                                         background: 'rgba(139,92,246,0.15)',
-                                        color: '#8b5cf6',
+                                        color: 'var(--purple)',
                                     }}
                                 >
                                     <Download size={12} /> Install

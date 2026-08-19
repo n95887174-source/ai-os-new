@@ -24,7 +24,7 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       case 'nvidia':
         return { Icon: Eye, color: '#76b900', bg: 'rgba(118, 185, 0, 0.1)' };
       case 'openrouter':
-        return { Icon: Network, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+        return { Icon: Network, color: 'var(--purple)', bg: 'rgba(139, 92, 246, 0.1)' };
       case 'mistral':
         return { Icon: Wind, color: '#ff7000', bg: 'rgba(255, 112, 0, 0.1)' };
       case 'cohere':
@@ -64,7 +64,7 @@ const ProviderIcon: React.FC<Props> = ({ provider, size = 18, className = '' }) 
       case 'github':
         return { Icon: Bot, color: '#6e40c9', bg: 'rgba(110, 64, 201, 0.1)' };
       default:
-        return { Icon: Box, color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
+        return { Icon: Box, color: 'var(--slate-400)', bg: 'rgba(148, 163, 184, 0.1)' };
     }
   };
 

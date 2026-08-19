@@ -75,15 +75,15 @@ const QuantumInspirationPanelContent: React.FC = () => {
                     >
                         <Atom size={20} color="#a855f7" /> Quantum Inspiration Engine
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--slate-400)' }}>
                         Quantum-inspired optimization algorithms
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>
+                    <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                         Solvers: {status.totalSolutions}
                     </span>
-                    <span style={{ fontSize: 11, color: '#64748b' }}>
+                    <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                         Avg convergence: {(status.avgConvergence * 100).toFixed(0)}%
                     </span>
                 </div>
@@ -93,7 +93,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                 <div
                     style={{
                         flex: 1,
-                        background: '#0f172a',
+                        background: 'var(--slate-900)',
                         borderRadius: 10,
                         padding: 16,
                         border: '1px solid rgba(255,255,255,0.04)',
@@ -104,7 +104,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                             margin: '0 0 12px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Problem Definition
@@ -117,7 +117,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                                     <label
                                         style={{
                                             fontSize: 11,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 2,
                                             display: 'block',
                                         }}
@@ -150,7 +150,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                 <div
                     style={{
                         flex: 1,
-                        background: '#0f172a',
+                        background: 'var(--slate-900)',
                         borderRadius: 10,
                         padding: 16,
                         border: '1px solid rgba(255,255,255,0.04)',
@@ -161,7 +161,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                             margin: '0 0 12px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Solver Configuration
@@ -215,7 +215,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                         <label
                             style={{
                                 fontSize: 11,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: 2,
                                 display: 'block',
                             }}
@@ -260,7 +260,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
             {solution && (
                 <div
                     style={{
-                        background: '#0f172a',
+                        background: 'var(--slate-900)',
                         borderRadius: 10,
                         padding: 16,
                         border: '1px solid rgba(168,85,247,0.2)',
@@ -271,7 +271,7 @@ const QuantumInspirationPanelContent: React.FC = () => {
                             margin: '0 0 12px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
@@ -288,13 +288,13 @@ const QuantumInspirationPanelContent: React.FC = () => {
                         }}
                     >
                         <div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>Cost</div>
-                            <div style={{ fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>
+                            <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>Cost</div>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--slate-200)' }}>
                                 {solution.cost.toFixed(2)}
                             </div>
                         </div>
                         <div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>Convergence</div>
+                            <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>Convergence</div>
                             <div
                                 style={{
                                     fontSize: 20,
@@ -306,13 +306,13 @@ const QuantumInspirationPanelContent: React.FC = () => {
                             </div>
                         </div>
                         <div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>Iterations</div>
-                            <div style={{ fontSize: 20, fontWeight: 700, color: '#3b82f6' }}>
+                            <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>Iterations</div>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)' }}>
                                 {solution.iterations}
                             </div>
                         </div>
                         <div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>Tunneling Events</div>
+                            <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>Tunneling Events</div>
                             <div style={{ fontSize: 20, fontWeight: 700, color: '#a855f7' }}>
                                 {solution.tunnelingEvents}
                             </div>
@@ -328,8 +328,8 @@ const QuantumInspirationPanelContent: React.FC = () => {
                                     borderRadius: 6,
                                 }}
                             >
-                                <span style={{ color: '#64748b' }}>{k}: </span>
-                                <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                                <span style={{ color: 'var(--slate-500)' }}>{k}: </span>
+                                <span style={{ color: 'var(--slate-200)', fontWeight: 600 }}>
                                     {v.toFixed(3)}
                                 </span>
                             </div>

@@ -16,24 +16,56 @@ import type { DebateSession } from '../../contracts/debate-types';
 
 /** In-memory stub for the active-debate session store. */
 export function createFallbackDebateSessionStore(): IDebateSessionStore {
-    let session: DebateSession | null = null;
-    let governorState: unknown = null;
+    const sessions = new Map<string, { session: DebateSession | null; governorState: unknown }>();
+    let activeSessionId: string | null = null;
     return {
         get session() {
-            return session;
+            const e = activeSessionId ? sessions.get(activeSessionId) : undefined;
+            return e?.session ?? null;
         },
         get governorState() {
-            return governorState;
+            const e = activeSessionId ? sessions.get(activeSessionId) : undefined;
+            return e?.governorState ?? null;
         },
         setSession: (s) => {
-            session = s;
+            if (!s) {
+                activeSessionId = null;
+                return;
+            }
+            sessions.set(s.id, {
+                session: s,
+                governorState: sessions.get(s.id)?.governorState ?? null,
+            });
+            activeSessionId = s.id;
+        },
+        upsertSession: (s) => {
+            if (!s) return;
+            sessions.set(s.id, {
+                session: s,
+                governorState: sessions.get(s.id)?.governorState ?? null,
+            });
         },
         setGovernorState: (state) => {
-            governorState = state;
+            if (activeSessionId) {
+                const e = sessions.get(activeSessionId);
+                if (e) e.governorState = state;
+            }
+        },
+        setGovernorStateFor: (id, state) => {
+            const e = sessions.get(id);
+            if (e) e.governorState = state;
+        },
+        setActiveSessionId: (id) => {
+            activeSessionId = id;
+        },
+        getSession: (id) => sessions.get(id)?.session ?? null,
+        clearSession: (id) => {
+            sessions.delete(id);
+            if (activeSessionId === id) activeSessionId = null;
         },
         clearAll: () => {
-            session = null;
-            governorState = null;
+            sessions.clear();
+            activeSessionId = null;
         },
     };
 }

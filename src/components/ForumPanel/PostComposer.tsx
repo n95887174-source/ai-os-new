@@ -69,10 +69,10 @@ const PostComposer: React.FC<PostComposerProps> = ({
                 rows={2}
                 style={{
                     flex: 1,
-                    background: '#0f172a',
+                    background: 'var(--slate-900)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.75rem',
                     padding: '0.5rem 0.7rem',
                     resize: 'none',
@@ -86,7 +86,7 @@ const PostComposer: React.FC<PostComposerProps> = ({
                     padding: '0.45rem 0.9rem',
                     borderRadius: 7,
                     border: 'none',
-                    background: '#8b5cf6',
+                    background: 'var(--purple)',
                     color: '#fff',
                     cursor: 'pointer',
                     fontWeight: 700,

@@ -55,7 +55,7 @@ const ForgettingCurvePanel: React.FC<ForgettingCurvePanelProps> = ({ memories })
             <h3 style={sectionPanelTitle}>
                 <TrendingDown size={18} color="#8b5cf6" aria-hidden="true" /> Forgetting Curve
             </h3>
-            <div style={{ marginBottom: '0.5rem', fontSize: '0.65rem', color: '#64748b' }}>
+            <div style={{ marginBottom: '0.5rem', fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                 Memory retention over time (days)
             </div>
             <svg width={w} height={h} style={{ display: 'block', margin: '0 auto' }}>
@@ -82,7 +82,7 @@ const ForgettingCurvePanel: React.FC<ForgettingCurvePanelProps> = ({ memories })
                     display: 'flex',
                     justifyContent: 'space-between',
                     fontSize: '0.55rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginTop: '0.25rem',
                 }}
             >

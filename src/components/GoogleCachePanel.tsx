@@ -24,7 +24,7 @@ const INPUT: React.CSSProperties = {
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 8,
     padding: '0.5rem 0.75rem',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.85rem',
     outline: 'none',
     width: '100%',
@@ -134,7 +134,7 @@ const GoogleCachePanel: React.FC = () => {
 
     if (loading) {
         return (
-            <div style={{ padding: '2rem', color: '#64748b', textAlign: 'center' }}>
+            <div style={{ padding: '2rem', color: 'var(--slate-500)', textAlign: 'center' }}>
                 Loading Google Cache...
             </div>
         );
@@ -243,7 +243,7 @@ const GoogleCachePanel: React.FC = () => {
                                     style={{
                                         ...BTN,
                                         background: 'rgba(255,255,255,0.05)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                     }}
                                 >
@@ -351,7 +351,7 @@ const GoogleCachePanel: React.FC = () => {
                                                         style={{
                                                             ...BTN,
                                                             background: 'transparent',
-                                                            color: '#94a3b8',
+                                                            color: 'var(--slate-400)',
                                                             border: '1px solid rgba(255,255,255,0.1)',
                                                         }}
                                                     >
@@ -384,7 +384,7 @@ const GoogleCachePanel: React.FC = () => {
                                     style={{
                                         ...CARD,
                                         textAlign: 'center',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         padding: '2rem',
                                     }}
                                 >
@@ -445,8 +445,8 @@ const GoogleCachePanel: React.FC = () => {
                                                     onClick={() => handleDelete(c.id)}
                                                     style={{
                                                         ...BTN,
-                                                        background: 'rgba(239,68,68,0.1)',
-                                                        color: '#ef4444',
+                                                        background: 'var(--error-tint)',
+                                                        color: 'var(--error)',
                                                         border: '1px solid rgba(239,68,68,0.2)',
                                                         padding: '0.35rem 0.75rem',
                                                     }}
@@ -468,7 +468,7 @@ const GoogleCachePanel: React.FC = () => {
                                     style={{
                                         ...CARD,
                                         textAlign: 'center',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         padding: '2rem',
                                     }}
                                 >
@@ -509,7 +509,7 @@ const GoogleCachePanel: React.FC = () => {
                                                     style={{
                                                         height: 6,
                                                         borderRadius: 3,
-                                                        background: 'rgba(255,255,255,0.08)',
+                                                        background: 'var(--border-subtle)',
                                                         overflow: 'hidden',
                                                         width: '100%',
                                                     }}
@@ -534,7 +534,7 @@ const GoogleCachePanel: React.FC = () => {
                                                     style={{
                                                         height: 6,
                                                         borderRadius: 3,
-                                                        background: 'rgba(255,255,255,0.08)',
+                                                        background: 'var(--border-subtle)',
                                                         overflow: 'hidden',
                                                         width: '100%',
                                                     }}
@@ -576,7 +576,7 @@ const GoogleCachePanel: React.FC = () => {
                                         style={{
                                             fontSize: '2rem',
                                             fontWeight: 700,
-                                            color: '#22c55e',
+                                            color: 'var(--success)',
                                         }}
                                     >
                                         ${savings.totalSaved.toFixed(4)}
@@ -604,7 +604,7 @@ const GoogleCachePanel: React.FC = () => {
                                         style={{
                                             fontSize: '2rem',
                                             fontWeight: 700,
-                                            color: '#f59e0b',
+                                            color: 'var(--warning)',
                                         }}
                                     >
                                         {totalHits}
@@ -657,7 +657,7 @@ const GoogleCachePanel: React.FC = () => {
                                                         {c.sizeTokens.toLocaleString()} tokens
                                                     </div>
                                                 </div>
-                                                <div style={{ color: '#22c55e', fontWeight: 600 }}>
+                                                <div style={{ color: 'var(--success)', fontWeight: 600 }}>
                                                     $
                                                     {(
                                                         c.sizeTokens *

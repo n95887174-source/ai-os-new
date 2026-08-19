@@ -29,16 +29,10 @@ const formatPct = (v: number): string => {
 };
 
 const CATEGORY_ORDER: Array<{ key: QualityTechnique['category']; color: string }> = [
-    { key: 'P0', color: '#ef4444' },
-    { key: 'P1', color: '#f59e0b' },
-    { key: 'P2', color: '#3b82f6' },
+    { key: 'P0', color: 'var(--error)' },
+    { key: 'P1', color: 'var(--warning)' },
+    { key: 'P2', color: 'var(--accent)' },
 ];
-
-const CATEGORY_LABELS_RU: Record<QualityTechnique['category'], string> = {
-    P0: 'P0 — Базовые',
-    P1: 'P1 — Продвинутые',
-    P2: 'P2 — Экспериментальные',
-};
 
 const Toggle: React.FC<{
     checked: boolean;
@@ -88,6 +82,7 @@ const QualityCard: React.FC<{
     onToggle: (id: string, v: boolean) => void;
     metrics?: TechniqueImpactMetrics;
 }> = ({ technique, enabled, onToggle, metrics }) => {
+    const { t } = useTranslation();
     return (
         <div
             style={{
@@ -108,7 +103,7 @@ const QualityCard: React.FC<{
                         style={{
                             fontWeight: 600,
                             fontSize: 14,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         {technique.nameRu}
@@ -116,7 +111,7 @@ const QualityCard: React.FC<{
                     <span
                         style={{
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontStyle: 'italic',
                         }}
                     >
@@ -127,7 +122,7 @@ const QualityCard: React.FC<{
                     style={{
                         margin: '0 0 6px 0',
                         fontSize: 12,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         lineHeight: 1.4,
                     }}
                 >
@@ -160,17 +155,18 @@ const QualityCard: React.FC<{
                         >
                             {metrics.confidence}
                         </span>
-                        <span style={{ fontSize: 10, color: '#64748b' }}>
+                        <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                             n={metrics.totalActivations}
                         </span>
-                        <span style={{ fontSize: 10, color: '#475569' }}>
-                            {metrics.sampleSizeOn}/{metrics.totalSessions} сессий
+                        <span style={{ fontSize: 10, color: 'var(--slate-600)' }}>
+                            {metrics.sampleSizeOn}/{metrics.totalSessions}{' '}
+                            {t('quality.sessions_label')}
                         </span>
                     </div>
                 )}
                 {(!metrics || metrics.totalSessions === 0) && (
-                    <div style={{ fontSize: 10, color: '#475569', fontStyle: 'italic' }}>
-                        Нет данных о влиянии
+                    <div style={{ fontSize: 10, color: 'var(--slate-600)', fontStyle: 'italic' }}>
+                        {t('quality.no_impact_data')}
                     </div>
                 )}
             </div>
@@ -270,18 +266,18 @@ export const DebateQualityPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                     <Sliders size={22} color="#a855f7" />
-                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>
+                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--slate-200)' }}>
                         {t('quality.nav_title') || 'Качество дебатов'}
                     </h2>
                 </div>
-                <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#94a3b8' }}>
+                <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--slate-400)' }}>
                     {t('quality.description') ||
                         'Включай и отключай 56 техник улучшения качества дебатов. P0 — базовые, P1 — продвинутые, P2 — экспериментальные.'}
                 </p>
 
                 {/* Stats + actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, color: '#94a3b8' }}>
+                    <span style={{ fontSize: 13, color: 'var(--slate-400)' }}>
                         {enabledCount}/{totalCount} {t('quality.active') || 'активно'}
                     </span>
                     <div style={{ flex: 1 }} />
@@ -296,8 +292,8 @@ export const DebateQualityPanel: React.FC = () => {
                             padding: '6px 14px',
                             borderRadius: 8,
                             border: '1px solid rgba(16,185,129,0.3)',
-                            background: 'rgba(16,185,129,0.1)',
-                            color: '#10b981',
+                            background: 'var(--success-tint)',
+                            color: 'var(--success)',
                             fontSize: 12,
                             cursor: 'pointer',
                         }}
@@ -315,8 +311,8 @@ export const DebateQualityPanel: React.FC = () => {
                             padding: '6px 14px',
                             borderRadius: 8,
                             border: '1px solid rgba(239,68,68,0.3)',
-                            background: 'rgba(239,68,68,0.1)',
-                            color: '#ef4444',
+                            background: 'var(--error-tint)',
+                            color: 'var(--error)',
                             fontSize: 12,
                             cursor: 'pointer',
                         }}
@@ -335,7 +331,7 @@ export const DebateQualityPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(148,163,184,0.3)',
                             background: 'rgba(148,163,184,0.1)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontSize: 12,
                             cursor: 'pointer',
                         }}
@@ -401,11 +397,11 @@ export const DebateQualityPanel: React.FC = () => {
                                 <ChevronDown size={18} color={color} />
                             )}
                             <span
-                                style={{ fontWeight: 700, fontSize: 15, color: '#e2e8f0', flex: 1 }}
+                                style={{ fontWeight: 700, fontSize: 15, color: 'var(--slate-200)', flex: 1 }}
                             >
-                                {CATEGORY_LABELS_RU[category]}
+                                {t(`quality.category.${category}`)}
                             </span>
-                            <span style={{ fontSize: 12, color: '#64748b', marginRight: 12 }}>
+                            <span style={{ fontSize: 12, color: 'var(--slate-500)', marginRight: 12 }}>
                                 {catEnabled}/{items.length}
                             </span>
                             <div style={{ display: 'flex', gap: 6 }}>
@@ -421,7 +417,7 @@ export const DebateQualityPanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: 'none',
                                         background: 'rgba(16,185,129,0.15)',
-                                        color: '#10b981',
+                                        color: 'var(--success)',
                                         fontSize: 11,
                                         cursor: 'pointer',
                                     }}
@@ -440,7 +436,7 @@ export const DebateQualityPanel: React.FC = () => {
                                         borderRadius: 6,
                                         border: 'none',
                                         background: 'rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         fontSize: 11,
                                         cursor: 'pointer',
                                     }}
@@ -493,7 +489,7 @@ export const DebateQualityPanel: React.FC = () => {
                     background: 'rgba(168,85,247,0.06)',
                     border: '1px solid rgba(168,85,247,0.15)',
                     fontSize: 12,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textAlign: 'center',
                 }}
             >

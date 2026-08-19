@@ -15,7 +15,7 @@ const MemoryErrorAlert: React.FC<MemoryErrorAlertProps> = ({ error, onDismiss })
             aria-live="assertive"
             style={{
                 padding: '0.5rem 1rem',
-                background: 'rgba(239,68,68,0.1)',
+                background: 'var(--error-tint)',
                 border: '1px solid rgba(239,68,68,0.2)',
                 borderRadius: 10,
                 color: '#fca5a5',

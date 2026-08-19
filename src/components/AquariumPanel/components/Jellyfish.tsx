@@ -48,7 +48,7 @@ const Jellyfish: React.FC<JellyfishProps> = ({ jellyfish: j }) => {
                         key={`t-${i}`}
                         animate={{ height: [t.minHeight, t.maxHeight, t.minHeight] }}
                         transition={{ duration: t.duration, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ width: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+                        style={{ width: 2, background: 'var(--border-default)', borderRadius: 2 }}
                     />
                 ))}
             </div>

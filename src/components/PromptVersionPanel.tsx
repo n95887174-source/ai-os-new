@@ -55,7 +55,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         gap: 4,
                         background: 'none',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: 12,
                         marginBottom: 12,
@@ -67,7 +67,7 @@ const PromptVersionPanelContent: React.FC = () => {
                 <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 600 }}>
                     {meta?.name || 'Prompt'}
                 </h2>
-                <p style={{ margin: '0 0 16px', fontSize: 12, color: '#64748b' }}>
+                <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--slate-500)' }}>
                     {meta?.currentVersion} versions · Updated{' '}
                     {meta ? new Date(meta.updatedAt).toLocaleDateString() : ''}
                 </p>
@@ -84,7 +84,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         alignItems: 'center',
                         gap: 6,
                         padding: '8px 16px',
-                        background: '#3b82f6',
+                        background: 'var(--accent)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 8,
@@ -100,7 +100,7 @@ const PromptVersionPanelContent: React.FC = () => {
                 {showForm && (
                     <div
                         style={{
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 10,
                             padding: 16,
                             marginBottom: 16,
@@ -132,7 +132,7 @@ const PromptVersionPanelContent: React.FC = () => {
                             onClick={handleSave}
                             style={{
                                 padding: '8px 20px',
-                                background: '#22c55e',
+                                background: 'var(--success)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: 8,
@@ -151,7 +151,7 @@ const PromptVersionPanelContent: React.FC = () => {
                     <div
                         key={v.id}
                         style={{
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 8,
                             padding: 12,
                             marginBottom: 6,
@@ -166,9 +166,9 @@ const PromptVersionPanelContent: React.FC = () => {
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <Hash size={14} style={{ color: '#3b82f6' }} />
+                                <Hash size={14} style={{ color: 'var(--accent)' }} />
                                 <span style={{ fontWeight: 600, fontSize: 13 }}>v{v.version}</span>
-                                <span style={{ fontSize: 11, color: '#64748b' }}>
+                                <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                     by {v.author}
                                 </span>
                             </div>
@@ -178,23 +178,23 @@ const PromptVersionPanelContent: React.FC = () => {
                                     alignItems: 'center',
                                     gap: 4,
                                     fontSize: 11,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 <Clock size={11} /> {new Date(v.createdAt).toLocaleString()}
                             </div>
                         </div>
-                        <div style={{ fontSize: 11, color: '#f59e0b', marginBottom: 6 }}>
+                        <div style={{ fontSize: 11, color: 'var(--warning)', marginBottom: 6 }}>
                             {v.comment}
                         </div>
                         <pre
                             style={{
                                 margin: 0,
                                 padding: 8,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 borderRadius: 4,
                                 fontSize: 11,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 whiteSpace: 'pre-wrap',
                                 maxHeight: 120,
                                 overflowY: 'auto',
@@ -222,7 +222,7 @@ const PromptVersionPanelContent: React.FC = () => {
                     <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
                         Prompt Version History
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--slate-400)' }}>
                         Track changes to your system prompts and templates
                     </p>
                 </div>
@@ -239,7 +239,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         alignItems: 'center',
                         gap: 6,
                         padding: '8px 16px',
-                        background: '#3b82f6',
+                        background: 'var(--accent)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 8,
@@ -261,7 +261,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         alignItems: 'center',
                         gap: 12,
                         padding: '10px 14px',
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 8,
                         marginBottom: 6,
                         cursor: 'pointer',
@@ -276,7 +276,7 @@ const PromptVersionPanelContent: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             flexShrink: 0,
                         }}
                     >
@@ -287,7 +287,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         <div
                             style={{
                                 fontSize: 11,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 display: 'flex',
                                 gap: 8,
                                 marginTop: 2,
@@ -307,7 +307,7 @@ const PromptVersionPanelContent: React.FC = () => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             padding: 4,
                         }}
@@ -317,7 +317,7 @@ const PromptVersionPanelContent: React.FC = () => {
                 </div>
             ))}
             {prompts.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 32, color: '#64748b', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--slate-500)', fontSize: 13 }}>
                     <History size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                     <p>No prompts tracked yet.</p>
                 </div>
@@ -329,7 +329,7 @@ const PromptVersionPanelContent: React.FC = () => {
 const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 10px',
-    background: '#0f172a',
+    background: 'var(--slate-900)',
     border: '1px solid #334155',
     borderRadius: 6,
     color: '#fff',

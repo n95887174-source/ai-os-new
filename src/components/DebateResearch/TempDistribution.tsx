@@ -7,10 +7,10 @@ interface Props {
 
 const TempDistribution: React.FC<Props> = ({ agents }) => {
     const buckets = [
-        { label: '0-0.2', min: 0, max: 0.2, agents: [] as string[], color: '#3b82f6' },
-        { label: '0.2-0.4', min: 0.2, max: 0.4, agents: [] as string[], color: '#10b981' },
-        { label: '0.4-0.6', min: 0.4, max: 0.6, agents: [] as string[], color: '#f59e0b' },
-        { label: '0.6+', min: 0.6, max: 1, agents: [] as string[], color: '#ef4444' },
+        { label: '0-0.2', min: 0, max: 0.2, agents: [] as string[], color: 'var(--accent)' },
+        { label: '0.2-0.4', min: 0.2, max: 0.4, agents: [] as string[], color: 'var(--success)' },
+        { label: '0.4-0.6', min: 0.4, max: 0.6, agents: [] as string[], color: 'var(--warning)' },
+        { label: '0.6+', min: 0.6, max: 1, agents: [] as string[], color: 'var(--error)' },
     ];
     for (const a of agents) {
         const b =
@@ -30,7 +30,7 @@ const TempDistribution: React.FC<Props> = ({ agents }) => {
                 style={{
                     fontSize: '0.7rem',
                     fontWeight: 700,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginBottom: '0.35rem',
                     display: 'flex',
                     alignItems: 'center',

@@ -70,7 +70,7 @@ const CriticalAlertBanner: React.FC<CriticalAlertBannerProps> = ({
                             padding: '0.6rem 1rem',
                             borderRadius: 10,
                             border: '1px solid rgba(239,68,68,0.3)',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             color: '#fca5a5',
                             cursor: 'pointer',
                             fontWeight: 700,

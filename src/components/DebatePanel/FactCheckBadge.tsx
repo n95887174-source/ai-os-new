@@ -11,37 +11,37 @@ const VERDICT_CONFIG: Record<
 > = {
     verified: {
         icon: <CheckCircle2 size={12} />,
-        color: '#10b981',
+        color: 'var(--success)',
         bg: 'rgba(16,185,129,0.12)',
         label: 'Verified',
     },
     disputed: {
         icon: <AlertTriangle size={12} />,
-        color: '#f59e0b',
+        color: 'var(--warning)',
         bg: 'rgba(245,158,11,0.12)',
         label: 'Disputed',
     },
     false: {
         icon: <XCircle size={12} />,
-        color: '#ef4444',
+        color: 'var(--error)',
         bg: 'rgba(239,68,68,0.12)',
         label: 'False',
     },
     no_evidence: {
         icon: <HelpCircle size={12} />,
-        color: '#64748b',
+        color: 'var(--slate-500)',
         bg: 'rgba(100,116,139,0.12)',
         label: 'Unverified',
     },
     pending: {
         icon: <Loader2 size={12} className="provider-spin" />,
-        color: '#8b5cf6',
+        color: 'var(--purple)',
         bg: 'rgba(139,92,246,0.12)',
         label: 'Checking...',
     },
     error: {
         icon: <AlertTriangle size={12} />,
-        color: '#ef4444',
+        color: 'var(--error)',
         bg: 'rgba(239,68,68,0.12)',
         label: 'Error',
     },
@@ -155,7 +155,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
                             style={{
                                 fontSize: 11,
                                 fontWeight: 600,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 marginBottom: 6,
                             }}
                         >
@@ -197,7 +197,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
                                         <span
                                             style={{
                                                 fontSize: 9,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 marginLeft: 'auto',
                                             }}
                                         >
@@ -205,7 +205,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
                                         </span>
                                     </div>
                                     <div
-                                        style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.3 }}
+                                        style={{ fontSize: 10, color: 'var(--slate-400)', lineHeight: 1.3 }}
                                     >
                                         {r.claim.length > 80
                                             ? r.claim.slice(0, 80) + '...'
@@ -215,7 +215,7 @@ export const FactCheckBadge: React.FC<FactCheckBadgeProps> = ({ argumentId }) =>
                                         <div
                                             style={{
                                                 fontSize: 9,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 marginTop: 2,
                                                 fontStyle: 'italic',
                                             }}

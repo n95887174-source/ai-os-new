@@ -14,13 +14,13 @@ import { useNow } from '../../hooks/useNow';
 import { eventBus } from '../../kernel/instances';
 import { storageAdapter } from '../../kernel/instances';
 import {
-    btnEventControl,
     buttonGroupPill,
     flex1Min0,
     flexAlignCenterGap2,
     posRelative,
     textSecondaryXs,
 } from '../../styles/common';
+import { Button } from '../Common';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
 
 let eventIdCounter = 0;
@@ -212,7 +212,7 @@ const EventsTimeline: React.FC = () => {
                     padding: 16,
                 }}
             >
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                     <p style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                         No events yet
                     </p>
@@ -238,7 +238,7 @@ const EventsTimeline: React.FC = () => {
                 <div style={flexAlignCenterGap2}>
                     <Terminal size={20} color="#a855f7" />
                     <h2
-                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}
+                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}
                     >
                         Events Timeline
                     </h2>
@@ -260,7 +260,7 @@ const EventsTimeline: React.FC = () => {
                                 left: 10,
                                 top: '50%',
                                 transform: 'translateY(-50%)',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 pointerEvents: 'none',
                             }}
                         />
@@ -274,7 +274,7 @@ const EventsTimeline: React.FC = () => {
                                 borderRadius: 8,
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 background: 'rgba(0,0,0,0.3)',
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 fontSize: '0.75rem',
                                 width: 160,
                                 outline: 'none',
@@ -332,10 +332,11 @@ const EventsTimeline: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <button
+                    <Button
+                        variant="neutral"
+                        size="sm"
                         onClick={() => setIsPaused(!isPaused)}
                         style={{
-                            ...btnEventControl,
                             border: `1px solid ${isPaused ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}`,
                             background: isPaused ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.3)',
                             color: isPaused ? '#f59e0b' : '#94a3b8',
@@ -343,18 +344,19 @@ const EventsTimeline: React.FC = () => {
                     >
                         {isPaused ? <Zap size={12} /> : <Activity size={12} />}{' '}
                         {isPaused ? 'PAUSED' : 'LIVE'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="neutral"
+                        size="sm"
                         onClick={clearEvents}
                         style={{
-                            ...btnEventControl,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                         }}
                     >
                         <Trash2 size={12} /> Clear
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -363,7 +365,7 @@ const EventsTimeline: React.FC = () => {
                 style={{
                     flex: 1,
                     overflowY: 'auto',
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     borderRadius: 16,
                     border: '1px solid rgba(255,255,255,0.05)',
                     padding: '1.5rem',
@@ -395,14 +397,14 @@ const EventsTimeline: React.FC = () => {
                                             style={{
                                                 fontSize: '0.7rem',
                                                 fontWeight: 800,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
                                             }}
                                         >
                                             {groupName}
                                         </span>
-                                        <span style={{ fontSize: '0.6rem', color: '#475569' }}>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-600)' }}>
                                             ({groupEvents.length})
                                         </span>
                                         <div
@@ -480,7 +482,7 @@ const EventsTimeline: React.FC = () => {
                                                     <span
                                                         style={{
                                                             fontSize: '0.65rem',
-                                                            color: '#475569',
+                                                            color: 'var(--slate-600)',
                                                             fontFamily: 'monospace',
                                                             flexShrink: 0,
                                                         }}
@@ -490,7 +492,7 @@ const EventsTimeline: React.FC = () => {
                                                     <span
                                                         style={{
                                                             fontSize: '0.8rem',
-                                                            color: '#e2e8f0',
+                                                            color: 'var(--slate-200)',
                                                             fontWeight: 700,
                                                         }}
                                                     >
@@ -510,7 +512,7 @@ const EventsTimeline: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontSize: '0.75rem',
-                                                        color: '#94a3b8',
+                                                        color: 'var(--slate-400)',
                                                         lineHeight: 1.5,
                                                         wordBreak: 'break-word',
                                                         marginLeft: '0.5rem',
@@ -533,7 +535,7 @@ const EventsTimeline: React.FC = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '200px',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             gap: '1rem',
                         }}
                     >

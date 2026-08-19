@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 padding: '0.25rem',
                                 marginRight: '0.5rem',
@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: '0.5rem',
                                 marginLeft: 'auto',
@@ -215,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         <ChevronDown
                                             size={14}
                                             style={{
-                                                color: '#475569',
+                                                color: 'var(--slate-600)',
                                                 transition: 'transform 0.2s',
                                             }}
                                         />

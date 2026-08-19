@@ -67,7 +67,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = memo(
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 cursor: 'pointer',
                                 padding: 4,
                             }}
@@ -86,7 +86,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = memo(
                             background: 'rgba(245,158,11,0.08)',
                             border: '1px solid rgba(245,158,11,0.15)',
                             fontSize: '0.8rem',
-                            color: '#fbbf24',
+                            color: 'var(--warning)',
                         }}
                     >
                         {b.note}
@@ -95,7 +95,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = memo(
                 <div
                     style={{
                         marginTop: '0.5rem',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         lineHeight: 1.5,
                         maxHeight: 120,
@@ -113,8 +113,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = memo(
                                 style={{
                                     padding: '0.1rem 0.4rem',
                                     borderRadius: 8,
-                                    background: 'rgba(139,92,246,0.1)',
-                                    color: '#a78bfa',
+                                    background: 'var(--purple-tint)',
+                                    color: 'var(--purple-muted)',
                                     fontSize: '0.65rem',
                                 }}
                             >
@@ -127,7 +127,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = memo(
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.7rem',
                         }}
                     >

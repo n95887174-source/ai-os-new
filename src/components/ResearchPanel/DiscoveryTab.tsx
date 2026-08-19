@@ -38,7 +38,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
             />
             {data ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate-300)' }}>
                         Topics
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -61,7 +61,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                             style={{
                                                 fontSize: '0.78rem',
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {t.name}
@@ -82,7 +82,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                     <div
                                         style={{
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginTop: 2,
                                         }}
                                     >
@@ -94,12 +94,12 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                         style={{
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                         }}
                                     >
                                         {t.frequency}
                                     </div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         mentions
                                     </div>
                                 </div>
@@ -112,7 +112,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                 style={{
                                     fontSize: '0.85rem',
                                     fontWeight: 600,
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     marginTop: 8,
                                 }}
                             >
@@ -126,7 +126,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                             padding: '4px 10px',
                                             borderRadius: 6,
                                             fontSize: '0.72rem',
-                                            background: 'rgba(168,85,247,0.1)',
+                                            background: 'var(--purple-tint)',
                                             color: '#c4b5fd',
                                             border: '1px solid rgba(168,85,247,0.2)',
                                         }}
@@ -141,7 +141,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                         style={{
                             fontSize: '0.85rem',
                             fontWeight: 600,
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             marginTop: 4,
                         }}
                     >
@@ -156,7 +156,7 @@ export const DiscoveryTab: React.FC<Props> = ({ engine }) => {
                                 background: 'rgba(59,130,246,0.05)',
                                 border: '1px solid rgba(59,130,246,0.1)',
                                 fontSize: '0.72rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             <span style={{ color: '#60a5fa' }}>⟫</span> {r.reason}

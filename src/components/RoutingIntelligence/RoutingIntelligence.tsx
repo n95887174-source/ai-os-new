@@ -9,7 +9,8 @@ import ABTestPanel from './ABTestPanel';
 import DecisionTreeTab from './DecisionTreeTab';
 import HistoryTab from './HistoryTab';
 import AdvancedTab from './AdvancedTab';
-import { flexCenterGap4, tabBase } from '../../styles/common';
+import { flexCenterGap4 } from '../../styles/common';
+import { Button } from '../../components/Common';
 
 const RoutingIntelligence: React.FC = () => {
     const [selected, setSelected] = useState<RouterDecision | null>(null);
@@ -193,12 +194,18 @@ const RoutingIntelligence: React.FC = () => {
                 }}
             >
                 <div style={flexCenterGap4}>
-                    <GitBranch size={28} style={{ color: '#8b5cf6' }} />
+                    <GitBranch size={28} style={{ color: 'var(--purple)' }} />
                     <div>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div
+                            style={{
+                                fontSize: '1.3rem',
+                                fontWeight: 800,
+                                color: 'var(--slate-50)',
+                            }}
+                        >
                             {t('routing.title')}
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                             {t('routing.subtitle')}
                         </div>
                     </div>
@@ -212,48 +219,48 @@ const RoutingIntelligence: React.FC = () => {
                         borderRadius: 12,
                     }}
                 >
-                    <button
+                    <Button
+                        variant="ghost"
                         onClick={() => setView('history')}
                         style={{
-                            ...tabBase,
                             background: view === 'history' ? 'rgba(139,92,246,0.2)' : 'transparent',
                             color: view === 'history' ? '#f8fafc' : '#64748b',
                         }}
                     >
                         <Activity size={16} /> {t('routing.tab.history')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => setView('decision-tree')}
                         style={{
-                            ...tabBase,
                             background:
                                 view === 'decision-tree' ? 'rgba(139,92,246,0.2)' : 'transparent',
                             color: view === 'decision-tree' ? '#f8fafc' : '#64748b',
                         }}
                     >
                         <GitBranch size={16} /> {t('routing.tab.decision_tree')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => setView('advanced')}
                         style={{
-                            ...tabBase,
                             background:
                                 view === 'advanced' ? 'rgba(139,92,246,0.2)' : 'transparent',
                             color: view === 'advanced' ? '#f8fafc' : '#64748b',
                         }}
                     >
                         <Settings2 size={16} /> {t('routing.tab.advanced')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => setView('ab-test')}
                         style={{
-                            ...tabBase,
                             background: view === 'ab-test' ? 'rgba(139,92,246,0.2)' : 'transparent',
                             color: view === 'ab-test' ? '#f8fafc' : '#64748b',
                         }}
                     >
                         <FlaskConical size={16} /> A/B Test
-                    </button>
+                    </Button>
                 </div>
             </div>
 

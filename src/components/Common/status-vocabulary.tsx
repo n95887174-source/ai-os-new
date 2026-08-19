@@ -116,6 +116,8 @@ interface BadgeProps {
     status: string;
     label?: string;
     size?: 'sm' | 'md' | 'lg';
+    color?: string;
+    icon?: React.ReactNode;
     style?: React.CSSProperties;
 }
 
@@ -125,8 +127,8 @@ const SIZE_MAP = {
     lg: { padding: '0.4rem 0.8rem', fontSize: '0.7rem' },
 };
 
-export function StatusBadge({ status, label, size = 'md', style }: BadgeProps) {
-    const color = getStatusColor(status);
+export function StatusBadge({ status, label, size = 'md', color, icon, style }: BadgeProps) {
+    const resolvedColor = color ?? getStatusColor(status);
     const s = SIZE_MAP[size];
     return (
         <span
@@ -140,12 +142,13 @@ export function StatusBadge({ status, label, size = 'md', style }: BadgeProps) {
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '0.03em',
-                background: `${color}15`,
-                color,
-                border: `1px solid ${color}30`,
+                background: `${resolvedColor}15`,
+                color: resolvedColor,
+                border: `1px solid ${resolvedColor}30`,
                 ...style,
             }}
         >
+            {icon}
             {label ?? status}
         </span>
     );

@@ -79,7 +79,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, actions, onClose
                     top: adjustedY,
                     zIndex: 9999,
                     minWidth: 180,
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 10,
                     padding: '0.35rem',
@@ -155,7 +155,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, actions, onClose
                                 <span
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginLeft: 12,
                                     }}
                                 >

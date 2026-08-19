@@ -41,6 +41,7 @@ export const registerPhase20: Phase = ({ register }) => {
                     c.get<IAgentResolver>('agentService'),
                 ),
                 c.get<DirectorRepository>('directorRepository'),
+                c.get<IEventBus>('eventBus'),
             ),
     );
 };

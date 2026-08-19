@@ -71,7 +71,7 @@ export const PrimitiveCard: React.FC<PrimitiveCardProps> = ({
                     </button>
                     <button
                         onClick={() => onRemove(index)}
-                        style={{ ...s.iconBtn, color: '#ef4444' }}
+                        style={{ ...s.iconBtn, color: 'var(--error)' }}
                     >
                         <X size={12} />
                     </button>
@@ -79,31 +79,31 @@ export const PrimitiveCard: React.FC<PrimitiveCardProps> = ({
             </div>
             <div style={s.primitiveLabel}>{p.label || p.id}</div>
             {p.type === 'debate_graph' && (
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: 'var(--slate-400)', marginTop: 2 }}>
                     {(p as DebateGraphPrimitive).agents?.length ?? 0} agents ·{' '}
                     {(p as DebateGraphPrimitive).edges?.length ?? 0} edges ·{' '}
                     {(p as DebateGraphPrimitive).maxRounds ?? 4} rounds
                 </div>
             )}
             {p.type === 'critic_loop' && (
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: 'var(--slate-400)', marginTop: 2 }}>
                     {(p as CriticLoopPrimitive).maxIterations} iterations ·{' '}
                     {(p as CriticLoopPrimitive).stopWhen}
                 </div>
             )}
             {p.type === 'voting' && (
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: 'var(--slate-400)', marginTop: 2 }}>
                     {(p as VotingPrimitive).mechanism} ·{' '}
                     {(p as VotingPrimitive).voters?.length ?? 0} voters
                 </div>
             )}
             {p.type === 'peer_review' && (
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: 'var(--slate-400)', marginTop: 2 }}>
                     {(p as PeerReviewPrimitive).criteria?.join(', ') ?? ''}
                 </div>
             )}
             {p.type === 'sequence' && (
-                <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
+                <div style={{ fontSize: 9, color: 'var(--slate-400)', marginTop: 2 }}>
                     {(p as SequencePrimitive).steps?.length ?? 0} steps
                 </div>
             )}

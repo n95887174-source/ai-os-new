@@ -124,7 +124,7 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                     style={{
                         fontSize: '0.55rem',
                         fontWeight: 700,
-                        color: '#22c55e',
+                        color: 'var(--success)',
                         background: 'rgba(34, 197, 94, 0.15)',
                         border: '1px solid rgba(34, 197, 94, 0.3)',
                         borderRadius: 4,
@@ -153,7 +153,7 @@ export const SpeakerNode: React.FC<Props> = ({ node, avatar, avatarCSS, isActive
                 {displayName}
             </div>
 
-            <div style={{ fontSize: '0.6rem', color: '#475569', textTransform: 'capitalize' }}>
+            <div style={{ fontSize: '0.6rem', color: 'var(--slate-600)', textTransform: 'capitalize' }}>
                 {node.role}
             </div>
 

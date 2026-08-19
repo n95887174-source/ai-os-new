@@ -12,7 +12,7 @@ export const StatCard: React.FC<{ label: string; value: string; color: string }>
             textAlign: 'center',
         }}
     >
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: '0.25rem' }}>
             {label}
         </div>
         <div style={{ fontSize: '1.3rem', fontWeight: 800, color }}>{value}</div>

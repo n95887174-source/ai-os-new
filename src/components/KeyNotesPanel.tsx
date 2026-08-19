@@ -151,7 +151,7 @@ const KeyNotesPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <Loader2 size={20} className="animate-spin" />
@@ -170,12 +170,12 @@ const KeyNotesPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <StickyNote size={26} color="#f59e0b" /> {t('key_notes.title')}
                 </h2>
-                <p style={{ color: '#94a3b8' }}>{t('key_notes.no_keys')}</p>
+                <p style={{ color: 'var(--slate-400)' }}>{t('key_notes.no_keys')}</p>
             </div>
         );
     }
@@ -202,12 +202,12 @@ const KeyNotesPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <StickyNote size={26} color="#f59e0b" /> {t('key_notes.title')}
                 </h2>
-                <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                     {t('key_notes.subtitle')}
                 </p>
             </div>
@@ -266,7 +266,7 @@ const KeyNotesPanel: React.FC = () => {
                         <div style={{ flex: 1, position: 'relative' }}>
                             <Search
                                 size={14}
-                                style={{ position: 'absolute', left: 8, top: 8, color: '#94a3b8' }}
+                                style={{ position: 'absolute', left: 8, top: 8, color: 'var(--slate-400)' }}
                             />
                             <input
                                 value={search}
@@ -278,7 +278,7 @@ const KeyNotesPanel: React.FC = () => {
                                     borderRadius: 6,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                 }}
                             />
@@ -290,7 +290,7 @@ const KeyNotesPanel: React.FC = () => {
                                     padding: '0.2rem 0.6rem',
                                     borderRadius: 12,
                                     border: '1px solid #ef4444',
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     color: '#fca5a5',
                                     cursor: 'pointer',
                                     fontSize: '0.7rem',
@@ -316,7 +316,7 @@ const KeyNotesPanel: React.FC = () => {
                                             borderRadius: 10,
                                             border: '1px solid rgba(245,158,11,0.3)',
                                             background: 'rgba(245,158,11,0.05)',
-                                            color: '#fbbf24',
+                                            color: 'var(--warning)',
                                             cursor: 'pointer',
                                             fontSize: '0.65rem',
                                         }}
@@ -347,7 +347,7 @@ const KeyNotesPanel: React.FC = () => {
                             ))}
                         </AnimatePresence>
                         {filteredNotes.length === 0 && (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                                 {t('key_notes.no_notes')}
                             </div>
                         )}

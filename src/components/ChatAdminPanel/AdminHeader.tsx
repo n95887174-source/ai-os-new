@@ -18,12 +18,12 @@ const AdminHeader: React.FC = () => (
                     display: 'flex',
                     alignItems: 'center',
                     gap: 16,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                 }}
             >
                 <LayoutDashboard size={36} color="#3b82f6" /> Conversation History Admin
             </h2>
-            <p style={{ color: '#94a3b8', margin: 0, fontSize: '1rem' }}>
+            <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '1rem' }}>
                 Manage all active threads, review past cognitive workflows, and clear agent memory.
             </p>
         </div>

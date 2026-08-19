@@ -98,7 +98,7 @@ const SessionTable: React.FC<SessionTableProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '6rem 0',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     gap: '1.5rem',
                 }}
             >

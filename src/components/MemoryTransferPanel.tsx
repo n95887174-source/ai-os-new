@@ -77,7 +77,7 @@ const MemoryTransferPanelContent: React.FC = () => {
             >
                 <Upload size={20} color="#3b82f6" /> Memory Export/Import
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Export and import memories across instances
             </p>
 
@@ -102,7 +102,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                     style={{
                         padding: 16,
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         border: '1px solid rgba(255,255,255,0.06)',
                     }}
                 >
@@ -111,7 +111,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             margin: '0 0 12px',
                             fontSize: 14,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
@@ -123,7 +123,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                         <label
                             style={{
                                 fontSize: 12,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: 6,
                                 display: 'block',
                             }}
@@ -160,7 +160,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                         <label
                             style={{
                                 fontSize: 12,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: 6,
                                 display: 'block',
                             }}
@@ -203,7 +203,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             fontSize: 13,
                             fontWeight: 600,
                             background: 'rgba(16,185,129,0.2)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             opacity: selectedSections.length === 0 ? 0.5 : 1,
                         }}
                     >
@@ -215,7 +215,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                     style={{
                         padding: 16,
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         border: '1px solid rgba(255,255,255,0.06)',
                     }}
                 >
@@ -224,7 +224,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             margin: '0 0 12px',
                             fontSize: 14,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
@@ -236,7 +236,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                         <label
                             style={{
                                 fontSize: 12,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: 6,
                                 display: 'block',
                             }}
@@ -279,8 +279,8 @@ const MemoryTransferPanelContent: React.FC = () => {
                             padding: 8,
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 12,
                             fontFamily: 'monospace',
                             outline: 'none',
@@ -302,7 +302,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 12,
                                 background: 'rgba(139,92,246,0.15)',
-                                color: '#8b5cf6',
+                                color: 'var(--purple)',
                                 opacity: importData.trim() ? 1 : 0.5,
                             }}
                         >
@@ -321,7 +321,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 12,
                                 background: 'rgba(245,158,11,0.2)',
-                                color: '#f59e0b',
+                                color: 'var(--warning)',
                                 opacity: importData.trim() ? 1 : 0.5,
                             }}
                         >
@@ -334,9 +334,9 @@ const MemoryTransferPanelContent: React.FC = () => {
                                 marginTop: 8,
                                 padding: 8,
                                 borderRadius: 6,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 fontSize: 11,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             Sections: {preview.sections.join(', ')} · Entries: {preview.entries}
@@ -354,7 +354,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Export History ({exports.length})
@@ -365,10 +365,10 @@ const MemoryTransferPanelContent: React.FC = () => {
                             style={{
                                 padding: '8px 10px',
                                 borderRadius: 6,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: '1px solid rgba(255,255,255,0.04)',
                                 fontSize: 11,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: 4,
                             }}
                         >
@@ -383,7 +383,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Import History ({imports.length})
@@ -394,7 +394,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             style={{
                                 padding: '8px 10px',
                                 borderRadius: 6,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: '1px solid rgba(255,255,255,0.04)',
                                 fontSize: 11,
                                 marginBottom: 4,
@@ -407,7 +407,7 @@ const MemoryTransferPanelContent: React.FC = () => {
                             >
                                 {imp.status}
                             </span>
-                            <span style={{ color: '#64748b' }}>
+                            <span style={{ color: 'var(--slate-500)' }}>
                                 {' '}
                                 · {imp.entriesCount} entries ·{' '}
                                 {new Date(imp.createdAt).toLocaleString()}

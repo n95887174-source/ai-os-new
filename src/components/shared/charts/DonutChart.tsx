@@ -82,10 +82,10 @@ export function DonutChart({
                         right: 8,
                         padding: '4px 8px',
                         borderRadius: 8,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         fontSize: '0.75rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         pointerEvents: 'none',
                         whiteSpace: 'nowrap',
                     }}

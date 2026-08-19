@@ -186,7 +186,7 @@ const ExperimentalPanel: React.FC = () => {
                                 {t('experimental.planned')}
                             </span>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 4 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--slate-300)', marginTop: 4 }}>
                             {f.blurb}
                         </div>
                     </div>

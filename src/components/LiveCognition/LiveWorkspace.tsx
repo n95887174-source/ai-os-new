@@ -112,19 +112,19 @@ const LiveWorkspace: React.FC = () => {
             label: 'Throughput',
             value: health?.vitals?.throughput ?? 0,
             unit: 'req/min',
-            color: '#f59e0b',
+            color: 'var(--warning)',
         },
         {
             label: 'Collective Latency',
             value: avgLatency().toString(),
             unit: 'ms',
-            color: '#3b82f6',
+            color: 'var(--accent)',
         },
         {
             label: 'Total Requests',
             value: health?.vitals?.totalRequests ?? 0,
             unit: 'req',
-            color: '#10b981',
+            color: 'var(--success)',
         },
         {
             label: 'Total Tokens',
@@ -193,7 +193,7 @@ const LiveWorkspace: React.FC = () => {
                         exit={{ opacity: 0, y: -10 }}
                         style={{
                             padding: '0.6rem 1rem',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 10,
                             color: '#fca5a5',
@@ -280,7 +280,7 @@ const LiveWorkspace: React.FC = () => {
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#10b981',
+                                    color: 'var(--success)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 4,
@@ -293,7 +293,7 @@ const LiveWorkspace: React.FC = () => {
                                         width: 6,
                                         height: 6,
                                         borderRadius: '50%',
-                                        background: '#10b981',
+                                        background: 'var(--success)',
                                     }}
                                 />
                                 LIVE TOPOLOGY

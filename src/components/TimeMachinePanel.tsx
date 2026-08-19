@@ -80,7 +80,7 @@ const TimeMachinePanelContent: React.FC = () => {
                     >
                         <Clock size={20} color="#8b5cf6" /> Time Machine
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         System snapshots — capture, compare, restore
                     </p>
                 </div>
@@ -98,7 +98,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 12,
                                 background: 'rgba(139,92,246,0.2)',
-                                color: '#8b5cf6',
+                                color: 'var(--purple)',
                             }}
                         >
                             <GitCompare size={14} /> Compare
@@ -131,7 +131,7 @@ const TimeMachinePanelContent: React.FC = () => {
             {showCreate && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -147,8 +147,8 @@ const TimeMachinePanelContent: React.FC = () => {
                             padding: '8px 10px',
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 13,
                             outline: 'none',
                             marginBottom: 12,
@@ -190,7 +190,7 @@ const TimeMachinePanelContent: React.FC = () => {
                             border: 'none',
                             cursor: 'pointer',
                             background: 'rgba(139,92,246,0.2)',
-                            color: '#8b5cf6',
+                            color: 'var(--purple)',
                             fontSize: 13,
                             fontWeight: 600,
                             opacity: label.trim() ? 1 : 0.5,
@@ -204,7 +204,7 @@ const TimeMachinePanelContent: React.FC = () => {
             {diff && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(139,92,246,0.2)',
                         padding: 16,
@@ -218,7 +218,7 @@ const TimeMachinePanelContent: React.FC = () => {
                             marginBottom: 8,
                         }}
                     >
-                        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--slate-200)' }}>
                             Comparison
                         </h3>
                         <button
@@ -233,7 +233,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                 cursor: 'pointer',
                                 fontSize: 10,
                                 background: 'rgba(239,68,68,0.15)',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                             }}
                         >
                             Close
@@ -248,13 +248,13 @@ const TimeMachinePanelContent: React.FC = () => {
                                 fontSize: 11,
                             }}
                         >
-                            <div style={{ fontWeight: 600, color: '#94a3b8', marginBottom: 2 }}>
+                            <div style={{ fontWeight: 600, color: 'var(--slate-400)', marginBottom: 2 }}>
                                 {d.key}
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                                <span style={{ color: '#10b981' }}>{d.before}</span>
-                                <span style={{ color: '#475569' }}>→</span>
-                                <span style={{ color: '#3b82f6' }}>{d.after}</span>
+                                <span style={{ color: 'var(--success)' }}>{d.before}</span>
+                                <span style={{ color: 'var(--slate-600)' }}>→</span>
+                                <span style={{ color: 'var(--accent)' }}>{d.after}</span>
                             </div>
                         </div>
                     ))}
@@ -293,7 +293,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                     }}
                                 >
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 14, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 14, color: 'var(--slate-200)' }}
                                     >
                                         {s.label}
                                     </span>
@@ -311,7 +311,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                         {s.scope}
                                     </span>
                                     {compare.includes(s.id) && (
-                                        <span style={{ fontSize: 10, color: '#8b5cf6' }}>
+                                        <span style={{ fontSize: 10, color: 'var(--purple)' }}>
                                             Selected
                                         </span>
                                     )}
@@ -319,7 +319,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         display: 'flex',
                                         gap: 12,
                                     }}
@@ -328,7 +328,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                     <span>{new Date(s.timestamp).toLocaleString()}</span>
                                 </div>
                                 {s.changes.length > 0 && (
-                                    <div style={{ marginTop: 4, fontSize: 11, color: '#64748b' }}>
+                                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--slate-500)' }}>
                                         {s.changes.slice(0, 2).map((c, i) => (
                                             <div key={`${s.timestamp}-${i}`}>• {c}</div>
                                         ))}
@@ -348,7 +348,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 10,
                                         background: 'rgba(16,185,129,0.15)',
-                                        color: '#10b981',
+                                        color: 'var(--success)',
                                     }}
                                 >
                                     <RotateCcw size={10} /> Restore
@@ -362,7 +362,7 @@ const TimeMachinePanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 10,
                                         background: 'rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                     }}
                                 >
                                     <Trash2 size={10} />

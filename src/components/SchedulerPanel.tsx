@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Calendar, Info, Clock, Plus, RefreshCw, ListTodo } from 'lucide-react';
 import { getAllSettings, setSetting } from '../kernel/instances';
 import type { QualityTechnique } from '../kernel/contracts/debate-quality-settings';
+import { useTranslation } from '../i18n/useTranslation';
 
 const TECHNIQUE_ID = 'scheduler';
 
@@ -101,6 +102,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = (
 );
 
 export const SchedulerPanel: React.FC = () => {
+    const { t, lang } = useTranslation();
     const [settings, setSettingsState] = useState(() => getAllSettings());
     const enabled = settings[TECHNIQUE_ID] ?? TECHNIQUE.defaultEnabled;
 
@@ -124,8 +126,8 @@ export const SchedulerPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                     <Calendar size={22} color="#3b82f6" />
-                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>
-                        {TECHNIQUE.nameRu}
+                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--slate-200)' }}>
+                        {lang === 'ru' ? TECHNIQUE.nameRu : TECHNIQUE.name}
                     </h2>
                     <span
                         style={{
@@ -133,7 +135,7 @@ export const SchedulerPanel: React.FC = () => {
                             padding: '2px 8px',
                             borderRadius: 6,
                             background: 'rgba(59,130,246,0.15)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             fontWeight: 600,
                         }}
                     >
@@ -148,17 +150,17 @@ export const SchedulerPanel: React.FC = () => {
                             fontWeight: 500,
                         }}
                     >
-                        {enabled ? 'Активно' : 'Отключено'}
+                        {enabled ? t('scheduler.active') : t('scheduler.disabled')}
                     </span>
                 </div>
-                <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
-                    {TECHNIQUE.descriptionRu}
+                <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--slate-400)', lineHeight: 1.5 }}>
+                    {lang === 'ru' ? TECHNIQUE.descriptionRu : TECHNIQUE.description}
                 </p>
                 <p
                     style={{
                         margin: '4px 0 0 0',
                         fontSize: 11,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontStyle: 'italic',
                     }}
                 >
@@ -178,26 +180,26 @@ export const SchedulerPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <Info size={18} color="#60a5fa" />
-                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>
-                        Как это работает
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--slate-200)' }}>
+                        {t('scheduler.how_it_works')}
                     </h3>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                     {[
                         {
                             icon: <Plus size={20} />,
-                            title: 'Создание расписания',
-                            desc: 'Задача создаётся с name, agentId, frequency (daily/weekly/hourly/custom) и cronExpression.',
+                            title: t('scheduler.card.create_title'),
+                            desc: t('scheduler.card.create_desc'),
                         },
                         {
                             icon: <RefreshCw size={20} />,
-                            title: 'Cron-движок',
-                            desc: 'Каждую минуту проверяются due schedules. При совпадении задача запускается через trigger().',
+                            title: t('scheduler.card.engine_title'),
+                            desc: t('scheduler.card.engine_desc'),
                         },
                         {
                             icon: <ListTodo size={20} />,
-                            title: 'Управление',
-                            desc: 'Расписания можно включать/отключать, редактировать, удалять. История запусков отслеживается.',
+                            title: t('scheduler.card.manage_title'),
+                            desc: t('scheduler.card.manage_desc'),
                         },
                     ].map((card, i) => (
                         <div
@@ -214,13 +216,13 @@ export const SchedulerPanel: React.FC = () => {
                                 style={{
                                     fontSize: 13,
                                     fontWeight: 600,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     marginBottom: 4,
                                 }}
                             >
                                 {card.title}
                             </div>
-                            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 12, color: 'var(--slate-400)', lineHeight: 1.5 }}>
                                 {card.desc}
                             </div>
                         </div>
@@ -240,8 +242,8 @@ export const SchedulerPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <Clock size={18} color="#60a5fa" />
-                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>
-                        Демо: расписания
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--slate-200)' }}>
+                        {t('scheduler.demo_title')}
                     </h3>
                     <div style={{ flex: 1 }} />
                     <span
@@ -250,11 +252,11 @@ export const SchedulerPanel: React.FC = () => {
                             padding: '2px 8px',
                             borderRadius: 4,
                             background: 'rgba(34,197,94,0.15)',
-                            color: '#22c55e',
+                            color: 'var(--success)',
                             fontWeight: 500,
                         }}
                     >
-                        {SCHEDULES.filter((s) => s.enabled).length} активных
+                        {SCHEDULES.filter((s) => s.enabled).length} {t('scheduler.active_count')}
                     </span>
                 </div>
 
@@ -278,7 +280,7 @@ export const SchedulerPanel: React.FC = () => {
                                     marginBottom: 4,
                                 }}
                             >
-                                <span style={{ fontWeight: 600, fontSize: 12, color: '#e2e8f0' }}>
+                                <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--slate-200)' }}>
                                     {s.name}
                                 </span>
                                 <span
@@ -293,7 +295,7 @@ export const SchedulerPanel: React.FC = () => {
                                 >
                                     {s.frequency}
                                 </span>
-                                <span style={{ fontSize: 10, color: '#64748b' }}>
+                                <span style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                                     {s.cronExpression}
                                 </span>
                                 {!s.enabled && (
@@ -303,18 +305,19 @@ export const SchedulerPanel: React.FC = () => {
                                             padding: '1px 5px',
                                             borderRadius: 3,
                                             background: 'rgba(239,68,68,0.15)',
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             fontWeight: 500,
                                             marginLeft: 'auto',
                                         }}
                                     >
-                                        ОТКЛЮЧЕНО
+                                        {t('scheduler.disabled_badge')}
                                     </span>
                                 )}
                             </div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                                Тип: {s.taskParams.type} | Агент: {s.agentId || 'система'} | След.
-                                запуск: {s.nextRun}
+                            <div style={{ fontSize: 11, color: 'var(--slate-400)' }}>
+                                {t('scheduler.type_label')}: {s.taskParams.type} |{' '}
+                                {t('scheduler.agent_label')}: {s.agentId || t('scheduler.system')} |{' '}
+                                {t('scheduler.next_run_label')}: {s.nextRun}
                             </div>
                         </div>
                     ))}
@@ -328,12 +331,11 @@ export const SchedulerPanel: React.FC = () => {
                     background: 'rgba(59,130,246,0.06)',
                     border: '1px solid rgba(59,130,246,0.15)',
                     fontSize: 12,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textAlign: 'center',
                 }}
             >
-                Scheduler — core сервис. Использует Dexie для персистенции расписаний. Cron-парсер
-                поддерживает стандартные 5-польные выражения.
+                {t('scheduler.footer')}
             </div>
         </div>
     );

@@ -17,7 +17,7 @@ const SocialLeaderboardPanelContent: React.FC = () => (
             >
                 <Trophy size={20} color="#f59e0b" /> Social Leaderboard
             </h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                 Agent rankings by ELO rating — performance, trends, and historical data
             </p>
         </div>

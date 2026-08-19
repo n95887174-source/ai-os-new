@@ -37,7 +37,7 @@ const ChatExportOverlay: React.FC<Props> = ({ onClose, t }) => {
                 style={{
                     width: '90vw',
                     height: '85vh',
-                    background: '#0f172a',
+                    background: 'var(--slate-900)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 16,
                     overflow: 'hidden',
@@ -51,7 +51,7 @@ const ChatExportOverlay: React.FC<Props> = ({ onClose, t }) => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             padding: 8,
                         }}

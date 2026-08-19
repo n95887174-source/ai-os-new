@@ -104,7 +104,7 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                     <div className="debate-sub-label" style={{ fontSize: '0.65rem' }}>
                         {t('debate.feedback_loops') || 'Feedback Loops'}
                     </div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#a78bfa' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--purple-muted)' }}>
                         {metrics.loopCount}
                     </div>
                 </div>
@@ -132,16 +132,16 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                     gap: '0.5rem',
                     marginTop: '0.5rem',
                     fontSize: '0.7rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 <span>
                     {metrics.loopCount + metrics.cascadeCount} systemic (
                     {Math.round(metrics.loopRatio * 100)}%)
                 </span>
-                <span style={{ color: '#475569' }}>|</span>
+                <span style={{ color: 'var(--slate-600)' }}>|</span>
                 <span>{metrics.cascadeCount} cascades</span>
-                <span style={{ color: '#475569' }}>|</span>
+                <span style={{ color: 'var(--slate-600)' }}>|</span>
                 <span>
                     {metrics.coveredDimensions.length}/{DIMENSION_REGEX.length} dimensions
                 </span>
@@ -157,7 +157,7 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                         fontSize: '0.7rem',
                     }}
                 >
-                    <span style={{ color: '#64748b', marginRight: '0.25rem' }}>Missing:</span>
+                    <span style={{ color: 'var(--slate-500)', marginRight: '0.25rem' }}>Missing:</span>
                     {metrics.missingDimensions.map((d) => (
                         <span key={d} style={badgeAmber}>
                             {d}
@@ -192,7 +192,7 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                     <div
                         style={{
                             fontSize: '0.7rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: '0.5rem',
                             fontWeight: 600,
                         }}
@@ -221,7 +221,7 @@ const CausalAnalysisSection: React.FC<CausalAnalysisSectionProps> = ({ args, par
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                         }}
                                     >
                                         <span>{label}</span>

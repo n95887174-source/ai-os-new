@@ -100,9 +100,9 @@ export function buildEdges(nodes: GraphNodeData[]): EdgeData[] {
 export const GLOW_COLORS = ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#ec4899'];
 
 export const LEGEND_ITEMS = [
-    { label: 'Context', color: '#10b981' },
-    { label: 'Decision', color: '#3b82f6' },
+    { label: 'Context', color: 'var(--success)' },
+    { label: 'Decision', color: 'var(--accent)' },
     { label: 'Code', color: '#a855f7' },
-    { label: 'Response', color: '#f59e0b' },
+    { label: 'Response', color: 'var(--warning)' },
     { label: 'Query', color: '#ec4899' },
 ];

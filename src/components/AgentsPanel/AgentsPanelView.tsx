@@ -146,7 +146,7 @@ const AgentsPanelView: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(139,92,246,0.3)',
                             background: 'rgba(139,92,246,0.08)',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             fontWeight: 600,
                             fontSize: '0.85rem',
                             cursor: 'pointer',

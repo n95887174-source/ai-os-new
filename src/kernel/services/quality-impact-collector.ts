@@ -1,8 +1,8 @@
 import type { ILifecycle } from '../contracts/lifecycle';
+import type { IEventBus } from '../types/interfaces';
 import { rootLogger } from './logger-service';
 import { BucketStorageAdapter } from './storage-adapter';
 import { getTechniques } from './debate-runtime/quality-settings-store';
-import { eventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import type {
     QualityImpactEvent,
@@ -103,11 +103,16 @@ function findBestRoundRange(scores: number[], rounds: number[]): [number, number
 }
 
 export class QualityImpactCollector implements IQualityImpactCollector, ILifecycle {
+    private readonly _eventBus: IEventBus | null;
     private sessionBuffers = new Map<string, QualityImpactEvent[]>();
     private aggregatedMetrics = new Map<string, TechniqueImpactMetrics>();
     private sessionHistory: QualitySessionRecord[] = [];
     private baselineSessions: QualityBaselineRecord[] = [];
     private scoreSnapshots: SessionScoreSnapshot[] = [];
+
+    constructor(eventBus?: IEventBus) {
+        this._eventBus = eventBus ?? null;
+    }
 
     async init(): Promise<void> {
         await this.loadPersistedMetrics();
@@ -138,7 +143,7 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
         buf.push(event);
         // Emit live event for real-time UI indicators
         try {
-            eventBus.emit(EVENTS.DEBATE_QUALITY_TECHNIQUE_APPLIED, {
+            this._eventBus?.emit(EVENTS.DEBATE_QUALITY_TECHNIQUE_APPLIED, {
                 sessionId: event.sessionId,
                 techniqueId: event.techniqueId,
                 eventType: event.eventType,
@@ -311,7 +316,7 @@ export class QualityImpactCollector implements IQualityImpactCollector, ILifecyc
                 (s, m) => s + m.avgJudgeScoreDelta,
                 0,
             );
-            eventBus.emit(EVENTS.DEBATE_QUALITY_IMPACT_COMPUTED, {
+            this._eventBus?.emit(EVENTS.DEBATE_QUALITY_IMPACT_COMPUTED, {
                 sessionId,
                 techniqueCount: techniqueEvents.size,
                 techniqueDelta: totalDelta,

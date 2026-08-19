@@ -12,10 +12,10 @@ import ModuleInfo from '../ModuleInfo';
 import { ToolCard } from './ToolCard';
 import { ToolInspectorPanel } from './ToolInspectorPanel';
 import { safeJsonParse } from '../../kernel/utils/safe-json';
+import { Button } from '../Common';
 import {
     dismissBtnRed,
     errorBannerLg,
-    exportImportBtn,
     flexGap3,
     glassPanelColRounded24,
     pageSubtitleMuted,
@@ -204,20 +204,20 @@ const ToolsPanel: React.FC = () => {
                     <p style={pageSubtitleMuted}>{t('tools.subtitle')}</p>
                 </div>
                 <div style={flexGap3}>
-                    <button
+                    <Button
+                        variant="ghost"
                         onClick={handleExportTools}
-                        style={exportImportBtn}
                         aria-label={t('tools.export_aria')}
                     >
                         <Download size={16} aria-hidden="true" /> {t('common.export')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={() => fileInputRef.current?.click()}
-                        style={exportImportBtn}
                         aria-label={t('tools.import_aria')}
                     >
                         <Upload size={16} aria-hidden="true" /> {t('common.import')}
-                    </button>
+                    </Button>
                     <button
                         onClick={() =>
                             eventBus.emit(EVENTS.NOTIFICATION, {
@@ -348,7 +348,7 @@ const ToolsPanel: React.FC = () => {
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     gap: '1rem',
                                     padding: '4rem 0',
                                 }}

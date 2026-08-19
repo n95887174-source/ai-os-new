@@ -53,7 +53,7 @@ const statRow = (label: string, a: string, b: string, higherBetter = true) => {
                 {a}
             </div>
             <div
-                style={{ fontSize: '0.65rem', color: '#64748b', textAlign: 'center', minWidth: 80 }}
+                style={{ fontSize: '0.65rem', color: 'var(--slate-500)', textAlign: 'center', minWidth: 80 }}
             >
                 {label}
             </div>
@@ -108,7 +108,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.9 }}
                 style={{
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     borderRadius: 16,
                     border: '1px solid rgba(255,255,255,0.1)',
                     width: '100%',
@@ -129,7 +129,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <BarChart3 size={18} color="#3b82f6" />
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--slate-200)' }}>
                             Agent Comparison
                         </span>
                     </div>
@@ -140,7 +140,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: 'none',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                     >
@@ -162,14 +162,14 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         <div style={{ fontWeight: 800, fontSize: '1rem', color: '#60a5fa' }}>
                             {a.name}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{a.role}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>{a.role}</div>
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 700 }}>VS</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--slate-600)', fontWeight: 700 }}>VS</div>
                     <div>
                         <div style={{ fontWeight: 800, fontSize: '1rem', color: '#a855f7' }}>
                             {b.name}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{b.role}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>{b.role}</div>
                     </div>
                 </div>
 
@@ -179,7 +179,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             marginBottom: '0.5rem',
@@ -217,7 +217,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             marginBottom: '0.5rem',
@@ -235,12 +235,12 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                             marginTop: '0.5rem',
                         }}
                     >
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                            <span style={{ color: '#64748b' }}>Provider: </span>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Provider: </span>
                             {a.providerId}
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                            <span style={{ color: '#64748b' }}>Provider: </span>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
+                            <span style={{ color: 'var(--slate-500)' }}>Provider: </span>
                             {b.providerId}
                         </div>
                     </div>
@@ -252,7 +252,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             marginBottom: '0.5rem',
@@ -264,7 +264,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(0,0,0,0.2)',
                                 padding: '0.5rem',
                                 borderRadius: 8,
@@ -280,7 +280,7 @@ export const AgentComparison: React.FC<AgentComparisonProps> = ({ agents, onClos
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(0,0,0,0.2)',
                                 padding: '0.5rem',
                                 borderRadius: 8,

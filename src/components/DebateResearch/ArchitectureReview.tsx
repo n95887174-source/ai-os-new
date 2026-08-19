@@ -139,7 +139,7 @@ const ArchitectureReview: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Zap size={20} color="#a855f7" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('arch_review.title')}
                     </span>
                 </div>
@@ -182,7 +182,7 @@ const ArchitectureReview: React.FC = () => {
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem' }}>
                         {loading ? (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-500)' }}>
                                 <Loader2 size={20} />
                             </div>
                         ) : findings.length === 0 && !scanning ? (
@@ -190,7 +190,7 @@ const ArchitectureReview: React.FC = () => {
                                 style={{
                                     textAlign: 'center',
                                     padding: '3rem',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: '0.85rem',
                                 }}
                             >
@@ -201,7 +201,7 @@ const ArchitectureReview: React.FC = () => {
                                 style={{
                                     textAlign: 'center',
                                     padding: '3rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: 8,

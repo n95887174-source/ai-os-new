@@ -51,7 +51,7 @@ const LiveTerminalSection: React.FC<LiveTerminalSectionProps> = ({ events, onNav
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.85rem',
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     height: '100%',
                     minHeight: 300,
                 }}
@@ -67,7 +67,7 @@ const LiveTerminalSection: React.FC<LiveTerminalSectionProps> = ({ events, onNav
                             fontFamily: 'JetBrains Mono, monospace',
                         }}
                     >
-                        <span style={{ color: '#475569', flexShrink: 0, marginTop: 2 }}>
+                        <span style={{ color: 'var(--slate-600)', flexShrink: 0, marginTop: 2 }}>
                             [{event.time}]
                         </span>
                         <div
@@ -87,7 +87,7 @@ const LiveTerminalSection: React.FC<LiveTerminalSectionProps> = ({ events, onNav
                             </div>
                             <div
                                 style={{
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     opacity: 0.8,
                                     lineHeight: 1.4,
                                     wordBreak: 'break-word',
@@ -106,7 +106,7 @@ const LiveTerminalSection: React.FC<LiveTerminalSectionProps> = ({ events, onNav
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '100%',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                         }}
                     >
                         <Activity size={32} style={{ marginBottom: '1rem', opacity: 0.5 }} />

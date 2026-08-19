@@ -1,7 +1,8 @@
 import { Play, Pause, Square, Loader2 } from 'lucide-react';
 import type { DebateSessionSnapshot } from '../../kernel/instances';
 import { PHASE_COLORS } from './debate-runtime-constants';
-import { buttonSmAction, flexGap2 } from '../../styles/common';
+import { flexGap2 } from '../../styles/common';
+import { Button } from '../Common';
 
 interface SessionDetailHeaderProps {
     selected: DebateSessionSnapshot;
@@ -37,7 +38,7 @@ const SessionDetailHeader: React.FC<SessionDetailHeaderProps> = ({
                 margin: 0,
                 fontSize: '1rem',
                 fontWeight: 700,
-                color: '#e2e8f0',
+                color: 'var(--slate-200)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
@@ -83,29 +84,31 @@ const SessionDetailHeader: React.FC<SessionDetailHeaderProps> = ({
         </h3>
         <div style={flexGap2}>
             {(selected.phase === 'active' || selected.phase === 'deliberating') && (
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onPause}
                     style={{
-                        ...buttonSmAction,
                         background: 'rgba(245,158,11,0.2)',
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                     }}
                 >
                     <Pause size={14} /> {t('debate_runtime.pause')}
-                </button>
+                </Button>
             )}
             {selected.phase === 'created' && (
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onStart}
                     disabled={actionLoading === selected.id}
                     style={{
-                        ...buttonSmAction,
                         cursor: actionLoading === selected.id ? 'not-allowed' : 'pointer',
                         background:
                             actionLoading === selected.id
                                 ? 'rgba(34,197,94,0.3)'
                                 : 'rgba(34,197,94,0.2)',
-                        color: '#22c55e',
+                        color: 'var(--success)',
                     }}
                 >
                     {actionLoading === selected.id ? (
@@ -114,19 +117,20 @@ const SessionDetailHeader: React.FC<SessionDetailHeaderProps> = ({
                         <Play size={14} />
                     )}{' '}
                     {t('debate_runtime.start')}
-                </button>
+                </Button>
             )}
             {['active', 'deliberating', 'paused'].includes(selected.phase) && (
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onCancel}
                     style={{
-                        ...buttonSmAction,
                         background: 'rgba(239,68,68,0.2)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     }}
                 >
                     <Square size={14} /> {t('debate_runtime.cancel')}
-                </button>
+                </Button>
             )}
         </div>
     </div>

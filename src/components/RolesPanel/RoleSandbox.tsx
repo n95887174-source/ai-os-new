@@ -184,12 +184,12 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                             margin: 0,
                                             fontSize: '1rem',
                                             fontWeight: 700,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                         }}
                                     >
                                         Role Testing Sandbox
                                     </h3>
-                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
+                                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                         Test roles with prompts, compare side-by-side
                                     </p>
                                 </div>
@@ -199,7 +199,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     cursor: 'pointer',
                                     padding: 4,
                                 }}
@@ -215,7 +215,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                         display: 'block',
                                         fontSize: '0.8rem',
                                         fontWeight: 600,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: 8,
                                     }}
                                 >
@@ -263,7 +263,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                         display: 'block',
                                         fontSize: '0.8rem',
                                         fontWeight: 600,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: 6,
                                     }}
                                 >
@@ -281,7 +281,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                             borderRadius: 10,
                                             border: '1px solid rgba(100,116,139,0.25)',
                                             background: 'rgba(30,30,50,0.6)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.85rem',
                                             resize: 'vertical',
                                             outline: 'none',
@@ -360,7 +360,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                     borderRadius: 6,
                                                     border: '1px solid rgba(100,116,139,0.25)',
                                                     background: 'rgba(30,30,50,0.6)',
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                     fontSize: '0.75rem',
                                                     outline: 'none',
                                                     width: 200,
@@ -392,7 +392,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                     fontSize: '0.7rem',
                                                     border: 'none',
                                                     background: 'transparent',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     cursor: 'pointer',
                                                 }}
                                             >
@@ -410,7 +410,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                             display: 'block',
                                             fontSize: '0.8rem',
                                             fontWeight: 600,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 8,
                                         }}
                                     >
@@ -461,7 +461,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                             style={{
                                                                 fontWeight: 700,
                                                                 fontSize: '0.85rem',
-                                                                color: '#e2e8f0',
+                                                                color: 'var(--slate-200)',
                                                             }}
                                                         >
                                                             {tc.roleName}
@@ -480,7 +480,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                             display: 'flex',
                                                             gap: 12,
                                                             fontSize: '0.7rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         <span>
@@ -502,7 +502,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                 <div
                                                     style={{
                                                         fontSize: '0.8rem',
-                                                        color: '#cbd5e1',
+                                                        color: 'var(--slate-300)',
                                                         lineHeight: 1.6,
                                                         whiteSpace: 'pre-wrap',
                                                         maxHeight: 200,
@@ -537,7 +537,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                             style={{
                                                 fontSize: '0.75rem',
                                                 fontWeight: 600,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                             }}
                                         >
                                             <BarChart3
@@ -550,7 +550,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                             onClick={() => setHistory([])}
                                             style={{
                                                 fontSize: '0.7rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 background: 'none',
                                                 border: 'none',
                                                 cursor: 'pointer',
@@ -593,7 +593,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                     <span
                                                         style={{
                                                             fontSize: '0.7rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                             whiteSpace: 'nowrap',
                                                         }}
                                                     >
@@ -605,7 +605,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                         style={{
                                                             fontSize: '0.75rem',
                                                             fontWeight: 600,
-                                                            color: '#e2e8f0',
+                                                            color: 'var(--slate-200)',
                                                             whiteSpace: 'nowrap',
                                                         }}
                                                     >
@@ -614,7 +614,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                     <span
                                                         style={{
                                                             fontSize: '0.7rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap',
@@ -643,7 +643,7 @@ export const RoleSandbox: React.FC<RoleSandboxProps> = ({ isOpen, onClose }) => 
                                                     <span
                                                         style={{
                                                             fontSize: '0.65rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         {entry.latencyMs}ms

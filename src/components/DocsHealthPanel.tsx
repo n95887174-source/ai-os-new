@@ -16,7 +16,8 @@ import type { ConsistencyReport, HealingPlan } from '../kernel/instances';
 import { eventBus, EVENTS } from '../kernel/instances';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, button } from '../styles/common';
+import { errorContainer, dismissBtnRed } from '../styles/common';
+import { Button } from './Common';
 import { DOC_FILES } from './DocsHealthPanel/docs-health-constants';
 import { HealthStatCard } from './DocsHealthPanel/HealthStatCard';
 import { BrokenItemsSection } from './DocsHealthPanel/BrokenItemsSection';
@@ -137,31 +138,32 @@ const DocsHealthPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <FileText size={28} color="#22c55e" /> {t('docs_health.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('docs_health.subtitle')}
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
+                    <Button
+                        variant="primary"
                         onClick={handleCheck}
                         disabled={loading}
-                        style={{ ...button, display: 'flex', alignItems: 'center', gap: 6 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                     >
                         {loading ? <Loader2 size={16} /> : <Search size={16} />}
                         {loading ? t('docs_health.checking') : t('docs_health.run_check')}
-                    </button>
+                    </Button>
                     {brokenItems.length > 0 && (
-                        <button
+                        <Button
+                            variant="primary"
                             onClick={handleAutoFix}
                             disabled={healing}
                             style={{
-                                ...button,
-                                background: '#f59e0b',
+                                background: 'var(--warning)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 6,
@@ -169,7 +171,7 @@ const DocsHealthPanel: React.FC = () => {
                         >
                             {healing ? <Loader2 size={16} /> : <Wrench size={16} />}
                             {healing ? t('docs_health.fixing') : t('docs_health.auto_fix')}
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
@@ -195,7 +197,7 @@ const DocsHealthPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '4rem 2rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                         fontStyle: 'italic',
                         border: '1px dashed rgba(255,255,255,0.1)',
@@ -203,7 +205,13 @@ const DocsHealthPanel: React.FC = () => {
                     }}
                 >
                     <Shield size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>
+                    <div
+                        style={{
+                            fontWeight: 600,
+                            marginBottom: '0.5rem',
+                            color: 'var(--slate-400)',
+                        }}
+                    >
                         {t('docs_health.no_report')}
                     </div>
                     <div>{t('docs_health.no_report_desc')}</div>

@@ -72,7 +72,7 @@ const LensEditorModal: React.FC<LensEditorModalProps> = ({ initial, onClose, onS
                     maxWidth: '90vw',
                     maxHeight: '85vh',
                     overflowY: 'auto',
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     borderRadius: 12,
                     border: '1px solid rgba(255,255,255,0.08)',
                     padding: '1.25rem',
@@ -86,7 +86,7 @@ const LensEditorModal: React.FC<LensEditorModalProps> = ({ initial, onClose, onS
                         marginBottom: '1rem',
                     }}
                 >
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {initial ? t('lenses.edit') : t('lenses.new')}
                     </span>
                     <button
@@ -94,7 +94,7 @@ const LensEditorModal: React.FC<LensEditorModalProps> = ({ initial, onClose, onS
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             padding: 4,
                         }}
@@ -188,7 +188,7 @@ const LensEditorModal: React.FC<LensEditorModalProps> = ({ initial, onClose, onS
                                 borderRadius: 7,
                                 border: 'none',
                                 background: CATEGORY_COLORS[lens.category] ?? '#8b5cf6',
-                                color: '#0f172a',
+                                color: 'var(--slate-900)',
                                 fontWeight: 700,
                                 fontSize: '0.8rem',
                                 cursor: 'pointer',
@@ -207,7 +207,7 @@ const LensEditorModal: React.FC<LensEditorModalProps> = ({ initial, onClose, onS
                                 borderRadius: 7,
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 background: 'transparent',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontSize: '0.8rem',
                                 cursor: 'pointer',
                             }}
@@ -227,7 +227,7 @@ const labelStyle: React.CSSProperties = {
     gap: 4,
     fontSize: '0.72rem',
     fontWeight: 600,
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
 };
 
 const inputStyle: React.CSSProperties = {
@@ -235,7 +235,7 @@ const inputStyle: React.CSSProperties = {
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: 6,
     padding: '0.45rem 0.6rem',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.8rem',
     outline: 'none',
     fontFamily: 'inherit',

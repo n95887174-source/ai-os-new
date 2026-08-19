@@ -23,13 +23,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
     return (
         <ModalShell open={open} onClose={onCancel} width={400}>
-            <h3 style={{ margin: 0, color: '#f1f5f9', fontWeight: 600, fontSize: '1rem' }}>
+            <h3 style={{ margin: 0, color: 'var(--slate-100)', fontWeight: 600, fontSize: '1rem' }}>
                 {title}
             </h3>
             <p
                 style={{
                     margin: '0.75rem 0 1.25rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     fontSize: '0.85rem',
                     lineHeight: 1.5,
                 }}
@@ -44,7 +44,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
                     }}

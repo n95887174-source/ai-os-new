@@ -38,7 +38,7 @@ export const ARCH_CARDS: ArchCardData[] = [
     {
         title: 'Kernel Layer',
         icon: <Cpu size={24} color="#3b82f6" />,
-        border: '#3b82f6',
+        border: 'var(--accent)',
         text: 'SystemKernel (reducer-pattern state machine), EventBus (typed), DI Container, Bootstrap. Deep immutable state, ring buffer event log, composite event keys.',
     },
     {
@@ -50,13 +50,13 @@ export const ARCH_CARDS: ArchCardData[] = [
     {
         title: 'Contracts & Types',
         icon: <FileJson size={24} color="#10b981" />,
-        border: '#10b981',
+        border: 'var(--success)',
         text: '32 contract interfaces (IKeyVault, IProviderAdapter, ILogger, ITransaction, IRotationService). 16 Zod schemas. All business logic lives in kernel \u2014 legacy src/services/ are thin Proxy wrappers.',
     },
     {
         title: 'Persistence',
         icon: <Database size={24} color="#f59e0b" />,
-        border: '#f59e0b',
+        border: 'var(--warning)',
         text: 'Dexie (IndexedDB) stores memories, keys, sessions, traces, roles, skills, connectors. localStorage for vault encryption keys. Schema versioning supports incremental migrations.',
     },
 ];

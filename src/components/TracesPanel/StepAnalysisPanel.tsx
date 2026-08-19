@@ -19,7 +19,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 Select a step to begin cognitive analysis
@@ -57,7 +57,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                     fontSize: '1.75rem',
                                     fontWeight: 800,
                                     margin: 0,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                 }}
                             >
                                 {selectedStep.label}
@@ -65,18 +65,18 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                             <span
                                 style={{
                                     padding: '0.2rem 0.6rem',
-                                    background: 'rgba(59,130,246,0.1)',
+                                    background: 'var(--accent-tint)',
                                     borderRadius: 6,
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
-                                    color: '#3b82f6',
+                                    color: 'var(--accent)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 {selectedStep.type}
                             </span>
                         </div>
-                        <p style={{ color: '#94a3b8', margin: 0 }}>
+                        <p style={{ color: 'var(--slate-400)', margin: 0 }}>
                             {t('traces.step_analysis_desc')}
                         </p>
                     </div>
@@ -88,7 +88,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                 borderRadius: 8,
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 cursor: 'pointer',
                                 fontWeight: 600,
                             }}
@@ -119,7 +119,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                 <div
                                     style={{
                                         fontSize: '0.75rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '1rem',
                                         textTransform: 'uppercase',
                                     }}
@@ -160,7 +160,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                                     style={{
                                                         fontWeight: 700,
                                                         fontSize: '0.9rem',
-                                                        color: '#f8fafc',
+                                                        color: 'var(--slate-50)',
                                                     }}
                                                 >
                                                     {alt.label}
@@ -182,7 +182,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                             <div
                                                 style={{
                                                     fontSize: '0.8rem',
-                                                    color: '#94a3b8',
+                                                    color: 'var(--slate-400)',
                                                     lineHeight: 1.4,
                                                 }}
                                             >
@@ -196,7 +196,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                                         top: 0,
                                                         bottom: 0,
                                                         width: 3,
-                                                        background: '#10b981',
+                                                        background: 'var(--success)',
                                                     }}
                                                 />
                                             )}
@@ -219,7 +219,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#3b82f6',
+                                            color: 'var(--accent)',
                                             marginBottom: '0.75rem',
                                             fontWeight: 800,
                                             textTransform: 'uppercase',
@@ -232,7 +232,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                             fontSize: '1rem',
                                             fontWeight: 500,
                                             lineHeight: 1.6,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                         }}
                                     >
                                         "{selectedStep.decision.logic}"
@@ -251,7 +251,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                             style={{
                                                 fontSize: '1.5rem',
                                                 fontWeight: 800,
-                                                color: '#3b82f6',
+                                                color: 'var(--accent)',
                                             }}
                                         >
                                             {Math.round(selectedStep.decision.confidence * 100)}%
@@ -263,7 +263,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                             style={{
                                                 fontSize: '1.5rem',
                                                 fontWeight: 800,
-                                                color: '#f59e0b',
+                                                color: 'var(--warning)',
                                             }}
                                         >
                                             {Math.round(
@@ -311,7 +311,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                         <div
                                             style={{
                                                 fontSize: '0.95rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 opacity: 0.9,
                                             }}
                                         >
@@ -334,7 +334,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 8,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                             }}
                         >
                             <Activity size={18} color="#10b981" aria-hidden="true" /> Environmental
@@ -352,7 +352,7 @@ const StepAnalysisPanel: React.FC<Props> = ({ step: selectedStep, onClose }) => 
                                 fontSize: '0.9rem',
                                 lineHeight: 1.6,
                                 fontFamily: 'monospace',
-                                color: '#10b981',
+                                color: 'var(--success)',
                             }}
                         >
                             {selectedStep.observations}

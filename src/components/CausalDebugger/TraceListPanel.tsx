@@ -18,7 +18,7 @@ const TraceListPanel: React.FC<Props> = ({ entries, selectedId, scopes, onSelect
                     ...CARD,
                     textAlign: 'center',
                     padding: 24,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.8rem',
                 }}
             >
@@ -66,7 +66,7 @@ const TraceListPanel: React.FC<Props> = ({ entries, selectedId, scopes, onSelect
                                 }}
                             />
                             <span
-                                style={{ fontSize: '0.75rem', fontWeight: 600, color: '#e2e8f0' }}
+                                style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--slate-200)' }}
                             >
                                 {t.causalId}
                             </span>
@@ -78,7 +78,7 @@ const TraceListPanel: React.FC<Props> = ({ entries, selectedId, scopes, onSelect
                                     key={p}
                                     style={{
                                         ...PILL,
-                                        background: 'rgba(59,130,246,0.1)',
+                                        background: 'var(--accent-tint)',
                                         color: '#60a5fa',
                                     }}
                                 >

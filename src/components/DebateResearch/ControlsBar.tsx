@@ -55,7 +55,7 @@ const ControlsBar: React.FC<ControlsBarProps> = ({
                 borderRadius: 7,
                 border: '1px solid rgba(255,255,255,0.08)',
                 background: 'transparent',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '0.72rem',
@@ -85,7 +85,7 @@ const ControlsBar: React.FC<ControlsBarProps> = ({
                     background: 'none',
                     border: 'none',
                     outline: 'none',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.72rem',
                 }}
             />
@@ -95,7 +95,7 @@ const ControlsBar: React.FC<ControlsBarProps> = ({
                     style={{
                         background: 'none',
                         border: 'none',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         cursor: 'pointer',
                         padding: 0,
                     }}

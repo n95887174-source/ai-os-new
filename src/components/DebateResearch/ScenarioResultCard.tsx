@@ -27,7 +27,7 @@ const ScenarioResultCard: React.FC<Props> = ({ result }) => {
                 }}
             >
                 {iconForResult(outcome)}
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--slate-200)' }}>
                     {scenario.name}
                 </span>
                 <span
@@ -46,7 +46,7 @@ const ScenarioResultCard: React.FC<Props> = ({ result }) => {
                 style={{
                     margin: 0,
                     fontSize: '0.7rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     lineHeight: 1.4,
                 }}
             >
@@ -69,7 +69,7 @@ const ScenarioResultCard: React.FC<Props> = ({ result }) => {
                                 padding: '0.1rem 0.35rem',
                                 borderRadius: 3,
                                 background: 'rgba(239,68,68,0.06)',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                             }}
                         >
                             {rule}
@@ -81,7 +81,7 @@ const ScenarioResultCard: React.FC<Props> = ({ result }) => {
                 style={{
                     marginTop: 4,
                     fontSize: '0.65rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontStyle: 'italic',
                 }}
             >

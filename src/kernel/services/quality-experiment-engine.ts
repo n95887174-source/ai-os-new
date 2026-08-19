@@ -2,7 +2,7 @@ import { ssrSafeStorage } from '../utils/ssr-storage';
 import type { QualityExperiment, IExperimentEngine } from '../contracts/quality-impact';
 import { setSetting } from './debate-runtime/quality-settings-store';
 import { rootLogger } from './logger-service';
-import { eventBus } from '../events/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { SeededRng } from '../utils/seedable-rng';
 
@@ -18,8 +18,13 @@ export function resetExperimentRng(seed?: number): void {
 }
 
 export class ExperimentEngine implements IExperimentEngine {
+    private readonly _eventBus: IEventBus | null;
     private experiments: QualityExperiment[] = [];
     private initialized = false;
+
+    constructor(eventBus?: IEventBus) {
+        this._eventBus = eventBus ?? null;
+    }
 
     async init(): Promise<void> {
         if (this.initialized) return;
@@ -71,7 +76,7 @@ export class ExperimentEngine implements IExperimentEngine {
         await this.persist();
         // Emit experiment completed event
         try {
-            eventBus.emit(EVENTS.DEBATE_QUALITY_EXPERIMENT_COMPLETED, {
+            this._eventBus?.emit(EVENTS.DEBATE_QUALITY_EXPERIMENT_COMPLETED, {
                 experimentId,
                 techniqueIds: exp.techniqueIds,
                 sessionsCompleted: exp.sessionsCompleted,

@@ -3,10 +3,9 @@
  * Cron-like scheduling for agent tasks
  */
 
-import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import type { IDatabaseService } from '../types/interfaces';
+import type { IEventBus, IDatabaseService } from '../types/interfaces';
 import { BucketStorageAdapter } from './storage-adapter';
 import { genId } from '../../utils/gen-id';
 
@@ -52,14 +51,21 @@ export class SchedulerService {
     private _checkingSchedules = false; // H-30: re-entrancy guard
     lastCheckTime = 0; // OBS-96: public for external watchdog
     private _database: IDatabaseService | null = null;
+    private _eventBus: IEventBus | null = null;
 
-    constructor(database?: IDatabaseService) {
+    constructor(database?: IDatabaseService, eventBus?: IEventBus) {
         this._database = database ?? null;
+        this._eventBus = eventBus ?? null;
     }
 
     /** Inject database after construction (for DI registration) */
     setDatabase(db: IDatabaseService): void {
         this._database = db;
+    }
+
+    /** Inject eventBus after construction (for DI registration) */
+    setEventBus(eventBus: IEventBus): void {
+        this._eventBus = eventBus;
     }
 
     private get db(): IDatabaseService | null {
@@ -155,7 +161,7 @@ export class SchedulerService {
         this.schedules.set(id, schedule);
         await this.save();
 
-        EventBus.emit(EVENTS.SCHEDULE_CREATED, schedule);
+        this._eventBus?.emit(EVENTS.SCHEDULE_CREATED, schedule);
         LOGGER.info('SchedulerService', 'Schedule created', { id, name: data.name });
 
         return schedule;
@@ -185,7 +191,7 @@ export class SchedulerService {
         this.schedules.set(id, updated);
         await this.save();
 
-        EventBus.emit(EVENTS.SCHEDULE_UPDATED, updated);
+        this._eventBus?.emit(EVENTS.SCHEDULE_UPDATED, updated);
         LOGGER.info('SchedulerService', 'Schedule updated', { id });
 
         return updated;
@@ -201,7 +207,7 @@ export class SchedulerService {
         this.schedules.delete(id);
         await this.save();
 
-        EventBus.emit(EVENTS.SCHEDULE_DELETED, { id });
+        this._eventBus?.emit(EVENTS.SCHEDULE_DELETED, { id });
         LOGGER.info('SchedulerService', 'Schedule deleted', { id });
 
         return true;
@@ -264,7 +270,7 @@ export class SchedulerService {
         try {
             this.lastCheckTime = Date.now();
             LOGGER.debug('SchedulerService', 'Heartbeat', { lastCheckTime: this.lastCheckTime });
-            EventBus.emit(EVENTS.SCHEDULER_HEARTBEAT, { lastCheckTime: this.lastCheckTime });
+            this._eventBus?.emit(EVENTS.SCHEDULER_HEARTBEAT, { lastCheckTime: this.lastCheckTime });
 
             const due = this.getDueSchedules();
 
@@ -297,14 +303,14 @@ export class SchedulerService {
             });
 
             // Emit event to trigger agent (after schedule is updated)
-            EventBus.emit(EVENTS.SCHEDULE_TRIGGERED, {
+            this._eventBus?.emit(EVENTS.SCHEDULE_TRIGGERED, {
                 scheduleId: schedule.id,
                 agentId: schedule.agentId,
                 taskParams: schedule.taskParams,
                 timestamp: now,
             });
 
-            EventBus.emit(EVENTS.SCHEDULE_COMPLETED, {
+            this._eventBus?.emit(EVENTS.SCHEDULE_COMPLETED, {
                 scheduleId: schedule.id,
                 success: true,
                 timestamp: now,
@@ -320,7 +326,7 @@ export class SchedulerService {
                 error,
             });
 
-            EventBus.emit(EVENTS.SCHEDULE_COMPLETED, {
+            this._eventBus?.emit(EVENTS.SCHEDULE_COMPLETED, {
                 scheduleId: schedule.id,
                 success: false,
                 error: String(error),
@@ -521,7 +527,7 @@ export class SchedulerService {
 // Singleton instance — created lazily in RuntimeManager.registerCoreServices
 // to ensure database is available from the start
 export let schedulerService: SchedulerService | null = null;
-export function initSchedulerService(db: IDatabaseService): SchedulerService {
-    if (!schedulerService) schedulerService = new SchedulerService(db);
+export function initSchedulerService(db: IDatabaseService, eventBus?: IEventBus): SchedulerService {
+    if (!schedulerService) schedulerService = new SchedulerService(db, eventBus);
     return schedulerService;
 }

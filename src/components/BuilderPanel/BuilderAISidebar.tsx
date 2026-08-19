@@ -118,7 +118,7 @@ const BuilderAISidebar: React.FC<BuilderAISidebarProps> = ({ onGenerate }) => {
                 <Bot size={16} color="#8b5cf6" aria-hidden="true" />
                 AI Topology Generator
             </div>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                 Describe your workflow and AI will generate a cognitive topology
             </p>
             <textarea
@@ -133,7 +133,7 @@ const BuilderAISidebar: React.FC<BuilderAISidebarProps> = ({ onGenerate }) => {
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '0.5rem',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.85rem',
                     resize: 'vertical',
                     fontFamily: 'inherit',

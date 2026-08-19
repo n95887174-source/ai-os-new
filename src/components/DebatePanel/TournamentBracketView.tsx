@@ -64,13 +64,13 @@ export const TournamentBracketView: React.FC<{
                             style={{
                                 fontSize: '0.95rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 margin: 0,
                             }}
                         >
                             Tournament Bracket
                         </h3>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)', margin: 0 }}>
                             {bracket.rounds.length} rounds •{' '}
                             {bracket.rounds[0]?.matches.length || 0} matchups
                         </p>
@@ -151,7 +151,7 @@ export const TournamentBracketView: React.FC<{
                                                 style={{
                                                     width: 12,
                                                     height: 1,
-                                                    background: 'rgba(255,255,255,0.1)',
+                                                    background: 'var(--border-default)',
                                                 }}
                                             />
                                             <ChevronRight

@@ -39,20 +39,20 @@ const SynthesisZonesView: React.FC<{ zones: SynthesisZone[] }> = ({ zones }) => 
                                 background: ZONE_COLORS[kind],
                             }}
                         />
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {t(`synthesis.zone_${kind}`)}
                         </span>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--slate-500)' }}>
                             {grouped[kind].length}
                         </span>
                     </div>
                     {grouped[kind].length === 0 && (
-                        <div style={{ fontSize: '0.7rem', color: '#475569' }}>—</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-600)' }}>—</div>
                     )}
                     {grouped[kind].slice(0, 3).map((z) => (
                         <div
                             key={z.id}
-                            style={{ fontSize: '0.7rem', color: '#cbd5e1', marginBottom: 4 }}
+                            style={{ fontSize: '0.7rem', color: 'var(--slate-300)', marginBottom: 4 }}
                         >
                             {z.kind === 'dissent' && 'irreducible' in z && z.irreducible ? (
                                 <span style={{ color: '#f87171' }}>

@@ -45,7 +45,7 @@ export const RoleAnalytics: React.FC<RoleAnalyticsProps> = ({ stats, roles }) =>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <BarChart3 size={18} color="#3b82f6" />
-                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--slate-200)' }}>
                     Role Usage Analytics
                 </span>
             </div>

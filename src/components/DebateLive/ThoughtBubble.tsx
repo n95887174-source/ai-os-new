@@ -18,7 +18,7 @@ export const ThoughtBubble: React.FC<Props> = ({ draftPreview, progress }) => {
                 left: '50%',
                 transform: 'translateX(-50%)',
                 background: 'rgba(30,41,59,0.95)',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 padding: '4px 10px',
                 borderRadius: 10,
                 fontSize: '0.55rem',
@@ -36,7 +36,7 @@ export const ThoughtBubble: React.FC<Props> = ({ draftPreview, progress }) => {
                 style={{
                     width: `${Math.min(100, Math.round(progress * 100))}%`,
                     height: 2,
-                    background: '#8b5cf6',
+                    background: 'var(--purple)',
                     borderRadius: 1,
                     marginTop: 3,
                     transition: 'width 0.5s',

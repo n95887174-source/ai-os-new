@@ -28,36 +28,36 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
             <div style={flexColGap3MarginTop3}>
                 <div>
                     <div style={flexBetweenCenterSm}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--info)' }}>
                             {t('debate.depth')}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: '#38bdf8', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--info)', fontWeight: 600 }}>
                             {Math.round(session.qualityMetrics.depth.depthScore * 100)}%
                         </span>
                     </div>
                     <div style={grid2TinyGap}>
                         <span>
                             {t('debate.unique_args')}:{' '}
-                            <strong style={{ color: '#e2e8f0' }}>
+                            <strong style={{ color: 'var(--slate-200)' }}>
                                 {session.qualityMetrics.depth.uniqueArguments}
                             </strong>{' '}
                             / {args.length}
                         </span>
                         <span>
                             {t('debate.lexical_diversity')}:{' '}
-                            <strong style={{ color: '#e2e8f0' }}>
+                            <strong style={{ color: 'var(--slate-200)' }}>
                                 {(session.qualityMetrics.depth.lexicalDiversity * 100).toFixed(0)}%
                             </strong>
                         </span>
                         <span>
                             {t('debate.unique_bigrams')}:{' '}
-                            <strong style={{ color: '#e2e8f0' }}>
+                            <strong style={{ color: 'var(--slate-200)' }}>
                                 {session.qualityMetrics.depth.uniqueBigrams}
                             </strong>
                         </span>
                         <span>
                             {t('debate.topic_breadth')}:{' '}
-                            <strong style={{ color: '#e2e8f0' }}>
+                            <strong style={{ color: 'var(--slate-200)' }}>
                                 {(session.qualityMetrics.depth.topicBreadth * 100).toFixed(0)}%
                             </strong>
                         </span>
@@ -67,7 +67,7 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                             style={{
                                 width: `${Math.round(session.qualityMetrics.depth.depthScore * 100)}%`,
                                 height: '100%',
-                                background: '#38bdf8',
+                                background: 'var(--info)',
                                 borderRadius: 2,
                             }}
                         />
@@ -159,7 +159,7 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                             display: 'flex',
                             justifyContent: 'space-between',
                             fontSize: '0.55rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginTop: '0.15rem',
                         }}
                     >
@@ -169,10 +169,10 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                 </div>
                 <div style={borderTopSection}>
                     <div style={flexBetweenCenterSm}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--warning)' }}>
                             {t('debate.usefulness')}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--warning)', fontWeight: 600 }}>
                             {Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%
                         </span>
                     </div>
@@ -181,7 +181,7 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                             display: 'flex',
                             gap: '0.5rem',
                             fontSize: '0.62rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                         }}
                     >
                         <div style={metricBoxSmall}>
@@ -198,7 +198,7 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                             <div style={textXsSubtle}>{t('debate.evidence')}</div>
                         </div>
                         <div style={metricBoxSmall}>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a78bfa' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--purple-muted)' }}>
                                 {Math.round(session.qualityMetrics.usefulness.structureScore * 100)}
                                 %
                             </div>
@@ -210,7 +210,7 @@ const QualityMetricsSection: React.FC<QualityMetricsSectionProps> = ({ session, 
                             style={{
                                 width: `${Math.round(session.qualityMetrics.usefulness.usefulnessScore * 100)}%`,
                                 height: '100%',
-                                background: '#f59e0b',
+                                background: 'var(--warning)',
                                 borderRadius: 2,
                             }}
                         />

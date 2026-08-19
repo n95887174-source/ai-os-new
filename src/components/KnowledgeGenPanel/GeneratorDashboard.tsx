@@ -33,7 +33,7 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                     marginBottom: 8,
                 }}
             >
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                     {jobs.length} {t('generator.jobs_active')}
                 </div>
                 <button
@@ -43,7 +43,7 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.12)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: '0.7rem',
                     }}
@@ -56,7 +56,7 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                 <div
                     style={{
                         fontSize: '0.75rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                         textAlign: 'center',
                         padding: '1.5rem 0',
                     }}
@@ -90,7 +90,7 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                                 <div
                                     style={{
                                         fontSize: '0.78rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 600,
                                     }}
                                 >
@@ -99,7 +99,7 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginTop: 4,
                                         lineHeight: 1.4,
                                     }}
@@ -128,25 +128,25 @@ const GeneratorDashboard: React.FC<GeneratorDashboardProps> = ({ jobs, onRefresh
                                 alignItems: 'center',
                                 marginTop: 8,
                                 fontSize: '0.68rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 flexWrap: 'wrap',
                             }}
                         >
                             <span>
                                 {t('generator.stage_label')}: {t(`generator.stage_${j.stage}`)}
                             </span>
-                            <span style={{ color: '#22c55e' }}>
+                            <span style={{ color: 'var(--success)' }}>
                                 {t('generator.confidence')}: {j.confidence.toFixed(2)}
                             </span>
                             <span>
                                 {j.tokensSpent} {t('generator.tokens')}
                             </span>
                             {j.crystalId && (
-                                <span style={{ color: '#10b981' }}>
+                                <span style={{ color: 'var(--success)' }}>
                                     ◆ {j.crystalId.slice(0, 18)}
                                 </span>
                             )}
-                            {j.error && <span style={{ color: '#ef4444' }}>{j.error}</span>}
+                            {j.error && <span style={{ color: 'var(--error)' }}>{j.error}</span>}
                             {(j.status === 'queued' || j.status === 'running') && (
                                 <button
                                     onClick={() => onCancel(j.id)}

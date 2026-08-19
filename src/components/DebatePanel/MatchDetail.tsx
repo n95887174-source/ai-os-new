@@ -36,7 +36,7 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                     }}
                 >
                     <MessageSquare size={14} color="#3b82f6" />
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {match.topic}
                     </span>
                 </div>
@@ -47,14 +47,14 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                         <div
                             style={{
                                 fontSize: '0.6rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textTransform: 'uppercase',
                                 marginBottom: '0.2rem',
                             }}
                         >
                             Participant A
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#e2e8f0', fontWeight: 600 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-200)', fontWeight: 600 }}>
                             {match.participantA.name}
                         </div>
                         <div
@@ -70,7 +70,7 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                         <div
                             style={{
                                 fontSize: '0.6rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textTransform: 'uppercase',
                                 marginBottom: '0.2rem',
                             }}
@@ -94,14 +94,14 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                         <div
                             style={{
                                 fontSize: '0.6rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textTransform: 'uppercase',
                                 marginBottom: '0.2rem',
                             }}
                         >
                             Participant B
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#e2e8f0', fontWeight: 600 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-200)', fontWeight: 600 }}>
                             {match.participantB.name}
                         </div>
                         <div
@@ -121,7 +121,7 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                             paddingTop: '0.5rem',
                             borderTop: '1px solid rgba(255,255,255,0.05)',
                             fontSize: '0.7rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             lineHeight: 1.5,
                         }}
                     >
@@ -135,7 +135,7 @@ const MatchDetail: React.FC<Props> = ({ match, expandedMatch, onStartMatch }) =>
                             marginTop: '0.5rem',
                             padding: '0.4rem 1rem',
                             borderRadius: 6,
-                            background: '#3b82f6',
+                            background: 'var(--accent)',
                             border: 'none',
                             color: 'white',
                             fontWeight: 700,

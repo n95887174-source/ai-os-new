@@ -39,7 +39,7 @@ const MODULES: ModuleCard[] = [
         route: '/project-os',
         icon: <Search size={20} />,
         labelKey: 'nav.project_os_explorer',
-        color: '#8b5cf6',
+        color: 'var(--purple)',
         descriptionKey: 'project_os_explorer.subtitle',
     },
     {
@@ -47,7 +47,7 @@ const MODULES: ModuleCard[] = [
         route: '/hypothesis-gen',
         icon: <Lightbulb size={20} />,
         labelKey: 'nav.hypothesis_generator',
-        color: '#f59e0b',
+        color: 'var(--warning)',
         descriptionKey: 'hypothesis_generator.subtitle',
     },
     {
@@ -63,7 +63,7 @@ const MODULES: ModuleCard[] = [
         route: '/prompt-audit',
         icon: <BookOpen size={20} />,
         labelKey: 'nav.prompt_strategy_audit',
-        color: '#3b82f6',
+        color: 'var(--accent)',
         descriptionKey: 'prompt_audit.subtitle',
     },
     {
@@ -71,7 +71,7 @@ const MODULES: ModuleCard[] = [
         route: '/routing-experiments',
         icon: <Route size={20} />,
         labelKey: 'nav.model_routing_experiments',
-        color: '#f59e0b',
+        color: 'var(--warning)',
         descriptionKey: 'routing_experiments.subtitle',
     },
     {
@@ -79,7 +79,7 @@ const MODULES: ModuleCard[] = [
         route: '/gov-stress-test',
         icon: <Shield size={20} />,
         labelKey: 'nav.governance_stress_test',
-        color: '#10b981',
+        color: 'var(--success)',
         descriptionKey: 'gov_stress_test.subtitle',
     },
     {
@@ -116,7 +116,7 @@ const DebateSystemResearch: React.FC = () => {
                         fontSize: '1.75rem',
                         fontWeight: 800,
                         margin: '0 0 0.5rem',
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
@@ -127,7 +127,7 @@ const DebateSystemResearch: React.FC = () => {
                 </h1>
                 <p
                     style={{
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontSize: '0.9rem',
                         lineHeight: 1.6,
                         marginBottom: '1rem',
@@ -151,7 +151,7 @@ const DebateSystemResearch: React.FC = () => {
                             style={{
                                 fontSize: '0.8rem',
                                 fontWeight: 700,
-                                color: '#fbbf24',
+                                color: 'var(--warning)',
                                 marginBottom: 8,
                             }}
                         >
@@ -170,11 +170,11 @@ const DebateSystemResearch: React.FC = () => {
                                         borderRadius: 8,
                                         padding: '0.5rem 0.75rem',
                                         cursor: 'pointer',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.78rem',
                                     }}
                                 >
-                                    <span style={{ color: '#94a3b8', marginRight: 8 }}>
+                                    <span style={{ color: 'var(--slate-400)', marginRight: 8 }}>
                                         {h.status}
                                     </span>
                                     {h.title}
@@ -220,7 +220,7 @@ const DebateSystemResearch: React.FC = () => {
                                     style={{
                                         fontSize: '0.9rem',
                                         fontWeight: 700,
-                                        color: '#f8fafc',
+                                        color: 'var(--slate-50)',
                                         flex: 1,
                                     }}
                                 >
@@ -232,7 +232,7 @@ const DebateSystemResearch: React.FC = () => {
                                 style={{
                                     margin: 0,
                                     fontSize: '0.78rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     lineHeight: 1.5,
                                 }}
                             >
@@ -260,7 +260,7 @@ const DebateSystemResearch: React.FC = () => {
                         }}
                     >
                         <Clock size={16} color="#f59e0b" />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             Recent Research Runs
                         </span>
                     </div>
@@ -320,7 +320,7 @@ const DebateSystemResearch: React.FC = () => {
                                     color: '#60a5fa',
                                     padding: '0.2rem 0.5rem',
                                     borderRadius: 4,
-                                    background: 'rgba(59,130,246,0.1)',
+                                    background: 'var(--accent-tint)',
                                     textDecoration: 'none',
                                     fontFamily: 'monospace',
                                 }}

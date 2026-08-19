@@ -19,7 +19,7 @@ const STRATEGIES: TeamStrategy[] = [
 
 const StrategyPicker: React.FC<TeamState> = ({ team, setTeam }) => (
     <div>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
             Choose how the team coordinates to solve the task. Each strategy has different
             strengths.
         </div>
@@ -70,7 +70,7 @@ const StrategyPicker: React.FC<TeamState> = ({ team, setTeam }) => (
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 lineHeight: 1.3,
                             }}
                         >

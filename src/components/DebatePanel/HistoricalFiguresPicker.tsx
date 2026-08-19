@@ -166,7 +166,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                                 margin: 0,
                                                 fontSize: '1rem',
                                                 fontWeight: 700,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             Historical Figures ({ALL_FIGURES.length})
@@ -175,7 +175,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                             style={{
                                                 margin: 0,
                                                 fontSize: '0.75rem',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                             }}
                                         >
                                             Select up to {max} figures for your debate
@@ -187,7 +187,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -203,7 +203,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                             left: 10,
                                             top: '50%',
                                             transform: 'translateY(-50%)',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     />
                                     <input
@@ -219,7 +219,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                             borderRadius: 8,
                                             border: '1px solid rgba(255,255,255,0.1)',
                                             background: 'rgba(255,255,255,0.05)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.8rem',
                                             outline: 'none',
                                             boxSizing: 'border-box',
@@ -237,7 +237,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(255,255,255,0.05)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.75rem',
                                         outline: 'none',
                                     }}
@@ -260,7 +260,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(255,255,255,0.05)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.75rem',
                                         outline: 'none',
                                     }}
@@ -323,7 +323,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                             <div
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#64748b',
+                                                    color: 'var(--slate-500)',
                                                     display: 'flex',
                                                     gap: 4,
                                                     flexWrap: 'wrap',
@@ -363,7 +363,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                                 style={{
                                     padding: 30,
                                     textAlign: 'center',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.85rem',
                                 }}
                             >
@@ -383,7 +383,7 @@ export const HistoricalFiguresPicker: React.FC<HistoricalFiguresPickerProps> = (
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                                     {selectedIds.length}/{max} selected
                                 </span>
                                 {filtered.total > ITEMS_PER_PAGE &&

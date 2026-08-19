@@ -30,7 +30,7 @@ const MemoryHeader: React.FC<MemoryHeaderProps> = ({ onWipe, onExport }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 8,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         borderColor: 'rgba(239,68,68,0.2)',
                         background: 'rgba(239,68,68,0.05)',
                     }}

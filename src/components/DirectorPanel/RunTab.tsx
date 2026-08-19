@@ -4,9 +4,11 @@ import type { ConversationScenario } from '../../kernel/contracts/conversation/s
 import type { ConversationSession } from '../../kernel/contracts/conversation/session';
 import type { TurnProposal } from '../../kernel/contracts/conversation/turn';
 import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { agentService } from '../../kernel/instances/services-core';
 import AgentIdentityChip from './AgentIdentityChip';
 import { createDirectorControls } from '../../stores/directorController';
 import { useDirectorStore } from '../../stores/directorStore';
+import { Button } from '../../components/Common';
 
 const CARD: React.CSSProperties = {
     margin: '0.75rem 0',
@@ -26,6 +28,17 @@ const LOG_ROW: React.CSSProperties = {
     marginBottom: '0.35rem',
 };
 
+type ObjectiveType = TurnProposal['objective']['type'];
+const OVERRIDE_TYPES: ObjectiveType[] = [
+    'INTRODUCE',
+    'CRITIQUE',
+    'RESPOND',
+    'ANALYZE',
+    'SUMMARIZE',
+    'CHALLENGE',
+    'CUSTOM',
+];
+
 /**
  * Run tab (B5.4c) — the full runtime UI bound to the Director runtime.
  *
@@ -37,15 +50,23 @@ const LOG_ROW: React.CSSProperties = {
 const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario }) => {
     const { t } = useTranslation();
     const controls = useMemo(() => createDirectorControls(), []);
-    const { status, currentParticipantId, turnLog, history } = useDirectorStore();
+    const status = useDirectorStore((s) => s.status);
+    const currentParticipantId = useDirectorStore((s) => s.currentParticipantId);
+    const turnLog = useDirectorStore((s) => s.turnLog);
+    const history = useDirectorStore((s) => s.history);
 
     // Rehydrate persisted past runs (Q7) on first mount.
     useEffect(() => {
+        useDirectorStore.getState?.()?.ensureSubscribed?.();
         void controls.loadHistory();
+        return () => {
+            useDirectorStore.getState?.()?.destroy?.();
+        };
     }, [controls]);
 
     const [overrideOpen, setOverrideOpen] = useState(false);
     const [overrideParticipant, setOverrideParticipant] = useState('');
+    const [overrideType, setOverrideType] = useState<ObjectiveType>('CHALLENGE');
     const [overrideObjective, setOverrideObjective] = useState('');
     const [checkpointLabel, setCheckpointLabel] = useState('');
 
@@ -104,7 +125,7 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
     const conversationRoleOf = (pid?: string | null) =>
         pid ? scenario.participants.find((p) => p.id === pid)?.role : undefined;
     const currentIdentity = useMemo(
-        () => resolveAgentIdentity(currentParticipantId ?? ''),
+        () => resolveAgentIdentity(currentParticipantId ?? '', { resolver: agentService }),
         [currentParticipantId],
     );
 
@@ -117,11 +138,12 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
         if (!overrideParticipant || !overrideObjective) return;
         const proposal: TurnProposal = {
             participantId: overrideParticipant,
-            objective: { type: 'CHALLENGE', description: overrideObjective, constraints: [] },
+            objective: { type: overrideType, description: overrideObjective, constraints: [] },
         };
         controls.override(proposal);
         setOverrideOpen(false);
         setOverrideParticipant('');
+        setOverrideType('CHALLENGE');
         setOverrideObjective('');
     };
 
@@ -174,11 +196,11 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                     style={{
                         height: 8,
                         borderRadius: 4,
-                        background: 'rgba(255,255,255,0.1)',
+                        background: 'var(--border-default)',
                         overflow: 'hidden',
                     }}
                 >
-                    <div style={{ height: '100%', width: `${progress}%`, background: '#3b82f6' }} />
+                    <div style={{ height: '100%', width: `${progress}%`, background: 'var(--accent)' }} />
                 </div>
                 <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: 4 }}>
                     {t('director.run.progress')}: {plannedDone}/{plannedTotal}{' '}
@@ -190,31 +212,36 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', margin: '0.5rem 0' }}>
-                <button onClick={handleRun} disabled={!canRun}>
+                <Button variant="primary" onClick={handleRun} disabled={!canRun}>
                     {t('director.run.run')}
-                </button>
-                <button onClick={() => controls.pause()} disabled={!isRunning}>
+                </Button>
+                <Button variant="secondary" onClick={() => controls.pause()} disabled={!isRunning}>
                     {t('director.run.pause')}
-                </button>
-                <button onClick={() => controls.resume()} disabled={!isPaused}>
+                </Button>
+                <Button variant="secondary" onClick={() => controls.resume()} disabled={!isPaused}>
                     {t('director.run.resume')}
-                </button>
-                <button onClick={() => controls.skip()} disabled={!busy}>
+                </Button>
+                <Button variant="secondary" onClick={() => controls.skip()} disabled={!busy}>
                     {t('director.run.skip')}
-                </button>
-                <button onClick={() => setOverrideOpen((o) => !o)} disabled={!busy}>
+                </Button>
+                <Button
+                    variant="secondary"
+                    onClick={() => setOverrideOpen((o) => !o)}
+                    disabled={!busy}
+                >
                     {t('director.run.override')}
-                </button>
-                <button onClick={() => controls.abort()} disabled={!busy}>
+                </Button>
+                <Button variant="danger" onClick={() => controls.abort()} disabled={!busy}>
                     {t('director.run.abort')}
-                </button>
+                </Button>
                 <input
                     value={checkpointLabel}
                     onChange={(e) => setCheckpointLabel(e.target.value)}
                     placeholder={t('director.run.checkpoint.label')}
                     style={{ width: 140 }}
                 />
-                <button
+                <Button
+                    variant="secondary"
                     onClick={() => {
                         controls.checkpoint(checkpointLabel || undefined);
                         setCheckpointLabel('');
@@ -222,7 +249,7 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                     disabled={!session}
                 >
                     {t('director.run.checkpoint')}
-                </button>
+                </Button>
             </div>
 
             {overrideOpen && (
@@ -235,7 +262,22 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                             <option value="">{t('director.run.overrideParticipant')}</option>
                             {scenario.participants.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                    {resolveAgentIdentity(p.id).displayName} · {p.role}
+                                    {
+                                        resolveAgentIdentity(p.id, { resolver: agentService })
+                                            .displayName
+                                    }{' '}
+                                    · {p.role}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={overrideType}
+                            onChange={(e) => setOverrideType(e.target.value as ObjectiveType)}
+                            aria-label={t('director.run.overrideType')}
+                        >
+                            {OVERRIDE_TYPES.map((tp) => (
+                                <option key={tp} value={tp}>
+                                    {t(`director.run.overrideType.${tp}`)}
                                 </option>
                             ))}
                         </select>
@@ -244,12 +286,13 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
                             onChange={(e) => setOverrideObjective(e.target.value)}
                             placeholder={t('director.run.overrideObjective')}
                         />
-                        <button
+                        <Button
+                            variant="primary"
                             onClick={handleOverride}
                             disabled={!overrideParticipant || !overrideObjective}
                         >
                             {t('director.run.overrideSubmit')}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -282,7 +325,9 @@ const RunTab: React.FC<{ scenario?: ConversationScenario | null }> = ({ scenario
             <h4 style={{ margin: '1rem 0 0.5rem' }}>{t('director.run.log')}</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {turnLog.map((e, i) => {
-                    const identity = resolveAgentIdentity(e.participantId);
+                    const identity = resolveAgentIdentity(e.participantId, {
+                        resolver: agentService,
+                    });
                     const convRole = conversationRoleOf(e.participantId);
                     return (
                         <li

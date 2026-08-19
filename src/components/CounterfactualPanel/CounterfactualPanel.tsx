@@ -91,10 +91,10 @@ const CounterfactualPanel: React.FC = () => {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Zap size={20} color="#f59e0b" />
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     Counterfactual Router
                 </span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                     {traces.length} traces available
                 </span>
             </div>
@@ -124,7 +124,7 @@ const CounterfactualPanel: React.FC = () => {
                                 ...CARD,
                                 textAlign: 'center',
                                 padding: 32,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.8rem',
                             }}
                         >
@@ -148,7 +148,7 @@ const CounterfactualPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                         }}
                                     >
                                         {result.switchProvider
@@ -156,7 +156,7 @@ const CounterfactualPanel: React.FC = () => {
                                             : 'Same Provider'}
                                     </div>
                                     {result.switchReason && (
-                                        <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--warning)' }}>
                                             {result.switchReason}
                                         </div>
                                     )}
@@ -165,7 +165,7 @@ const CounterfactualPanel: React.FC = () => {
                                     style={{
                                         marginLeft: 'auto',
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     {result.meta.durationMs.toFixed(1)}ms
@@ -179,7 +179,7 @@ const CounterfactualPanel: React.FC = () => {
                                     style={{
                                         fontSize: '0.7rem',
                                         fontWeight: 700,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: 8,
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.08em',
@@ -190,7 +190,7 @@ const CounterfactualPanel: React.FC = () => {
                                 <pre
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                         whiteSpace: 'pre-wrap',
                                         margin: 0,
                                         fontFamily: 'monospace',

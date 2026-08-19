@@ -27,7 +27,7 @@ export const KeySelectorSidebar: React.FC<KeySelectorSidebarProps> = ({
                         borderColor: selectedKeyId === k.id ? '#f59e0b' : 'rgba(255,255,255,0.05)',
                         background:
                             selectedKeyId === k.id ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.2)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         cursor: 'pointer',
                         textAlign: 'left',
                         fontSize: '0.8rem',
@@ -37,7 +37,7 @@ export const KeySelectorSidebar: React.FC<KeySelectorSidebarProps> = ({
                     }}
                 >
                     <span>{k.label}</span>
-                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{k.notes.length}</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-400)' }}>{k.notes.length}</span>
                 </button>
             ))}
         </div>

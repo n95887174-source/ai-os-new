@@ -38,13 +38,13 @@ const AgentMarketplacePanel: React.FC = () => {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search prompts, templates, topologies…"
-              style={{ flex: 1, background: 'transparent', border: 'none', color: '#e2e8f0', outline: 'none' }}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--slate-200)', outline: 'none' }}
             />
           </div>
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value as MarketplaceItem['type'] | 'all')}
-            style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', padding: '8px 12px' }}
+            style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: 'var(--slate-200)', padding: '8px 12px' }}
           >
             <option value="all">All types</option>
             <option value="prompt">Prompts</option>
@@ -55,7 +55,7 @@ const AgentMarketplacePanel: React.FC = () => {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="glass-panel" style={{ ...glassPanel, padding: 32, textAlign: 'center', color: '#64748b' }}>
+          <div className="glass-panel" style={{ ...glassPanel, padding: 32, textAlign: 'center', color: 'var(--slate-500)' }}>
             <Store size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
             No marketplace items match your search.
           </div>
@@ -70,7 +70,7 @@ const AgentMarketplacePanel: React.FC = () => {
                   </span>
                 </div>
                 <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{item.title}</h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>{item.description}</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--slate-400)', lineHeight: 1.4 }}>{item.description}</p>
                 <div style={{ ...textXsMuted, display: 'flex', justifyContent: 'space-between' }}>
                   <span>by {item.author}</span>
                   <span>{item.downloads} installs</span>

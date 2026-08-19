@@ -36,7 +36,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({
                 style={{
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    color: '#f1f5f9',
+                    color: 'var(--slate-100)',
                     margin: '0 0 0.75rem',
                 }}
             >
@@ -115,7 +115,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontFamily: 'monospace',
                             fontSize: '0.75rem',
                             resize: 'vertical',
@@ -128,7 +128,7 @@ export const SourcePanel: React.FC<SourcePanelProps> = ({
                             padding: '0.4rem 0.8rem',
                             borderRadius: 6,
                             border: 'none',
-                            background: '#10b981',
+                            background: 'var(--success)',
                             color: '#fff',
                             cursor: 'pointer',
                             fontSize: '0.8rem',

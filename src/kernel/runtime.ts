@@ -239,7 +239,7 @@ export class RuntimeManager {
         coreEventBus.setLogger(rootLogger);
         this.container.register('securityService', new SecurityService());
         this.container.register('BucketStorageAdapter', localStorageAdapter);
-        const schedulerService = initSchedulerService(coreDatabase);
+        const schedulerService = initSchedulerService(coreDatabase, coreEventBus);
         this.container.register('schedulerService', schedulerService);
     }
 }

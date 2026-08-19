@@ -44,9 +44,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
                             <div
                                 style={{
                                     padding: '2rem',
-                                    background: '#1e293b',
+                                    background: 'var(--slate-800)',
                                     borderRadius: 8,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                 }}
                             >
                                 <p>{file.name}</p>
@@ -61,7 +61,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
                                         gap: 4,
                                         padding: '0.4rem 0.8rem',
                                         borderRadius: 6,
-                                        background: '#3b82f6',
+                                        background: 'var(--accent)',
                                         color: '#fff',
                                         textDecoration: 'none',
                                     }}

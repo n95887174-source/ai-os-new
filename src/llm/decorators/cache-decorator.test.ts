@@ -118,4 +118,42 @@ describe('CacheDecorator - Semantic Caching', () => {
         await d.sendMessage([{ role: 'user', content: 'question one' }], 'gpt-4', 'key-1');
         expect(innerAdapter.sendMessage).toHaveBeenCalledTimes(4);
     });
+
+    // ── B-20: cacheScope isolation ─────────────────────────────────────────
+
+    it('B-20: exact cache key differs by cacheScope (no cross-agent contamination)', async () => {
+        const d = new CacheDecorator(innerAdapter, 10000, 5, 0); // semantic off
+        const msgs: ChatMessage[] = [{ role: 'user', content: 'What is your opening statement?' }];
+
+        const a = await d.sendMessage(msgs, 'gpt-4', 'key-1', undefined, {
+            cacheScope: { agentId: 'agent-A', sessionId: 's1' },
+        });
+        const b = await d.sendMessage(msgs, 'gpt-4', 'key-1', undefined, {
+            cacheScope: { agentId: 'agent-B', sessionId: 's1' },
+        });
+
+        expect(a.content).toBe('Paris');
+        expect(b.content).toBe('Paris');
+        // Two distinct agents -> two distinct cache entries -> inner called twice.
+        expect(innerAdapter.sendMessage).toHaveBeenCalledTimes(2);
+    });
+
+    it('B-20: semantic cache bucket differs by cacheScope', async () => {
+        const d = new CacheDecorator(innerAdapter, 10000, 5, 0.7);
+        const msgs1: ChatMessage[] = [{ role: 'user', content: 'What is the capital of France?' }];
+        const msgs2: ChatMessage[] = [
+            { role: 'user', content: 'What is the capital city of France?' },
+        ];
+
+        await d.sendMessage(msgs1, 'gpt-4', 'key-1', undefined, {
+            cacheScope: { agentId: 'agent-A', sessionId: 's1' },
+        });
+        // Same near-duplicate prompt but a DIFFERENT agent -> must NOT share the cached answer.
+        const res = await d.sendMessage(msgs2, 'gpt-4', 'key-1', undefined, {
+            cacheScope: { agentId: 'agent-B', sessionId: 's1' },
+        });
+
+        expect(res.content).toBe('Paris');
+        expect(innerAdapter.sendMessage).toHaveBeenCalledTimes(2); // scoped MISS
+    });
 });

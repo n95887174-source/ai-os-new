@@ -269,7 +269,7 @@ const HealthPanel: React.FC = () => {
                             alignItems: 'center',
                             gap: 8,
                             padding: '0.5rem 1rem',
-                            background: 'rgba(16,185,129,0.1)',
+                            background: 'var(--success-tint)',
                             border: '1px solid rgba(16,185,129,0.2)',
                             borderRadius: 12,
                         }}
@@ -279,7 +279,7 @@ const HealthPanel: React.FC = () => {
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 800,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -303,9 +303,9 @@ const HealthPanel: React.FC = () => {
                         style={{
                             padding: '0.5rem 0.8rem',
                             borderRadius: 8,
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             border: '1px solid rgba(59,130,246,0.2)',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -330,7 +330,7 @@ const HealthPanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -359,7 +359,7 @@ const HealthPanel: React.FC = () => {
                         position: 'relative',
                         zIndex: 2,
                         padding: '0.5rem 1rem',
-                        background: 'rgba(239,68,68,0.1)',
+                        background: 'var(--error-tint)',
                         border: '1px solid rgba(239,68,68,0.2)',
                         borderRadius: 10,
                         color: '#fca5a5',
@@ -480,13 +480,13 @@ const HealthPanel: React.FC = () => {
                         display: 'flex',
                         gap: 8,
                         alignItems: 'center',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontSize: '0.8rem',
                     }}
                 >
                     <ShieldCheck size={16} aria-hidden="true" /> {t('health.data_encryption')}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', fontFamily: 'monospace' }}>
                     BUILD_VER: {APP_VERSION} | KERNEL_ID: {kernelId}
                 </div>
             </div>

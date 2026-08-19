@@ -220,7 +220,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ value, onChange }) => 
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.75rem',
                         outline: 'none',
                     }}
@@ -232,8 +232,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ value, onChange }) => 
                             padding: '0.25rem 0.5rem',
                             borderRadius: 6,
                             border: '1px solid rgba(239,68,68,0.3)',
-                            background: 'rgba(239,68,68,0.1)',
-                            color: '#ef4444',
+                            background: 'var(--error-tint)',
+                            color: 'var(--error)',
                             fontSize: '0.65rem',
                             cursor: 'pointer',
                         }}
@@ -300,7 +300,7 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({ value, onChange }) => 
                     </button>
                 ))}
                 {filtered.length === 0 && (
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', padding: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', padding: '0.5rem' }}>
                         No emojis found
                     </span>
                 )}

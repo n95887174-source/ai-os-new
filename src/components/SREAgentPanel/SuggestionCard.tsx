@@ -58,7 +58,7 @@ const SuggestionCard: React.FC<Props> = ({ suggestion: s, executingId, onExecute
                                     fontSize: '0.6rem',
                                     fontWeight: 800,
                                     background: 'rgba(16,185,129,0.15)',
-                                    color: '#10b981',
+                                    color: 'var(--success)',
                                 }}
                             >
                                 {t('sre.auto_badge')}
@@ -69,13 +69,13 @@ const SuggestionCard: React.FC<Props> = ({ suggestion: s, executingId, onExecute
                         style={{
                             fontSize: '0.9rem',
                             fontWeight: 700,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             marginBottom: '0.25rem',
                         }}
                     >
                         {s.title}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', lineHeight: 1.5 }}>
                         {s.description}
                     </div>
                     {s.estimatedSavings && (
@@ -85,7 +85,7 @@ const SuggestionCard: React.FC<Props> = ({ suggestion: s, executingId, onExecute
                                 gap: '1rem',
                                 marginTop: '0.5rem',
                                 fontSize: '0.7rem',
-                                color: '#10b981',
+                                color: 'var(--success)',
                             }}
                         >
                             {s.estimatedSavings.latency && (
@@ -119,7 +119,7 @@ const SuggestionCard: React.FC<Props> = ({ suggestion: s, executingId, onExecute
                                 executingId === s.id
                                     ? 'rgba(16,185,129,0.2)'
                                     : 'rgba(16,185,129,0.1)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -143,7 +143,7 @@ const SuggestionCard: React.FC<Props> = ({ suggestion: s, executingId, onExecute
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

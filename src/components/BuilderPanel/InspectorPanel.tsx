@@ -94,7 +94,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                     <label
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontWeight: 600,
                                             textTransform: 'uppercase',
                                         }}
@@ -105,7 +105,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                         style={{
                                             fontSize: '0.65rem',
                                             fontFamily: 'monospace',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         {activeNode.id}
@@ -170,7 +170,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                             <div
                                                 style={{
                                                     fontSize: '0.75rem',
-                                                    color: '#f59e0b',
+                                                    color: 'var(--warning)',
                                                     marginTop: '0.5rem',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -195,7 +195,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                                 background: 'rgba(0,0,0,0.3)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 borderRadius: 8,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 outline: 'none',
                                                 resize: 'vertical',
                                                 fontSize: '0.85rem',
@@ -220,7 +220,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                         <label
                                             style={{
                                                 fontSize: '0.75rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 fontWeight: 600,
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
@@ -360,7 +360,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                                 <div
                                                     style={{
                                                         fontSize: '0.75rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         textAlign: 'center',
                                                         padding: '1rem 0',
                                                     }}
@@ -412,8 +412,8 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                             <button
                                 style={{
                                     padding: '0.75rem',
-                                    background: 'rgba(239,68,68,0.1)',
-                                    color: '#ef4444',
+                                    background: 'var(--error-tint)',
+                                    color: 'var(--error)',
                                     border: '1px solid rgba(239,68,68,0.2)',
                                     borderRadius: 8,
                                     display: 'flex',
@@ -450,7 +450,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 textAlign: 'center',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 gap: '1rem',
                             }}
                         >
@@ -472,7 +472,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                     style={{
                                         fontSize: '0.95rem',
                                         fontWeight: 600,
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '0.25rem',
                                     }}
                                 >

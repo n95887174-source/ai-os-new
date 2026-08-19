@@ -23,10 +23,10 @@ interface Suggestion {
 }
 
 const REC_BADGES = {
-    recommended: { label: 'Recommended', color: '#10b981', icon: <ThumbsUp size={12} /> },
-    good: { label: 'Good', color: '#3b82f6', icon: <Minus size={12} /> },
-    fair: { label: 'Fair', color: '#f59e0b', icon: <ThumbsDown size={12} /> },
-    avoid: { label: 'Avoid', color: '#ef4444', icon: <ThumbsDown size={12} /> },
+    recommended: { label: 'Recommended', color: 'var(--success)', icon: <ThumbsUp size={12} /> },
+    good: { label: 'Good', color: 'var(--accent)', icon: <Minus size={12} /> },
+    fair: { label: 'Fair', color: 'var(--warning)', icon: <ThumbsDown size={12} /> },
+    avoid: { label: 'Avoid', color: 'var(--error)', icon: <ThumbsDown size={12} /> },
 } as const;
 
 const ProviderMarketplace: React.FC = () => {
@@ -89,7 +89,7 @@ const ProviderMarketplace: React.FC = () => {
     if (rankings.length === 0 && catalog.length === 0) {
         return (
             <PanelLoader title="Provider Marketplace">
-                <div style={error ? { ...emptyState, color: '#ef4444' } : emptyState}>
+                <div style={error ? { ...emptyState, color: 'var(--error)' } : emptyState}>
                     {error ? (
                         <>
                             <p style={emptyStateTitle}>Failed to load marketplace</p>
@@ -119,7 +119,7 @@ const ProviderMarketplace: React.FC = () => {
                 }}
             >
                 <div style={{ ...flexBetween }}>
-                    <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                         Rankings from live metrics · {installed.length} installed
                     </span>
                     <button
@@ -146,11 +146,11 @@ const ProviderMarketplace: React.FC = () => {
                     <div className="glass-panel" style={{ ...glassPanelPad15r }}>
                         <div style={{ ...flexBetween, marginBottom: 8 }}>
                             <span
-                                style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}
+                                style={{ fontSize: '0.85rem', color: 'var(--slate-200)', fontWeight: 600 }}
                             >
                                 Suggestions
                             </span>
-                            <Lightbulb size={16} style={{ color: '#f59e0b' }} />
+                            <Lightbulb size={16} style={{ color: 'var(--warning)' }} />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {suggestions.slice(0, 5).map((s) => {
@@ -169,7 +169,7 @@ const ProviderMarketplace: React.FC = () => {
                                         <span
                                             style={{
                                                 fontWeight: 600,
-                                                color: '#f59e0b',
+                                                color: 'var(--warning)',
                                                 minWidth: 80,
                                             }}
                                         >
@@ -234,7 +234,7 @@ const ProviderMarketplace: React.FC = () => {
                                                     borderRadius: 999,
                                                     fontSize: '0.6rem',
                                                     background: 'rgba(34,197,94,0.15)',
-                                                    color: '#22c55e',
+                                                    color: 'var(--success)',
                                                 }}
                                             >
                                                 Installed
@@ -332,7 +332,7 @@ const ProviderMarketplace: React.FC = () => {
                         style={{
                             ...glassPanelPad15r,
                             textAlign: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: 13,
                         }}
                     >

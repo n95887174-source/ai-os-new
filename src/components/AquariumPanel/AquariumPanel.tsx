@@ -257,11 +257,11 @@ const AquariumPanel: React.FC = () => {
                                 gridTemplateColumns: '1fr 1fr',
                                 gap: '0.75rem',
                                 fontSize: '0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             <div>
-                                <span style={{ color: '#3b82f6' }}>🐟 Fish</span> = Provider. Size =
+                                <span style={{ color: 'var(--accent)' }}>🐟 Fish</span> = Provider. Size =
                                 requests. Color = health.
                             </div>
                             <div>
@@ -269,15 +269,15 @@ const AquariumPanel: React.FC = () => {
                                 provider (no recent activity).
                             </div>
                             <div>
-                                <span style={{ color: '#10b981' }}>🌿 Seaweed</span> = Passive
+                                <span style={{ color: 'var(--success)' }}>🌿 Seaweed</span> = Passive
                                 background process.
                             </div>
                             <div>
-                                <span style={{ color: '#f59e0b' }}>🫧 Bubbles</span> = Chat messages
+                                <span style={{ color: 'var(--warning)' }}>🫧 Bubbles</span> = Chat messages
                                 flowing through.
                             </div>
                             <div>
-                                <span style={{ color: '#ef4444' }}>🤖 Cleaner Bot</span> =
+                                <span style={{ color: 'var(--error)' }}>🤖 Cleaner Bot</span> =
                                 Maintenance task running.
                             </div>
                             <div>
@@ -285,7 +285,7 @@ const AquariumPanel: React.FC = () => {
                                 limit, error, success).
                             </div>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
                             Click a fish to see provider details. Hover for quick stats. Feed all
                             fish to refresh activity.
                         </div>
@@ -311,14 +311,14 @@ const AquariumPanel: React.FC = () => {
                 >
                     <Waves size={64} color="#475569" />
                     <h3
-                        style={{ margin: 0, color: '#94a3b8', fontWeight: 700, fontSize: '1.1rem' }}
+                        style={{ margin: 0, color: 'var(--slate-400)', fontWeight: 700, fontSize: '1.1rem' }}
                     >
                         {t('aquarium.empty_title')}
                     </h3>
                     <p
                         style={{
                             margin: 0,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.85rem',
                             textAlign: 'center',
                             maxWidth: 300,
@@ -623,7 +623,7 @@ const AquariumPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.7rem',
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                     fontWeight: 800,
                                                 }}
                                             >
@@ -647,7 +647,7 @@ const AquariumPanel: React.FC = () => {
                                                 animate={{
                                                     width: `${Math.round(selectedKeyData.stats?.extended?.reputationScore || 0)}%`,
                                                 }}
-                                                style={{ height: '100%', background: '#10b981' }}
+                                                style={{ height: '100%', background: 'var(--success)' }}
                                             />
                                         </div>
                                     </div>
@@ -688,7 +688,7 @@ const AquariumPanel: React.FC = () => {
                                                 style={{
                                                     fontSize: '0.9rem',
                                                     fontWeight: 800,
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                 }}
                                             >
                                                 {(() => {
@@ -726,7 +726,7 @@ const AquariumPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.6rem',
-                                                    background: 'rgba(59,130,246,0.1)',
+                                                    background: 'var(--accent-tint)',
                                                     padding: '4px 10px',
                                                     borderRadius: 8,
                                                     border: '1px solid rgba(59,130,246,0.2)',
@@ -742,11 +742,11 @@ const AquariumPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.6rem',
-                                                    background: 'rgba(245,158,11,0.1)',
+                                                    background: 'var(--warning-tint)',
                                                     padding: '4px 10px',
                                                     borderRadius: 8,
                                                     border: '1px solid rgba(245,158,11,0.2)',
-                                                    color: '#f59e0b',
+                                                    color: 'var(--warning)',
                                                     fontWeight: 700,
                                                     textTransform: 'uppercase',
                                                 }}
@@ -830,7 +830,7 @@ const AquariumPanel: React.FC = () => {
                 >
                     <div
                         className="aquarium-footer-icon-box"
-                        style={{ background: 'rgba(16,185,129,0.1)' }}
+                        style={{ background: 'var(--success-tint)' }}
                     >
                         <ShieldCheck color="#10b981" size={24} />
                     </div>
@@ -864,7 +864,7 @@ const AquariumPanel: React.FC = () => {
                 >
                     <div
                         className="aquarium-footer-icon-box"
-                        style={{ background: 'rgba(245,158,11,0.1)' }}
+                        style={{ background: 'var(--warning-tint)' }}
                     >
                         <Sparkles color="#f59e0b" size={24} />
                     </div>
@@ -872,7 +872,7 @@ const AquariumPanel: React.FC = () => {
                         <div className="aquarium-footer-label">
                             {t('aquarium.agent_population')}
                         </div>
-                        <div className="aquarium-footer-value" style={{ color: '#f59e0b' }}>
+                        <div className="aquarium-footer-value" style={{ color: 'var(--warning)' }}>
                             {activeFishesCount} {t('aquarium.active_entities')}
                         </div>
                     </div>

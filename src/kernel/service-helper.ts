@@ -25,6 +25,9 @@ export function lazyService<T extends object>(
                     try {
                         instance = ensureContainer().getOptional<unknown>(name);
                         if (instance) {
+                            // B-06: attribute the locator edge to the factory currently
+                            // resolving (if any) so the container graph isn't blind to it.
+                            ensureContainer().recordDependencyFromActive(name);
                             resolved.set(name, instance);
                             notFoundCache.delete(name);
                         } else {

@@ -7,7 +7,7 @@ const LeaderAssignment: React.FC<TeamState> = ({ team, setTeam }) => {
     const show = team.coordinationStrategy === 'hierarchical';
     return (
         <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
                 {show
                     ? 'Hierarchical strategy requires a team leader who delegates tasks and synthesizes results.'
                     : 'Leader assignment is only needed for the "hierarchical" strategy. Select "hierarchical" in the previous step to configure a leader.'}
@@ -18,7 +18,7 @@ const LeaderAssignment: React.FC<TeamState> = ({ team, setTeam }) => {
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'block',
                             marginBottom: 4,
                         }}
@@ -50,7 +50,7 @@ const LeaderAssignment: React.FC<TeamState> = ({ team, setTeam }) => {
                         background: 'rgba(255,255,255,0.03)',
                         borderRadius: 8,
                         textAlign: 'center',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.8rem',
                     }}
                 >

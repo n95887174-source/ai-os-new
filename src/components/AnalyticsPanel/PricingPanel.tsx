@@ -74,7 +74,7 @@ const PricingPanel: React.FC = () => {
                         style={{
                             fontSize: '1.5rem',
                             fontWeight: 800,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             marginBottom: '0.5rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -83,7 +83,7 @@ const PricingPanel: React.FC = () => {
                     >
                         <DollarSign size={28} color="#10b981" /> {t('pricing.plane_title')}
                     </h1>
-                    <p style={{ fontSize: '0.9rem', color: '#64748b' }}>{t('pricing.subtitle')}</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--slate-500)' }}>{t('pricing.subtitle')}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
@@ -96,7 +96,7 @@ const PricingPanel: React.FC = () => {
                             padding: '0.6rem 1.2rem',
                             borderRadius: 12,
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             cursor: 'pointer',
                             fontSize: '0.9rem',
@@ -128,7 +128,7 @@ const PricingPanel: React.FC = () => {
                 >
                     <div
                         style={{
-                            color: '#10b981',
+                            color: 'var(--success)',
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             marginBottom: '0.5rem',
@@ -138,7 +138,7 @@ const PricingPanel: React.FC = () => {
                         {t('pricing.spent_this_month')}
                     </div>
                     <div style={budgetValueLarge}>{formatCost(budget?.spentThisMonth ?? 0)}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
                         {t('pricing.daily_avg', {
                             amount: budget?.dailyAverage.toFixed(2) ?? '0.00',
                         })}
@@ -155,7 +155,7 @@ const PricingPanel: React.FC = () => {
                 >
                     <div
                         style={{
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             marginBottom: '0.5rem',
@@ -169,7 +169,7 @@ const PricingPanel: React.FC = () => {
                             ? '∞'
                             : formatCost(budget?.remainingBudget ?? 0)}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
                         {t('pricing.of_goal', {
                             amount: budget?.monthlyBudget.toFixed(2) ?? '0.00',
                         })}
@@ -186,7 +186,7 @@ const PricingPanel: React.FC = () => {
                 >
                     <div
                         style={{
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             marginBottom: '0.5rem',
@@ -222,7 +222,7 @@ const PricingPanel: React.FC = () => {
                 >
                     <div
                         style={{
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontSize: '0.75rem',
                             fontWeight: 700,
                             marginBottom: '0.5rem',
@@ -231,10 +231,10 @@ const PricingPanel: React.FC = () => {
                     >
                         {t('pricing.last_sync')}
                     </div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {lastSync ? new Date(lastSync).toLocaleTimeString() : t('pricing.never')}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
                         {t('pricing.ttl')}
                     </div>
                 </div>
@@ -255,7 +255,7 @@ const PricingPanel: React.FC = () => {
                         style={{
                             fontSize: '1.1rem',
                             fontWeight: 700,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             marginBottom: '1.5rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -276,7 +276,7 @@ const PricingPanel: React.FC = () => {
                                 <tr
                                     style={{
                                         borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                     }}
                                 >
                                     <th style={{ textAlign: 'left', padding: '1rem' }}>
@@ -304,7 +304,7 @@ const PricingPanel: React.FC = () => {
                                             key={id}
                                             style={{
                                                 borderBottom: '1px solid rgba(255,255,255,0.02)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             <td style={{ padding: '1rem', fontWeight: 600 }}>
@@ -323,8 +323,8 @@ const PricingPanel: React.FC = () => {
                                                             fontSize: '0.7rem',
                                                             padding: '0.2rem 0.5rem',
                                                             borderRadius: 4,
-                                                            background: 'rgba(16,185,129,0.1)',
-                                                            color: '#10b981',
+                                                            background: 'var(--success-tint)',
+                                                            color: 'var(--success)',
                                                             fontWeight: 700,
                                                         }}
                                                     >
@@ -337,7 +337,7 @@ const PricingPanel: React.FC = () => {
                                                             padding: '0.2rem 0.5rem',
                                                             borderRadius: 4,
                                                             background: 'rgba(255,255,255,0.05)',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                         }}
                                                     >
                                                         {t('pricing.status.synced')}
@@ -352,7 +352,7 @@ const PricingPanel: React.FC = () => {
                                                     style={{
                                                         background: 'transparent',
                                                         border: 'none',
-                                                        color: '#3b82f6',
+                                                        color: 'var(--accent)',
                                                         cursor: 'pointer',
                                                         marginRight: '0.5rem',
                                                     }}
@@ -365,7 +365,7 @@ const PricingPanel: React.FC = () => {
                                                         style={{
                                                             background: 'transparent',
                                                             border: 'none',
-                                                            color: '#ef4444',
+                                                            color: 'var(--error)',
                                                             cursor: 'pointer',
                                                         }}
                                                     >
@@ -395,7 +395,7 @@ const PricingPanel: React.FC = () => {
                             style={{
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: '1.2rem',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -408,7 +408,7 @@ const PricingPanel: React.FC = () => {
                             <label
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     display: 'block',
                                     marginBottom: '0.5rem',
                                 }}
@@ -435,7 +435,7 @@ const PricingPanel: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(59,130,246,0.05)',
                                 padding: '0.75rem',
                                 borderRadius: 8,
@@ -463,7 +463,7 @@ const PricingPanel: React.FC = () => {
                             style={{
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: '1rem',
                             }}
                         >
@@ -474,7 +474,7 @@ const PricingPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: '0.8rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontStyle: 'italic',
                                     }}
                                 >
@@ -498,12 +498,12 @@ const PricingPanel: React.FC = () => {
                                                 style={{
                                                     fontSize: '0.8rem',
                                                     fontWeight: 700,
-                                                    color: '#f8fafc',
+                                                    color: 'var(--slate-50)',
                                                 }}
                                             >
                                                 {id}
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#10b981' }}>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--success)' }}>
                                                 {t('pricing.override_entry', {
                                                     input: `$${p.input}`,
                                                     output: `$${p.output}`,
@@ -513,7 +513,7 @@ const PricingPanel: React.FC = () => {
                                         <button
                                             onClick={() => removeOverride(id)}
                                             style={{
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 background: 'transparent',
                                                 border: 'none',
                                                 cursor: 'pointer',
@@ -561,7 +561,7 @@ const PricingPanel: React.FC = () => {
                                 width: 400,
                                 padding: '2rem',
                                 borderRadius: 24,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: '1px solid rgba(255,255,255,0.1)',
                             }}
                         >
@@ -569,7 +569,7 @@ const PricingPanel: React.FC = () => {
                                 style={{
                                     fontSize: '1.2rem',
                                     fontWeight: 800,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                     marginBottom: '1.5rem',
                                 }}
                             >
@@ -579,7 +579,7 @@ const PricingPanel: React.FC = () => {
                                 <label
                                     style={{
                                         fontSize: '0.75rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         display: 'block',
                                         marginBottom: '0.5rem',
                                     }}
@@ -610,7 +610,7 @@ const PricingPanel: React.FC = () => {
                                 <label
                                     style={{
                                         fontSize: '0.75rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         display: 'block',
                                         marginBottom: '0.5rem',
                                     }}
@@ -658,7 +658,7 @@ const PricingPanel: React.FC = () => {
                                         flex: 1,
                                         padding: '0.75rem',
                                         borderRadius: 12,
-                                        background: '#10b981',
+                                        background: 'var(--success)',
                                         color: 'white',
                                         border: 'none',
                                         fontWeight: 700,

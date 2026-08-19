@@ -32,7 +32,24 @@ export function getTranslation(
     key: TranslationKey,
     params?: Record<string, string | number>,
 ): string {
-    let text = _loaded[locale]?.[key] || _loaded.en?.[key] || key;
+    const localeText = _loaded[locale]?.[key];
+    const enText = _loaded.en?.[key];
+    let text = localeText ?? enText ?? key;
+
+    // FX-02: surface missing keys instead of silently degrading to English or
+    // leaking the raw key string. Warn once per key in dev.
+    if (import.meta.env?.DEV) {
+        const localeMissing = localeText === undefined;
+        const enMissing = enText === undefined;
+        if ((localeMissing || enMissing) && !_warnedKeys.has(key)) {
+            _warnedKeys.add(key);
+            console.warn(
+                `[i18n] missing translation key "${key}"` +
+                    ` (locale=${locale} missing=${localeMissing}, en missing=${enMissing})`,
+            );
+        }
+    }
+
     if (params) {
         for (const [k, v] of Object.entries(params)) {
             text = text.replace(`{${k}}`, String(v));
@@ -40,6 +57,9 @@ export function getTranslation(
     }
     return text;
 }
+
+/** Keys already warned about (dev only), to avoid console spam. */
+const _warnedKeys = new Set<string>();
 
 export const DEFAULT_LOCALE: Locale = 'en';
 

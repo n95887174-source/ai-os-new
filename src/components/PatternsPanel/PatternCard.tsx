@@ -47,17 +47,17 @@ const PatternCard: React.FC<Props> = ({ note, onClick }) => (
             >
                 {note.category.replace('-', ' ')}
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--slate-600)' }}>
                 {new Date(note.timestamp).toLocaleDateString()}
             </span>
         </div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-50)', marginBottom: '1rem' }}>
             {note.title}
         </h3>
         <p
             style={{
                 fontSize: '0.9rem',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 lineHeight: 1.6,
                 marginBottom: '1.5rem',
                 display: '-webkit-box',
@@ -77,7 +77,7 @@ const PatternCard: React.FC<Props> = ({ note, onClick }) => (
                         padding: '0.2rem 0.6rem',
                         borderRadius: 6,
                         background: 'rgba(255,255,255,0.05)',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     #{tag}

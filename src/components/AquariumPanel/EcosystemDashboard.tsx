@@ -123,7 +123,7 @@ const AchievementCard: React.FC<{ achievement: Achievement }> = ({ achievement }
             >
                 {achievement.title}
             </div>
-            <div style={{ fontSize: '0.6rem', color: '#64748b' }}>{achievement.description}</div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>{achievement.description}</div>
         </div>
         <div
             style={{
@@ -160,7 +160,7 @@ const ThemeCard: React.FC<{ theme: Theme }> = ({ theme }) => (
         >
             {theme.name}
         </div>
-        <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: 4 }}>
+        <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)', marginBottom: 4 }}>
             {theme.description}
         </div>
         <div style={{ display: 'flex', gap: 3 }}>
@@ -203,7 +203,7 @@ export const EcosystemDashboard: React.FC = () => {
     }, []);
 
     if (!state)
-        return <div style={{ padding: '1rem', color: '#64748b' }}>Loading ecosystem...</div>;
+        return <div style={{ padding: '1rem', color: 'var(--slate-500)' }}>Loading ecosystem...</div>;
 
     const unlockedCount = state.creatures.filter((c) => c.isUnlocked).length;
     const unlockedAchievements = state.achievements.filter((a) => a.isUnlocked).length;
@@ -224,19 +224,19 @@ export const EcosystemDashboard: React.FC = () => {
                         label: 'Happiness',
                         value: `${state.happiness}%`,
                         icon: <Heart size={14} />,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                     },
                     {
                         label: 'Creatures',
                         value: `${unlockedCount}/${state.creatures.length}`,
                         icon: <Fish size={14} />,
-                        color: '#22c55e',
+                        color: 'var(--success)',
                     },
                     {
                         label: 'Achievements',
                         value: `${unlockedAchievements}`,
                         icon: <Trophy size={14} />,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                     },
                     {
                         label: 'Themes',
@@ -256,10 +256,10 @@ export const EcosystemDashboard: React.FC = () => {
                         }}
                     >
                         <div style={{ color: stat.color, marginBottom: 4 }}>{stat.icon}</div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {stat.value}
                         </div>
-                        <div style={{ fontSize: '0.6rem', color: '#64748b' }}>{stat.label}</div>
+                        <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>{stat.label}</div>
                     </div>
                 ))}
             </div>

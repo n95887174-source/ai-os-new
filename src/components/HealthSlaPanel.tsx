@@ -107,7 +107,7 @@ const HealthSlaPanelContent: React.FC = () => {
                     >
                         <Shield size={20} color="#10b981" /> Health SLA Config
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Define and manage Service Level Agreements for provider health
                     </p>
                 </div>
@@ -135,7 +135,7 @@ const HealthSlaPanelContent: React.FC = () => {
             {showForm && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -157,8 +157,8 @@ const HealthSlaPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -171,8 +171,8 @@ const HealthSlaPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -190,7 +190,7 @@ const HealthSlaPanelContent: React.FC = () => {
                             border: 'none',
                             cursor: 'pointer',
                             background: 'rgba(16,185,129,0.2)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                             fontSize: 13,
                             fontWeight: 600,
                             opacity: formName.trim() ? 1 : 0.5,
@@ -228,10 +228,10 @@ const HealthSlaPanelContent: React.FC = () => {
                                         : '1px solid transparent',
                             }}
                         >
-                            <div style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}>
                                 {p.name}
                             </div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>
+                            <div style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                 {p.rules.length} rules · {p.providers.join(', ')}
                             </div>
                         </div>
@@ -246,7 +246,7 @@ const HealthSlaPanelContent: React.FC = () => {
                             borderRadius: 8,
                             border: '1px dashed rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             fontSize: 12,
                         }}
@@ -267,11 +267,11 @@ const HealthSlaPanelContent: React.FC = () => {
                             >
                                 <div>
                                     <div
-                                        style={{ fontWeight: 700, fontSize: 16, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 700, fontSize: 16, color: 'var(--slate-200)' }}
                                     >
                                         {selected.name}
                                     </div>
-                                    <div style={{ fontSize: 12, color: '#64748b' }}>
+                                    <div style={{ fontSize: 12, color: 'var(--slate-500)' }}>
                                         {selected.description}
                                     </div>
                                 </div>
@@ -287,7 +287,7 @@ const HealthSlaPanelContent: React.FC = () => {
                                             border: 'none',
                                             cursor: 'pointer',
                                             background: 'rgba(16,185,129,0.15)',
-                                            color: '#10b981',
+                                            color: 'var(--success)',
                                             fontSize: 11,
                                             fontWeight: 600,
                                         }}
@@ -305,7 +305,7 @@ const HealthSlaPanelContent: React.FC = () => {
                                             border: 'none',
                                             cursor: 'pointer',
                                             background: 'rgba(59,130,246,0.15)',
-                                            color: '#3b82f6',
+                                            color: 'var(--accent)',
                                             fontSize: 11,
                                             fontWeight: 600,
                                         }}
@@ -323,7 +323,7 @@ const HealthSlaPanelContent: React.FC = () => {
                                             border: 'none',
                                             cursor: 'pointer',
                                             background: 'rgba(239,68,68,0.15)',
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             fontSize: 11,
                                             fontWeight: 600,
                                         }}
@@ -341,8 +341,8 @@ const HealthSlaPanelContent: React.FC = () => {
                                             padding: '3px 8px',
                                             borderRadius: 4,
                                             fontSize: 11,
-                                            background: 'rgba(16,185,129,0.1)',
-                                            color: '#10b981',
+                                            background: 'var(--success-tint)',
+                                            color: 'var(--success)',
                                         }}
                                     >
                                         {p}
@@ -360,7 +360,7 @@ const HealthSlaPanelContent: React.FC = () => {
                                             gap: 10,
                                             padding: '10px 12',
                                             borderRadius: 8,
-                                            background: '#0f172a',
+                                            background: 'var(--slate-900)',
                                             border: '1px solid rgba(255,255,255,0.04)',
                                             opacity: rule.enabled ? 1 : 0.4,
                                         }}
@@ -379,12 +379,12 @@ const HealthSlaPanelContent: React.FC = () => {
                                                 style={{
                                                     fontSize: 13,
                                                     fontWeight: 600,
-                                                    color: '#e2e8f0',
+                                                    color: 'var(--slate-200)',
                                                 }}
                                             >
                                                 {rule.name}
                                             </div>
-                                            <div style={{ fontSize: 11, color: '#64748b' }}>
+                                            <div style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                                 {rule.metric} {rule.operator} {rule.threshold}
                                                 {rule.unit}
                                             </div>
@@ -410,13 +410,13 @@ const HealthSlaPanelContent: React.FC = () => {
                                 ))}
                             </div>
 
-                            <div style={{ fontSize: 11, color: '#475569' }}>
+                            <div style={{ fontSize: 11, color: 'var(--slate-600)' }}>
                                 Created {new Date(selected.createdAt).toLocaleDateString()} ·
                                 Updated {new Date(selected.updatedAt).toLocaleDateString()}
                             </div>
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                        <div style={{ textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                             <Shield size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                             <div style={{ fontSize: 14 }}>Select an SLA profile</div>
                             <div style={{ fontSize: 12, marginTop: 4 }}>

@@ -1,5 +1,5 @@
 import type { IGeminiLiveService, GeminiLiveSession } from '../contracts/gemini-live';
-import { googleGenAIService } from '../instances/services-extras';
+import type { GoogleGenAIService } from './google-genai-service';
 import { rootLogger } from './logger-service';
 import { PROVIDER_DEFAULT_MODELS } from '../utils/provider-default-models';
 
@@ -17,6 +17,8 @@ function getSpeechRecognition(): { new (): SpeechRecognition } | null {
 
 export class GeminiLiveService implements IGeminiLiveService {
     private static MAX_MESSAGES = 100;
+
+    constructor(private googleGenAIService: GoogleGenAIService) {}
     private session: GeminiLiveSession = {
         id: genId(),
         status: 'idle',
@@ -51,7 +53,7 @@ export class GeminiLiveService implements IGeminiLiveService {
             this.session = { ...this.session, status: 'error', error: 'Speech API not supported' };
             return;
         }
-        if (!googleGenAIService.isConfigured) {
+        if (!this.googleGenAIService.isConfigured) {
             this.session = { ...this.session, status: 'error', error: 'Set Google API key first' };
             return;
         }
@@ -163,7 +165,7 @@ export class GeminiLiveService implements IGeminiLiveService {
 
         try {
             let fullText = '';
-            const result = await googleGenAIService.streamContent(
+            const result = await this.googleGenAIService.streamContent(
                 chatMessages,
                 (chunk) => {
                     fullText += chunk;

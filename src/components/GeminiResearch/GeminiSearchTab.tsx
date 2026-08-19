@@ -50,7 +50,7 @@ export const GeminiSearchTab: React.FC<Props> = ({ service }) => {
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.9rem',
                     }}
                 />
@@ -78,7 +78,7 @@ export const GeminiSearchTab: React.FC<Props> = ({ service }) => {
             </div>
 
             {!service && (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 40, color: '#64748b' }}>
+                <div style={{ ...cardStyle, textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                     <Sparkles size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
                     <div>Gemini Research service not available</div>
                     <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
@@ -97,13 +97,13 @@ export const GeminiSearchTab: React.FC<Props> = ({ service }) => {
                             marginBottom: 12,
                         }}
                     >
-                        <h3 style={{ margin: 0, fontSize: '1rem', color: '#e2e8f0' }}>Results</h3>
+                        <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--slate-200)' }}>Results</h3>
                         <div
                             style={{
                                 display: 'flex',
                                 gap: 12,
                                 fontSize: '0.75rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             <span>Confidence: {(result.confidence * 100).toFixed(0)}%</span>
@@ -114,7 +114,7 @@ export const GeminiSearchTab: React.FC<Props> = ({ service }) => {
                     <div
                         style={{
                             fontSize: '0.9rem',
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             lineHeight: 1.7,
                             marginBottom: 12,
                             whiteSpace: 'pre-wrap',
@@ -132,17 +132,17 @@ export const GeminiSearchTab: React.FC<Props> = ({ service }) => {
                                 padding: '6px 0',
                                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                                 fontSize: '0.8rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             <ExternalLink
                                 size={12}
-                                style={{ marginTop: 3, flexShrink: 0, color: '#3b82f6' }}
+                                style={{ marginTop: 3, flexShrink: 0, color: 'var(--accent)' }}
                             />
                             <div>
                                 <div style={{ color: '#60a5fa', fontWeight: 500 }}>{s.title}</div>
                                 <div
-                                    style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}
+                                    style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: 2 }}
                                 >
                                     {s.snippet}
                                 </div>

@@ -197,14 +197,14 @@ const ImpactTab: React.FC = () => {
                                 (e.currentTarget as HTMLElement).style.background = 'transparent';
                             }}
                         >
-                            <span style={{ fontWeight: 500, color: '#e2e8f0' }}>
+                            <span style={{ fontWeight: 500, color: 'var(--slate-200)' }}>
                                 {m.techniqueId}
                             </span>
                             <span style={deltaStyle(m.avgJudgeScoreDelta)}>
                                 {m.avgJudgeScoreDelta >= 0 ? '+' : ''}
                                 {formatPct(m.avgJudgeScoreDelta)}
                             </span>
-                            <span style={{ color: '#94a3b8' }}>{m.totalActivations}</span>
+                            <span style={{ color: 'var(--slate-400)' }}>{m.totalActivations}</span>
                             <span>
                                 <span
                                     style={badgeStyle(CONFIDENCE_COLOR[m.confidence] ?? '#6b7280')}
@@ -212,8 +212,8 @@ const ImpactTab: React.FC = () => {
                                     {PRETTY_CONFIDENCE[m.confidence] ?? m.confidence}
                                 </span>
                             </span>
-                            <span style={{ color: '#94a3b8' }}>{m.totalSessions}</span>
-                            <span style={{ color: '#64748b', fontSize: '16px' }}>
+                            <span style={{ color: 'var(--slate-400)' }}>{m.totalSessions}</span>
+                            <span style={{ color: 'var(--slate-500)', fontSize: '16px' }}>
                                 {expandedId === m.techniqueId ? '−' : '+'}
                             </span>
                         </div>
@@ -259,7 +259,7 @@ const ImpactTab: React.FC = () => {
                                     </div>
                                 )}
                                 {m.pValue !== undefined && (
-                                    <div style={{ marginTop: '8px', color: '#64748b' }}>
+                                    <div style={{ marginTop: '8px', color: 'var(--slate-500)' }}>
                                         p-value: {m.pValue.toFixed(4)}
                                     </div>
                                 )}
@@ -278,7 +278,7 @@ const ImpactTab: React.FC = () => {
                                     </div>
                                     <div style={{ display: 'flex', gap: '20px', fontSize: '13px' }}>
                                         <div>
-                                            <span style={{ color: '#94a3b8' }}>
+                                            <span style={{ color: 'var(--slate-400)' }}>
                                                 {t('quality_impact.last_touch') ?? 'Last-touch'}:
                                             </span>{' '}
                                             <span style={{ color: '#60a5fa', fontWeight: 600 }}>
@@ -286,16 +286,16 @@ const ImpactTab: React.FC = () => {
                                             </span>
                                         </div>
                                         <div>
-                                            <span style={{ color: '#94a3b8' }}>
+                                            <span style={{ color: 'var(--slate-400)' }}>
                                                 {t('quality_impact.frequency_title') ?? 'Frequency'}
                                                 :
                                             </span>{' '}
-                                            <span style={{ color: '#a78bfa', fontWeight: 600 }}>
+                                            <span style={{ color: 'var(--purple-muted)', fontWeight: 600 }}>
                                                 {((m.frequencyInBestRounds ?? 0) * 100).toFixed(0)}%
                                             </span>
                                         </div>
                                         <div>
-                                            <span style={{ color: '#94a3b8' }}>Composite:</span>{' '}
+                                            <span style={{ color: 'var(--slate-400)' }}>Composite:</span>{' '}
                                             <span style={{ color: '#f472b6', fontWeight: 600 }}>
                                                 {(
                                                     (m.lastTouchCount ?? 0) * 2 +

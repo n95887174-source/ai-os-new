@@ -54,7 +54,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                     style={{
                         ...styles.detailBadge,
                         background: 'rgba(100,116,139,0.15)',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <FileCode size={12} /> SOURCE ONLY
@@ -89,7 +89,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                     style={{
                         ...styles.detailBadge,
                         background: 'rgba(251,191,36,0.15)',
-                        color: '#fbbf24',
+                        color: 'var(--warning)',
                     }}
                 >
                     <Hash size={12} /> user: {info.uiRouteId}
@@ -100,7 +100,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                     style={{
                         ...styles.detailBadge,
                         background: 'rgba(100,116,139,0.15)',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     ✗ No panel needed
@@ -147,7 +147,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
 
         {info.uiRouteId === null && info.registered && !info.userNoPanel && (
             <div style={styles.detailSection}>
-                <div style={{ ...styles.detailSectionTitle, color: '#fbbf24' }}>
+                <div style={{ ...styles.detailSectionTitle, color: 'var(--warning)' }}>
                     <Hash size={12} /> Assign a route
                 </div>
                 <select

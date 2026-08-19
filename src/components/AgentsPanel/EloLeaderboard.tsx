@@ -31,7 +31,7 @@ const MiniLineChart: React.FC<{ data: number[]; width?: number; height?: number 
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '0.65rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                 }}
             >
                 No data
@@ -104,10 +104,10 @@ export const EloLeaderboard: React.FC = () => {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
                 <Trophy size={18} color="#f59e0b" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                     ELO Leaderboard
                 </span>
-                <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginLeft: 'auto' }}>
                     {entries.length} agents ranked
                 </span>
             </div>
@@ -117,7 +117,7 @@ export const EloLeaderboard: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '2rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.85rem',
                     }}
                 >
@@ -134,7 +134,7 @@ export const EloLeaderboard: React.FC = () => {
                             padding: '0 12px 6px',
                             fontSize: '0.6rem',
                             fontWeight: 700,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                         }}
@@ -212,7 +212,7 @@ export const EloLeaderboard: React.FC = () => {
                                             style={{
                                                 fontSize: '0.8rem',
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -243,21 +243,21 @@ export const EloLeaderboard: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             textAlign: 'center',
                                             fontFamily: 'monospace',
                                         }}
                                     >
-                                        <span style={{ color: '#10b981' }}>{entry.wins}</span>
-                                        <span style={{ color: '#475569' }}> / </span>
-                                        <span style={{ color: '#ef4444' }}>{entry.losses}</span>
-                                        <span style={{ color: '#475569' }}> / </span>
-                                        <span style={{ color: '#f59e0b' }}>{entry.draws}</span>
+                                        <span style={{ color: 'var(--success)' }}>{entry.wins}</span>
+                                        <span style={{ color: 'var(--slate-600)' }}> / </span>
+                                        <span style={{ color: 'var(--error)' }}>{entry.losses}</span>
+                                        <span style={{ color: 'var(--slate-600)' }}> / </span>
+                                        <span style={{ color: 'var(--warning)' }}>{entry.draws}</span>
                                     </div>
                                     <span
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textAlign: 'right',
                                         }}
                                     >
@@ -265,7 +265,7 @@ export const EloLeaderboard: React.FC = () => {
                                     </span>
                                     <span
                                         style={{
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             display: 'flex',
                                             justifyContent: 'center',
                                         }}
@@ -291,7 +291,7 @@ export const EloLeaderboard: React.FC = () => {
                                             style={{
                                                 fontSize: '0.7rem',
                                                 fontWeight: 700,
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 marginBottom: 8,
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.05em',
@@ -314,7 +314,7 @@ export const EloLeaderboard: React.FC = () => {
                                                         key={h.timestamp ?? i}
                                                         style={{
                                                             fontSize: '0.6rem',
-                                                            color: '#64748b',
+                                                            color: 'var(--slate-500)',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: 4,
@@ -347,7 +347,7 @@ export const EloLeaderboard: React.FC = () => {
                                                             {h.elo}
                                                         </span>
                                                         {h.opponent && (
-                                                            <span style={{ color: '#475569' }}>
+                                                            <span style={{ color: 'var(--slate-600)' }}>
                                                                 vs {h.opponent.slice(0, 8)}
                                                             </span>
                                                         )}

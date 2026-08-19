@@ -79,13 +79,13 @@ const DebateChat: React.FC<DebateChatProps> = ({
                             style={{
                                 fontWeight: 700,
                                 fontSize: '1.1rem',
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 marginBottom: '0.5rem',
                             }}
                         >
                             {t('debate.all_agents_failed')}
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                             {t('debate.agent_errors', { count: errors.length })}
                         </div>
                     </motion.div>
@@ -222,7 +222,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                         borderTopRightRadius: isUser ? '4px' : '20px',
                                         fontSize: '1rem',
                                         lineHeight: 1.6,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
                                         backdropFilter: 'blur(10px)',
                                         overflow: 'hidden',
@@ -296,7 +296,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                                 fontSize: '0.7rem',
                                                 fontWeight: 700,
                                                 background: 'rgba(239,68,68,0.15)',
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 border: '1px solid rgba(239,68,68,0.3)',
                                             }}
                                         >
@@ -324,7 +324,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                             alignItems: 'center',
                             gap: '0.75rem',
                             padding: '1rem 1.5rem',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             fontSize: '0.85rem',
                             fontWeight: 600,
                             alignSelf: 'flex-start',
@@ -337,7 +337,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                background: '#a78bfa',
+                                background: 'var(--purple-muted)',
                             }}
                         />
                         {t('synthesizing')}
@@ -359,10 +359,10 @@ const DebateChat: React.FC<DebateChatProps> = ({
                         <div
                             style={{
                                 padding: '0.75rem 1.25rem',
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                                 fontSize: '0.8rem',
                                 fontWeight: 700,
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
@@ -422,7 +422,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                             style={{
                                                 fontWeight: 700,
                                                 fontSize: '0.85rem',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 marginBottom: '0.25rem',
                                             }}
                                         >
@@ -450,7 +450,7 @@ const DebateChat: React.FC<DebateChatProps> = ({
                                         <div
                                             style={{
                                                 fontSize: '0.8rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 fontFamily: 'monospace',
                                                 wordBreak: 'break-word',
                                             }}

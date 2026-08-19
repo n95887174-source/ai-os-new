@@ -91,10 +91,10 @@ const SynthesisPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <BrainCircuit size={18} color="#f59e0b" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('synthesis.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {syntheses.length} {t('synthesis.total')}
                     </span>
                 </div>
@@ -106,7 +106,7 @@ const SynthesisPanel: React.FC = () => {
                         borderRadius: 7,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -124,7 +124,7 @@ const SynthesisPanel: React.FC = () => {
                 />
 
                 {message && (
-                    <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginBottom: 8 }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--warning)', marginBottom: 8 }}>
                         {message}
                     </div>
                 )}
@@ -133,7 +133,7 @@ const SynthesisPanel: React.FC = () => {
                     <div
                         style={{
                             fontSize: '0.75rem',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             textAlign: 'center',
                             padding: '2rem 0',
                         }}
@@ -169,7 +169,7 @@ const SynthesisPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.78rem',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -178,7 +178,7 @@ const SynthesisPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.72rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: 4,
                                             lineHeight: 1.4,
                                         }}
@@ -217,19 +217,19 @@ const SynthesisPanel: React.FC = () => {
                                     alignItems: 'center',
                                     marginTop: 6,
                                     fontSize: '0.68rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     flexWrap: 'wrap',
                                 }}
                             >
-                                <span style={{ color: '#10b981' }}>
+                                <span style={{ color: 'var(--success)' }}>
                                     {s.confidenceDistribution.consensus.toFixed(2)}{' '}
                                     {t('synthesis.consensus')}
                                 </span>
-                                <span style={{ color: '#ef4444' }}>
+                                <span style={{ color: 'var(--error)' }}>
                                     {s.confidenceDistribution.dissent.toFixed(2)}{' '}
                                     {t('synthesis.dissent')}
                                 </span>
-                                <span style={{ color: '#f59e0b' }}>
+                                <span style={{ color: 'var(--warning)' }}>
                                     {s.confidenceDistribution.uncertainty.toFixed(2)}{' '}
                                     {t('synthesis.uncertainty')}
                                 </span>
@@ -241,7 +241,7 @@ const SynthesisPanel: React.FC = () => {
                                     {s.input.lensIds.length} {t('synthesis.roles_x_lenses')}
                                 </span>
                                 {s.generatedCrystalId && (
-                                    <span style={{ color: '#10b981' }}>
+                                    <span style={{ color: 'var(--success)' }}>
                                         ◆ {s.generatedCrystalId.slice(0, 16)}
                                     </span>
                                 )}
@@ -263,7 +263,7 @@ const SynthesisPanel: React.FC = () => {
                                             gap: 5,
                                             margin: '10px 0 4px',
                                             fontSize: '0.72rem',
-                                            color: '#8b5cf6',
+                                            color: 'var(--purple)',
                                         }}
                                     >
                                         <SlidersHorizontal size={12} />{' '}
@@ -283,10 +283,10 @@ const SynthesisPanel: React.FC = () => {
                                             placeholder={t('synthesis.feedback_placeholder')}
                                             style={{
                                                 flex: 1,
-                                                background: '#0f172a',
+                                                background: 'var(--slate-900)',
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 borderRadius: 6,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.72rem',
                                                 padding: '0.35rem 0.6rem',
                                             }}
@@ -297,7 +297,7 @@ const SynthesisPanel: React.FC = () => {
                                                 padding: '0.35rem 0.8rem',
                                                 borderRadius: 6,
                                                 border: 'none',
-                                                background: '#8b5cf6',
+                                                background: 'var(--purple)',
                                                 color: '#fff',
                                                 cursor: 'pointer',
                                                 fontSize: '0.72rem',

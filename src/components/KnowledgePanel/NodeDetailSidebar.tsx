@@ -101,7 +101,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                 <div
                                     style={{
                                         fontSize: '0.8rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontFamily: 'monospace',
                                     }}
                                 >
@@ -116,7 +116,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                     padding: '0.4rem',
                                     borderRadius: 8,
                                     border: '1px solid rgba(239,68,68,0.3)',
-                                    background: 'rgba(239,68,68,0.1)',
+                                    background: 'var(--error-tint)',
                                     color: '#fca5a5',
                                     cursor: 'pointer',
                                 }}
@@ -131,7 +131,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                     borderRadius: 8,
                                     background: 'rgba(255,255,255,0.05)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     cursor: 'pointer',
                                 }}
                                 aria-label={t('knowledge.close_details_aria')}
@@ -164,7 +164,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                             background: 'rgba(0,0,0,0.3)',
                                             border: '1px solid rgba(168,85,247,0.3)',
                                             borderRadius: 10,
-                                            color: '#f8fafc',
+                                            color: 'var(--slate-50)',
                                             fontSize: '0.85rem',
                                             lineHeight: 1.6,
                                             resize: 'vertical',
@@ -205,7 +205,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                                 borderRadius: 8,
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 background: 'transparent',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 cursor: 'pointer',
                                                 fontSize: '0.75rem',
                                             }}
@@ -223,7 +223,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                         borderRadius: 10,
                                         border: '1px solid var(--border)',
                                         fontSize: '0.85rem',
-                                        color: '#f8fafc',
+                                        color: 'var(--slate-50)',
                                         lineHeight: 1.6,
                                         fontFamily:
                                             selectedNode.type === 'code' ? 'monospace' : 'inherit',
@@ -269,7 +269,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                                     alignItems: 'center',
                                                     gap: 6,
                                                     fontSize: '0.75rem',
-                                                    color: '#cbd5e1',
+                                                    color: 'var(--slate-300)',
                                                 }}
                                             >
                                                 <Link size={12} aria-hidden="true" />{' '}
@@ -278,7 +278,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                             <span
                                                 style={{
                                                     fontSize: '0.65rem',
-                                                    color: '#3b82f6',
+                                                    color: 'var(--accent)',
                                                     fontWeight: 700,
                                                 }}
                                             >
@@ -291,7 +291,7 @@ const NodeDetailSidebar: React.FC<NodeDetailSidebarProps> = ({
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textAlign: 'center',
                                             padding: '0.5rem',
                                         }}

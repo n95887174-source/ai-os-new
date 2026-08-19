@@ -85,7 +85,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
                     borderRadius: 6,
                     border: '1px solid rgba(255,255,255,0.1)',
                     background: 'rgba(0,0,0,0.3)',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.85rem',
                     resize: 'vertical',
                     fontFamily: 'inherit',
@@ -111,7 +111,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                     }}
                 />
@@ -122,7 +122,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
                         display: 'flex',
@@ -171,7 +171,7 @@ export const NoteInputForm: React.FC<NoteInputFormProps> = ({
                                 gap: 4,
                                 padding: '0.2rem 0.5rem',
                                 borderRadius: 6,
-                                background: 'rgba(168,85,247,0.1)',
+                                background: 'var(--purple-tint)',
                                 border: '1px solid rgba(168,85,247,0.3)',
                                 fontSize: '0.7rem',
                             }}

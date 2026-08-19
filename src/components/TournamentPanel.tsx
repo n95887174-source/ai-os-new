@@ -223,10 +223,10 @@ const TournamentPanel: React.FC = () => {
                                     >
                                         {r.name}
                                     </span>
-                                    <span style={{ fontSize: '0.7rem', color: '#22c55e' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--success)' }}>
                                         {r.wins}W
                                     </span>
-                                    <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--error)' }}>
                                         {r.losses}L
                                     </span>
                                     <span
@@ -248,7 +248,7 @@ const TournamentPanel: React.FC = () => {
                                                 height: '100%',
                                                 borderRadius: 3,
                                                 width: `${Math.max(5, (r.wins / Math.max(1, r.wins + r.losses)) * 100)}%`,
-                                                background: '#22c55e',
+                                                background: 'var(--success)',
                                             }}
                                         />
                                     </div>
@@ -334,23 +334,23 @@ const TournamentPanel: React.FC = () => {
                                         {m.completed ? (
                                             m.winner ? (
                                                 <span
-                                                    style={{ color: '#22c55e', fontSize: '0.7rem' }}
+                                                    style={{ color: 'var(--success)', fontSize: '0.7rem' }}
                                                 >
                                                     Winner: {m.winner}
                                                 </span>
                                             ) : m.draw ? (
                                                 <span
-                                                    style={{ color: '#f59e0b', fontSize: '0.7rem' }}
+                                                    style={{ color: 'var(--warning)', fontSize: '0.7rem' }}
                                                 >
                                                     Draw
                                                 </span>
                                             ) : null
                                         ) : m.sessionStatus === 'cancelled' ? (
-                                            <span style={{ color: '#f59e0b', fontSize: '0.7rem' }}>
+                                            <span style={{ color: 'var(--warning)', fontSize: '0.7rem' }}>
                                                 Cancelled
                                             </span>
                                         ) : (
-                                            <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>
+                                            <span style={{ color: 'var(--error)', fontSize: '0.7rem' }}>
                                                 Failed
                                             </span>
                                         )}
@@ -367,7 +367,7 @@ const TournamentPanel: React.FC = () => {
                                 {m.error && (
                                     <div
                                         style={{
-                                            color: '#ef4444',
+                                            color: 'var(--error)',
                                             fontSize: '0.65rem',
                                             marginTop: '0.25rem',
                                         }}

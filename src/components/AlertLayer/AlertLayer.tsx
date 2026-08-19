@@ -190,7 +190,7 @@ const AlertLayer: React.FC = () => {
                         pointerEvents: 'auto',
                         padding: '0.75rem 1rem',
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         border: `1px solid ${toast.type === 'error' ? '#ef4444' : toast.type === 'warning' ? '#f59e0b' : toast.type === 'success' ? '#10b981' : '#3b82f6'}30`,
                         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                         display: 'flex',
@@ -205,7 +205,7 @@ const AlertLayer: React.FC = () => {
                             style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: 2,
                             }}
                         >
@@ -214,7 +214,7 @@ const AlertLayer: React.FC = () => {
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 wordBreak: 'break-word',
                             }}
                         >
@@ -227,7 +227,7 @@ const AlertLayer: React.FC = () => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             padding: 2,
                             flexShrink: 0,
@@ -284,7 +284,7 @@ const AlertLayer: React.FC = () => {
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid rgba(255,255,255,0.05)',
                                         fontSize: '0.65rem',
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '0.5rem',
@@ -305,7 +305,7 @@ const AlertLayer: React.FC = () => {
                                         }}
                                     />
                                     <span style={{ flex: 1 }}>{a.message}</span>
-                                    <span style={{ color: '#64748b', fontSize: '0.6rem' }}>
+                                    <span style={{ color: 'var(--slate-500)', fontSize: '0.6rem' }}>
                                         {new Date(a.timestamp).toLocaleTimeString()}
                                     </span>
                                 </div>

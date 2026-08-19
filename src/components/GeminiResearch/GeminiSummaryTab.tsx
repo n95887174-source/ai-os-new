@@ -81,7 +81,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                 alignItems: 'flex-start',
                             }}
                         >
-                            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#e2e8f0' }}>
+                            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: 'var(--slate-200)' }}>
                                 {data.title}
                             </h3>
                             <button
@@ -89,12 +89,12 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     cursor: 'pointer',
                                 }}
                             >
                                 {copied ? (
-                                    <Check size={14} style={{ color: '#22c55e' }} />
+                                    <Check size={14} style={{ color: 'var(--success)' }} />
                                 ) : (
                                     <Copy size={14} />
                                 )}
@@ -117,7 +117,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                             style={{
                                 margin: 0,
                                 fontSize: '0.85rem',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 lineHeight: 1.6,
                             }}
                         >
@@ -131,7 +131,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                 style={{
                                     margin: '0 0 8px',
                                     fontSize: '0.85rem',
-                                    color: '#22c55e',
+                                    color: 'var(--success)',
                                     fontWeight: 600,
                                 }}
                             >
@@ -144,13 +144,13 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                         display: 'flex',
                                         gap: 8,
                                         fontSize: '0.85rem',
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                         marginBottom: 6,
                                     }}
                                 >
                                     <ArrowRight
                                         size={14}
-                                        style={{ marginTop: 2, flexShrink: 0, color: '#22c55e' }}
+                                        style={{ marginTop: 2, flexShrink: 0, color: 'var(--success)' }}
                                     />
                                     {f}
                                 </div>
@@ -170,7 +170,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                             >
                                 Methodology
                             </h4>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1' }}>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--slate-300)' }}>
                                 {data.methodology}
                             </p>
                         </div>
@@ -183,7 +183,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                     style={{
                                         margin: '0 0 8px',
                                         fontSize: '0.85rem',
-                                        color: '#f59e0b',
+                                        color: 'var(--warning)',
                                         fontWeight: 600,
                                     }}
                                 >
@@ -194,7 +194,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                         key={l}
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 4,
                                         }}
                                     >
@@ -209,7 +209,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                     style={{
                                         margin: '0 0 8px',
                                         fontSize: '0.85rem',
-                                        color: '#3b82f6',
+                                        color: 'var(--accent)',
                                         fontWeight: 600,
                                     }}
                                 >
@@ -220,7 +220,7 @@ export const GeminiSummaryTab: React.FC<Props> = ({ service, sessionId }) => {
                                         key={f}
                                         style={{
                                             fontSize: '0.8rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 4,
                                         }}
                                     >

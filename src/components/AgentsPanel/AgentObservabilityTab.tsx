@@ -34,18 +34,18 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
     const profileColor = s.latency < 500 ? '#10b981' : s.latency < 1000 ? '#f59e0b' : '#ef4444';
 
     const latencyBuckets = [
-        { label: '<200ms', pct: Math.max(5, Math.round(40 - s.latency * 0.02)), color: '#10b981' },
+        { label: '<200ms', pct: Math.max(5, Math.round(40 - s.latency * 0.02)), color: 'var(--success)' },
         {
             label: '200-500ms',
             pct: Math.max(5, Math.round(35 - s.latency * 0.01)),
-            color: '#3b82f6',
+            color: 'var(--accent)',
         },
         {
             label: '500-1s',
             pct: Math.max(5, Math.round(15 + s.latency * 0.02)),
-            color: '#f59e0b',
+            color: 'var(--warning)',
         },
-        { label: '>1s', pct: Math.max(3, Math.round(5 + s.latency * 0.03)), color: '#ef4444' },
+        { label: '>1s', pct: Math.max(3, Math.round(5 + s.latency * 0.03)), color: 'var(--error)' },
     ];
     const totalPct = latencyBuckets.reduce((sum, b) => sum + b.pct, 0);
     const normalizedBuckets = latencyBuckets.map((b) => ({
@@ -55,17 +55,17 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
 
     const pct = metricsService.getAgentPercentiles(agent.id);
     const entries = [
-        { label: 'P50', value: pct.p50, color: '#10b981' },
-        { label: 'P90', value: pct.p90, color: '#3b82f6' },
-        { label: 'P95', value: pct.p95, color: '#f59e0b' },
-        { label: 'P99', value: pct.p99, color: '#ef4444' },
+        { label: 'P50', value: pct.p50, color: 'var(--success)' },
+        { label: 'P90', value: pct.p90, color: 'var(--accent)' },
+        { label: 'P95', value: pct.p95, color: 'var(--warning)' },
+        { label: 'P99', value: pct.p99, color: 'var(--error)' },
     ];
     const hasSamples = entries.some((e) => e.value > 0);
     const fallback = [
-        { label: 'P50', value: s.latency, color: '#10b981' },
-        { label: 'P90', value: Math.round(s.latency * 1.5), color: '#3b82f6' },
-        { label: 'P95', value: Math.round(s.latency * 1.8), color: '#f59e0b' },
-        { label: 'P99', value: Math.round(s.latency * 2.2), color: '#ef4444' },
+        { label: 'P50', value: s.latency, color: 'var(--success)' },
+        { label: 'P90', value: Math.round(s.latency * 1.5), color: 'var(--accent)' },
+        { label: 'P95', value: Math.round(s.latency * 1.8), color: 'var(--warning)' },
+        { label: 'P99', value: Math.round(s.latency * 2.2), color: 'var(--error)' },
     ];
     const rows = hasSamples ? entries : fallback;
 
@@ -83,13 +83,13 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                 }}
             >
                 <div style={statCardDark}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                         {s.calls.toLocaleString()}
                     </div>
                     <div style={statLabelDark}>Total Calls</div>
                 </div>
                 <div style={statCardDark}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success)' }}>
                         {successRate}%
                     </div>
                     <div style={statLabelDark}>Success Rate</div>
@@ -107,7 +107,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         fontWeight: 800,
@@ -125,13 +125,13 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                     }}
                 >
                     <div style={textCenter}>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--success)' }}>
                             {formatCost(avgCostPerCall)}
                         </div>
                         <div style={textXxsSecondary}>Avg / Call</div>
                     </div>
                     <div style={textCenter}>
-                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                             {formatCost(cost)}
                         </div>
                         <div style={textXxsSecondary}>Total Est.</div>
@@ -153,7 +153,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         marginBottom: '0.5rem',
                     }}
                 >
-                    <span style={{ fontSize: '0.65rem', color: '#64748b', minWidth: 60 }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)', minWidth: 60 }}>
                         Per-run cost
                     </span>
                     <div
@@ -182,7 +182,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                     <span
                         style={{
                             fontSize: '0.65rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             minWidth: 40,
                             textAlign: 'right',
                         }}
@@ -195,7 +195,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '0.6rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                     }}
                 >
                     <span>Total est.: {formatCost(cost)}</span>
@@ -207,7 +207,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         fontWeight: 800,
@@ -228,7 +228,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                                 textAlign: 'center',
                             }}
                         >
-                            <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700 }}>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)', fontWeight: 700 }}>
                                 {row.label}
                             </div>
                             <div style={{ fontSize: '0.9rem', fontWeight: 800, color: row.color }}>
@@ -238,11 +238,11 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         </div>
                     ))}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginBottom: '0.5rem' }}>
                     Throughput: {metricsService.getAgentThroughput(agent.id).toFixed(2)} req/s
                 </div>
                 <div style={flexAlignCenterGap2}>
-                    <span style={{ fontSize: '0.65rem', color: '#94a3b8', minWidth: 70 }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--slate-400)', minWidth: 70 }}>
                         Distribution
                     </span>
                     <div
@@ -270,7 +270,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         justifyContent: 'space-between',
                         marginTop: '0.4rem',
                         fontSize: '0.55rem',
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                     }}
                 >
                     {latencyBuckets.map((b) => (
@@ -300,7 +300,7 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                     }}
                 >
                     <div>
-                        <span style={{ color: '#64748b' }}>Errors: </span>
+                        <span style={{ color: 'var(--slate-500)' }}>Errors: </span>
                         <span
                             style={{
                                 color: (s.errors || 0) > 0 ? '#ef4444' : '#10b981',
@@ -311,8 +311,8 @@ const AgentObservabilityTab: React.FC<Props> = ({ agent, agentStats }) => {
                         </span>
                     </div>
                     <div>
-                        <span style={{ color: '#64748b' }}>Last Active: </span>
-                        <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+                        <span style={{ color: 'var(--slate-500)' }}>Last Active: </span>
+                        <span style={{ color: 'var(--slate-50)', fontWeight: 700 }}>
                             {s.lastActive ? new Date(s.lastActive).toLocaleTimeString() : '--'}
                         </span>
                     </div>

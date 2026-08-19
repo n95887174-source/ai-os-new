@@ -140,7 +140,7 @@ const CausalDebugger: React.FC = () => {
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                 <GitBranch size={20} color="#a78bfa" />
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     Causal Debugger
                 </span>
                 <span style={textXxsMuted}>
@@ -151,7 +151,7 @@ const CausalDebugger: React.FC = () => {
             <div style={{ position: 'relative' }}>
                 <Search
                     size={14}
-                    style={{ position: 'absolute', left: 10, top: 10, color: '#64748b' }}
+                    style={{ position: 'absolute', left: 10, top: 10, color: 'var(--slate-500)' }}
                 />
                 <input
                     value={searchTerm}
@@ -200,7 +200,7 @@ const CausalDebugger: React.FC = () => {
                             <pre
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     whiteSpace: 'pre-wrap',
                                     margin: 0,
                                     fontFamily: 'monospace',
@@ -246,7 +246,7 @@ const CausalDebugger: React.FC = () => {
                                 }}
                             >
                                 <div style={sectionHeaderDebug}>Scope</div>
-                                <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--slate-300)' }}>
                                     <div>
                                         <strong>causalId:</strong> {selectedTrace.scope.causalId}
                                     </div>

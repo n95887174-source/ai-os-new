@@ -63,7 +63,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                 style={{
                     padding: '1rem',
                     textAlign: 'center',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.85rem',
                 }}
             >
@@ -79,7 +79,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                 style={{
                     fontSize: '0.7rem',
                     fontWeight: 700,
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     marginBottom: '0.25rem',
@@ -115,16 +115,16 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                             <span style={{ color: statusColor(run.status) }}>
                                 {statusIcon(run.status)}
                             </span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
+                            <span style={{ color: 'var(--slate-200)', fontWeight: 600, flex: 1 }}>
                                 {run.module}
                                 {run.summary && (
-                                    <span style={{ color: '#64748b', fontWeight: 400 }}>
+                                    <span style={{ color: 'var(--slate-500)', fontWeight: 400 }}>
                                         {' '}
                                         — {run.summary.slice(0, 60)}
                                     </span>
                                 )}
                             </span>
-                            <span style={{ color: '#64748b', fontSize: '0.65rem' }}>
+                            <span style={{ color: 'var(--slate-500)', fontSize: '0.65rem' }}>
                                 {new Date(run.startedAt).toLocaleString()}
                             </span>
                             {expandedId === run.id ? (
@@ -147,7 +147,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: '0.5rem',
                                         }}
                                     >
@@ -167,7 +167,7 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                                             </div>
                                         )}
                                         {run.error && (
-                                            <div style={{ color: '#ef4444' }}>
+                                            <div style={{ color: 'var(--error)' }}>
                                                 <strong>Error:</strong> {run.error}
                                             </div>
                                         )}
@@ -208,9 +208,9 @@ const ResearchRunHistory: React.FC<ResearchRunHistoryProps> = ({ module, runServ
                                                 fontSize: '0.65rem',
                                                 padding: '0.3rem 0.6rem',
                                                 borderRadius: 6,
-                                                background: 'rgba(239,68,68,0.1)',
+                                                background: 'var(--error-tint)',
                                                 border: '1px solid rgba(239,68,68,0.2)',
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 cursor: 'pointer',
                                             }}
                                         >

@@ -287,7 +287,7 @@ const WorkspacePanel: React.FC = () => {
                         </span>
                         {node.type === 'file' && node.size != null && (
                             <span
-                                style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#475569' }}
+                                style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--slate-600)' }}
                             >
                                 {formatSize(node.size)}
                             </span>
@@ -315,7 +315,7 @@ const WorkspacePanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <HardDrive size={20} color="#a855f7" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Workspace
                     </span>
                 </div>
@@ -325,7 +325,7 @@ const WorkspacePanel: React.FC = () => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             padding: 4,
                             borderRadius: 6,
@@ -353,7 +353,7 @@ const WorkspacePanel: React.FC = () => {
                         justifyContent: 'center',
                         gap: '1rem',
                         padding: '3rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <HardDrive size={48} opacity={0.3} />
@@ -363,7 +363,7 @@ const WorkspacePanel: React.FC = () => {
                     <span
                         style={{
                             fontSize: '0.82rem',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             textAlign: 'center',
                             maxWidth: 300,
                         }}
@@ -405,7 +405,7 @@ const WorkspacePanel: React.FC = () => {
                             style={{
                                 fontSize: '0.85rem',
                                 fontWeight: 600,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -419,7 +419,7 @@ const WorkspacePanel: React.FC = () => {
                                 marginLeft: 'auto',
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 2,
                                 fontSize: '0.75rem',
@@ -456,7 +456,7 @@ const WorkspacePanel: React.FC = () => {
                                     background: 'none',
                                     border: 'none',
                                     outline: 'none',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.82rem',
                                 }}
                             />
@@ -467,7 +467,7 @@ const WorkspacePanel: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                         padding: 0,
                                     }}
@@ -486,7 +486,7 @@ const WorkspacePanel: React.FC = () => {
                                     style={{
                                         padding: '2rem',
                                         textAlign: 'center',
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         fontSize: '0.82rem',
                                     }}
                                 >
@@ -498,7 +498,7 @@ const WorkspacePanel: React.FC = () => {
                                         style={{
                                             padding: '0.5rem 0.75rem',
                                             fontSize: '0.75rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -548,7 +548,7 @@ const WorkspacePanel: React.FC = () => {
                                 </div>
                             )
                         ) : treeLoading ? (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-500)' }}>
                                 <Loader2 size={20} className="spinning" />
                             </div>
                         ) : tree.length === 0 ? (
@@ -556,7 +556,7 @@ const WorkspacePanel: React.FC = () => {
                                 style={{
                                     padding: '2rem',
                                     textAlign: 'center',
-                                    color: '#475569',
+                                    color: 'var(--slate-600)',
                                     fontSize: '0.82rem',
                                 }}
                             >
@@ -591,7 +591,7 @@ const WorkspacePanel: React.FC = () => {
                                 <span
                                     style={{
                                         fontSize: '0.78rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
@@ -609,7 +609,7 @@ const WorkspacePanel: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                         padding: 0,
                                     }}
@@ -624,14 +624,14 @@ const WorkspacePanel: React.FC = () => {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 8,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             fontSize: '0.82rem',
                                         }}
                                     >
                                         <Skeleton width="60%" height={14} />
                                     </div>
                                 ) : previewError ? (
-                                    <div style={{ color: '#ef4444', fontSize: '0.82rem' }}>
+                                    <div style={{ color: 'var(--error)', fontSize: '0.82rem' }}>
                                         {previewError}
                                     </div>
                                 ) : (
@@ -640,7 +640,7 @@ const WorkspacePanel: React.FC = () => {
                                             margin: 0,
                                             fontSize: '0.78rem',
                                             lineHeight: 1.5,
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                             whiteSpace: 'pre-wrap',
                                             wordBreak: 'break-all',
                                         }}

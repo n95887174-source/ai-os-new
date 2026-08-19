@@ -13,7 +13,7 @@ const paletteItems = [
         icon: Bot,
         labelKey: 'builder.node.agent',
         descKey: 'builder.node.agent_desc',
-        color: '#3b82f6',
+        color: 'var(--accent)',
         bg: 'rgba(59,130,246,0.1)',
     },
     {
@@ -21,7 +21,7 @@ const paletteItems = [
         icon: GitBranch,
         labelKey: 'builder.node.router',
         descKey: 'builder.node.router_desc',
-        color: '#f59e0b',
+        color: 'var(--warning)',
         bg: 'rgba(245,158,11,0.1)',
     },
     {
@@ -29,7 +29,7 @@ const paletteItems = [
         icon: ShieldCheck,
         labelKey: 'builder.node.guardrail',
         descKey: 'builder.node.guardrail_desc',
-        color: '#10b981',
+        color: 'var(--success)',
         bg: 'rgba(16,185,129,0.1)',
     },
     {
@@ -37,7 +37,7 @@ const paletteItems = [
         icon: Blocks,
         labelKey: 'builder.node.tool',
         descKey: 'builder.node.tool_desc',
-        color: '#8b5cf6',
+        color: 'var(--purple)',
         bg: 'rgba(139,92,246,0.1)',
     },
 ];

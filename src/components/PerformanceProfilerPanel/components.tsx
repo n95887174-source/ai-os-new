@@ -42,7 +42,7 @@ export const LatencyCell: React.FC<{ value: number; highlight?: boolean }> = ({
         <span
             style={{
                 textAlign: 'right',
-                color: highlight ? color : '#cbd5e1',
+                color: highlight ? color : 'var(--slate-300)',
                 fontWeight: highlight ? 600 : 400,
             }}
         >

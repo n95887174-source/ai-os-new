@@ -23,11 +23,11 @@ interface DslCanvasProps {
 }
 
 const NODE_TYPES_CONFIG = [
-    { type: 'agent', label: 'Agent', color: '#3b82f6' },
-    { type: 'router', label: 'Router', color: '#8b5cf6' },
-    { type: 'aggregator', label: 'Aggregator', color: '#22c55e' },
-    { type: 'judge', label: 'Judge', color: '#f59e0b' },
-    { type: 'tool', label: 'Tool', color: '#ef4444' },
+    { type: 'agent', label: 'Agent', color: 'var(--accent)' },
+    { type: 'router', label: 'Router', color: 'var(--purple)' },
+    { type: 'aggregator', label: 'Aggregator', color: 'var(--success)' },
+    { type: 'judge', label: 'Judge', color: 'var(--warning)' },
+    { type: 'tool', label: 'Tool', color: 'var(--error)' },
     { type: 'memory', label: 'Memory', color: '#ec4899' },
 ];
 
@@ -38,7 +38,7 @@ const DEFAULT_NODES: Node[] = [
         position: { x: 250, y: 50 },
         data: { label: 'Router' },
         style: {
-            background: '#8b5cf6',
+            background: 'var(--purple)',
             color: '#fff',
             border: 'none',
             borderRadius: 8,
@@ -52,7 +52,7 @@ const DEFAULT_NODES: Node[] = [
         position: { x: 100, y: 200 },
         data: { label: 'Agent A' },
         style: {
-            background: '#3b82f6',
+            background: 'var(--accent)',
             color: '#fff',
             border: 'none',
             borderRadius: 8,
@@ -66,7 +66,7 @@ const DEFAULT_NODES: Node[] = [
         position: { x: 400, y: 200 },
         data: { label: 'Agent B' },
         style: {
-            background: '#3b82f6',
+            background: 'var(--accent)',
             color: '#fff',
             border: 'none',
             borderRadius: 8,
@@ -80,7 +80,7 @@ const DEFAULT_NODES: Node[] = [
         position: { x: 250, y: 350 },
         data: { label: 'Aggregator' },
         style: {
-            background: '#22c55e',
+            background: 'var(--success)',
             color: '#fff',
             border: 'none',
             borderRadius: 8,
@@ -113,7 +113,7 @@ const DEFAULT_EDGES: Edge[] = [
         target: '4',
         markerEnd: { type: MarkerType.ArrowClosed },
         animated: true,
-        style: { stroke: '#22c55e', strokeWidth: 2 },
+        style: { stroke: 'var(--success)', strokeWidth: 2 },
     },
     {
         id: 'e3-4',
@@ -121,7 +121,7 @@ const DEFAULT_EDGES: Edge[] = [
         target: '4',
         markerEnd: { type: MarkerType.ArrowClosed },
         animated: true,
-        style: { stroke: '#22c55e', strokeWidth: 2 },
+        style: { stroke: 'var(--success)', strokeWidth: 2 },
     },
 ];
 
@@ -251,7 +251,7 @@ export const DslCanvas: React.FC<DslCanvasProps> = ({
                             borderRadius: '4px',
                             border: 'none',
                             background: 'rgba(239,68,68,0.2)',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                         }}

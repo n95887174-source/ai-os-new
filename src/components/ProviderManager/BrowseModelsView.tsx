@@ -154,11 +154,11 @@ const PROVIDERS: ProviderInfo[] = [
 const CATEGORIES = ['All', 'Fast', 'Enterprise', 'Multimodal', 'Open-Source'] as const;
 
 const FLEET_BADGE: Record<ProviderFleetStatus, { label: string; color: string; bg: string }> = {
-    ready: { label: 'Ready', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-    degraded: { label: 'Degraded', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    broken: { label: 'Keys failed', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-    unconfigured: { label: 'No keys', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
-    no_adapter: { label: 'No adapter', color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+    ready: { label: 'Ready', color: 'var(--success)', bg: 'rgba(16,185,129,0.12)' },
+    degraded: { label: 'Degraded', color: 'var(--warning)', bg: 'rgba(245,158,11,0.12)' },
+    broken: { label: 'Keys failed', color: 'var(--error)', bg: 'rgba(239,68,68,0.12)' },
+    unconfigured: { label: 'No keys', color: 'var(--slate-400)', bg: 'rgba(148,163,184,0.12)' },
+    no_adapter: { label: 'No adapter', color: 'var(--slate-500)', bg: 'rgba(100,116,139,0.12)' },
 };
 
 const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({
@@ -325,7 +325,7 @@ const BrowseModelsView: React.FC<BrowseModelsViewProps> = ({
                                     : provider.fleet.status === 'ready'
                                       ? { opacity: 0.55, cursor: 'default' }
                                       : provider.fleet.status === 'broken'
-                                        ? { borderColor: '#ef4444' }
+                                        ? { borderColor: 'var(--error)' }
                                         : {}
                             }
                         >

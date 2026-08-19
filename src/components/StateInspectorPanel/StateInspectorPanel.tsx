@@ -134,7 +134,7 @@ export const StateInspectorPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <RefreshCw size={20} className="animate-spin" />
@@ -173,12 +173,12 @@ export const StateInspectorPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Database size={26} color="#3b82f6" /> {t('state_inspector.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('state_inspector.subtitle')}
                     </p>
                 </div>
@@ -251,7 +251,7 @@ export const StateInspectorPanel: React.FC = () => {
             <div style={{ position: 'relative', flex: '0 0 auto' }}>
                 <Search
                     size={14}
-                    style={{ position: 'absolute', left: 8, top: 8, color: '#94a3b8' }}
+                    style={{ position: 'absolute', left: 8, top: 8, color: 'var(--slate-400)' }}
                 />
                 <input
                     value={search}
@@ -263,7 +263,7 @@ export const StateInspectorPanel: React.FC = () => {
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                     }}
                 />

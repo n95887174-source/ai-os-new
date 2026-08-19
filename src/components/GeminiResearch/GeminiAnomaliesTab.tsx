@@ -61,7 +61,7 @@ export const GeminiAnomaliesTab: React.FC<Props> = ({ service, sessionId }) => {
             </button>
 
             {data && data.anomalies.length === 0 && (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 30, color: '#22c55e' }}>
+                <div style={{ ...cardStyle, textAlign: 'center', padding: 30, color: 'var(--success)' }}>
                     <CheckCircle2 size={32} style={{ marginBottom: 8, opacity: 0.5 }} />
                     <div>No anomalies detected</div>
                 </div>
@@ -112,7 +112,7 @@ export const GeminiAnomaliesTab: React.FC<Props> = ({ service, sessionId }) => {
                                         borderRadius: 4,
                                         fontSize: '0.7rem',
                                         background: 'rgba(255,255,255,0.06)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                     }}
                                 >
                                     {t.replace(/_/g, ' ')}: {count}
@@ -153,21 +153,21 @@ export const GeminiAnomaliesTab: React.FC<Props> = ({ service, sessionId }) => {
                                     >
                                         {a.severity}
                                     </span>
-                                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                         {a.type.replace(/_/g, ' ')}
                                     </span>
                                 </div>
                                 <div
                                     style={{
                                         fontSize: '0.85rem',
-                                        color: '#cbd5e1',
+                                        color: 'var(--slate-300)',
                                         marginBottom: 6,
                                     }}
                                 >
                                     {a.description}
                                 </div>
                                 {a.recommendation && (
-                                    <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>
                                         → {a.recommendation}
                                     </div>
                                 )}

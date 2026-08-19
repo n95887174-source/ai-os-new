@@ -41,7 +41,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                     <span
                         style={{
                             fontSize: '0.8rem',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             fontWeight: 800,
                             width: 80,
                             textAlign: 'right',
@@ -96,7 +96,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                                 style={{
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: '0.5rem',
                                     textTransform: 'uppercase',
                                 }}
@@ -111,7 +111,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                                             style={{
                                                 padding: '0.3rem 0.6rem',
                                                 borderRadius: 6,
-                                                background: 'rgba(59,130,246,0.1)',
+                                                background: 'var(--accent-tint)',
                                                 border: '1px solid rgba(59,130,246,0.2)',
                                                 color: '#93c5fd',
                                                 fontSize: '0.8rem',
@@ -146,7 +146,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                                 style={{
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     minWidth: 120,
                                 }}
                             >
@@ -160,7 +160,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                                         style={{
                                             padding: '0.2rem 0.5rem',
                                             borderRadius: 5,
-                                            background: 'rgba(168,85,247,0.1)',
+                                            background: 'var(--purple-tint)',
                                             border: '1px solid rgba(168,85,247,0.2)',
                                             color: '#d8b4fe',
                                             fontSize: '0.75rem',
@@ -187,7 +187,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                     style={{
                         fontSize: '0.85rem',
                         fontWeight: 700,
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         marginBottom: '0.5rem',
                         textTransform: 'uppercase',
                         display: 'flex',
@@ -197,7 +197,7 @@ const ReadingTab: React.FC<ReadingTabProps> = ({ settings, updateSetting }) => {
                 >
                     <AlertTriangle size={16} /> {t('settings.system')}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', marginBottom: '1rem' }}>
                     {t('settings.restart_desc')}
                 </div>
                 <button

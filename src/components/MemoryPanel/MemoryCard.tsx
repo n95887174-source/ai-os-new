@@ -54,7 +54,7 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                             style={{
                                 fontSize: '0.65rem',
                                 fontWeight: 800,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 background: 'rgba(16,185,129,0.15)',
                                 padding: '0.3rem 0.6rem',
                                 borderRadius: 6,
@@ -70,14 +70,14 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                                 width: 4,
                                 height: 4,
                                 borderRadius: '50%',
-                                background: '#64748b',
+                                background: 'var(--slate-500)',
                             }}
                             aria-hidden="true"
                         />
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontFamily: 'monospace',
                             }}
                         >
@@ -89,11 +89,11 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                             style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 800,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 4,
-                                background: 'rgba(16,185,129,0.1)',
+                                background: 'var(--success-tint)',
                                 padding: '0.3rem 0.6rem',
                                 borderRadius: 8,
                                 border: '1px solid rgba(16,185,129,0.2)',
@@ -109,7 +109,7 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                 <div
                     style={{
                         fontSize: '0.95rem',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         lineHeight: 1.6,
                         fontFamily: isCode ? '"JetBrains Mono", monospace' : 'inherit',
                     }}
@@ -131,7 +131,7 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(255,255,255,0.05)',
                                 padding: '0.3rem 0.6rem',
                                 borderRadius: 8,
@@ -146,7 +146,7 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 background: 'rgba(255,255,255,0.05)',
                                 padding: '0.3rem 0.6rem',
                                 borderRadius: 8,
@@ -194,7 +194,7 @@ const MemoryCard: React.FC<MemoryCardProps> = memo(
                         </button>
                         <button
                             className="btn-secondary"
-                            style={{ padding: '0.4rem', borderRadius: 8, color: '#ef4444' }}
+                            style={{ padding: '0.4rem', borderRadius: 8, color: 'var(--error)' }}
                             title={t('memory.delete_vector')}
                             aria-label={t('common.aria.delete')}
                             onClick={() => onDelete(memory.id)}

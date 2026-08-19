@@ -31,7 +31,7 @@ const StatCard: React.FC<{
             <div
                 style={{
                     fontSize: '0.65rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                 }}
@@ -92,7 +92,7 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                     }}

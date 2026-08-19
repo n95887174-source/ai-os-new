@@ -43,7 +43,7 @@ const InsightFeed: React.FC = () => {
                     style={{
                         fontSize: '0.9rem',
                         fontWeight: 700,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         marginBottom: '1rem',
                         display: 'flex',
                         alignItems: 'center',
@@ -51,7 +51,7 @@ const InsightFeed: React.FC = () => {
                     }}
                 >
                     <Lightbulb size={18} color="#f59e0b" /> {t('patterns.insight_feed')}
-                    <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 400 }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)', fontWeight: 400 }}>
                         (example)
                     </span>
                 </h4>
@@ -61,10 +61,10 @@ const InsightFeed: React.FC = () => {
                             key={item.text}
                             style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem' }}
                         >
-                            <div style={{ color: '#64748b', marginTop: '2px' }}>{item.icon}</div>
+                            <div style={{ color: 'var(--slate-500)', marginTop: '2px' }}>{item.icon}</div>
                             <div>
-                                <div style={{ color: '#e2e8f0' }}>{item.text}</div>
-                                <div style={{ color: '#475569', fontSize: '0.7rem' }}>
+                                <div style={{ color: 'var(--slate-200)' }}>{item.text}</div>
+                                <div style={{ color: 'var(--slate-600)', fontSize: '0.7rem' }}>
                                     {item.time}
                                 </div>
                             </div>
@@ -87,12 +87,12 @@ const InsightFeed: React.FC = () => {
                     style={{
                         fontSize: '0.9rem',
                         fontWeight: 700,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                         marginBottom: '1rem',
                     }}
                 >
                     {t('patterns.backlog')}
-                    <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 400 }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)', fontWeight: 400 }}>
                         {' '}
                         (example)
                     </span>
@@ -106,7 +106,7 @@ const InsightFeed: React.FC = () => {
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 fontSize: '0.8rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             <div
@@ -114,7 +114,7 @@ const InsightFeed: React.FC = () => {
                                     width: 6,
                                     height: 6,
                                     borderRadius: '50%',
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                 }}
                             />
                             {item}

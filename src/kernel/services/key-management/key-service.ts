@@ -389,7 +389,7 @@ export class KeyService implements IKeyRotationManager {
         const restored = await this.registry.forceResyncFromDexie();
         if (restored > 0) {
             this.notify();
-            this.deps.eventBus.emitOnce(EVENTS.KEYS_LOADED, 'global', this.registry.getKeys());
+            this.deps.eventBus.emit(EVENTS.KEYS_LOADED, this.registry.getKeys());
         }
         return restored;
     }
@@ -474,8 +474,8 @@ export class KeyService implements IKeyRotationManager {
 
     private emitKeyUpdate = () => {
         const keys = [...this.registry.getKeys()];
-        this.deps.eventBus.emitOnce(EVENTS.KEY_UPDATED, 'all', keys);
-        this.deps.eventBus.emitOnce(EVENTS.KEYS_LOADED, 'all', keys);
+        this.deps.eventBus.emit(EVENTS.KEY_UPDATED, keys);
+        this.deps.eventBus.emit(EVENTS.KEYS_LOADED, keys);
     };
 
     // C-07: leading=true fires first update immediately, coalesces rapid subsequent calls

@@ -26,6 +26,21 @@ export interface SmartRoutingServiceDeps {
     pricingService: ICostCalculator;
 }
 
+/**
+ * SmartRoutingService — WHAT-IF ROUTING SIMULATOR (NOT authoritative for execution).
+ *
+ * B-21 design decision: this service is a self-contained, in-memory simulator used by
+ * `SmartRoutingPanel` to preview the effect of routing rules. It is intentionally
+ * DISCONNECTED from live routing — real execution (chat-executor, debate-query-engine,
+ * cognitive, advisor, temporal-replay, counterfactual) resolves providers exclusively
+ * through `RouterService.getRankedProviders(...)`. `RouterService` is the single source
+ * of truth for routing; its authoritative rule surface is `config.semanticRouteRules`
+ * (consulted via `trySelectProvider` → `matchSemanticRule`) plus `routingPolicyService`.
+ *
+ * Rules added here do NOT change live routing. Treat `simulateRouting`/`getRules` as a
+ * planning tool only. Do not wire these rules into the execution path; if real rule
+ * editing is ever required, edit `RouterService`/`routingPolicyService` instead.
+ */
 export class SmartRoutingService implements ISmartRoutingService {
     private config: SmartRoutingConfig = { ...DEFAULT_CONFIG };
     private rules: RoutingRule[] = [];

@@ -70,7 +70,7 @@ const KnowledgeGrowthPanel: React.FC<KnowledgeGrowthPanelProps> = ({
             <div
                 style={{
                     fontSize: '0.85rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     lineHeight: 1.6,
                     background: 'rgba(0,0,0,0.3)',
                     padding: '1.25rem',

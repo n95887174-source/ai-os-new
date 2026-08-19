@@ -50,7 +50,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                             padding: '2.5rem',
                             borderRadius: 24,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                         }}
                     >
                         <div
@@ -76,7 +76,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                                 style={{
                                     background: 'transparent',
                                     border: 'none',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     cursor: 'pointer',
                                 }}
                             >
@@ -87,7 +87,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                             style={{
                                 fontSize: '1.8rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 marginBottom: '1.5rem',
                             }}
                         >
@@ -96,7 +96,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                         <div
                             style={{
                                 fontSize: '1rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 lineHeight: 1.8,
                                 marginBottom: '2rem',
                                 whiteSpace: 'pre-wrap',
@@ -109,7 +109,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                                 <h4
                                     style={{
                                         fontSize: '0.9rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: '0.75rem',
                                     }}
                                 >
@@ -161,7 +161,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                                             padding: '0.3rem 0.8rem',
                                             borderRadius: 8,
                                             background: 'rgba(255,255,255,0.05)',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                         }}
                                     >
                                         #{tag}
@@ -176,7 +176,7 @@ const PatternDetailModal: React.FC<Props> = ({ note, onClose, onEdit, onSave, ed
                                         padding: '0.6rem 1.2rem',
                                         borderRadius: 12,
                                         background: 'rgba(255,255,255,0.05)',
-                                        color: '#f8fafc',
+                                        color: 'var(--slate-50)',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         cursor: 'pointer',
                                         opacity: editDisabled ? 0.5 : 1,

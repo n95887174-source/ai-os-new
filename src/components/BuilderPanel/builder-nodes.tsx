@@ -88,7 +88,7 @@ const BaseNode = ({
                 <div
                     style={{
                         fontSize: '0.65rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                     }}
@@ -179,7 +179,7 @@ export const RouterNode = ({
             color="#f59e0b"
             typeLabel={tt('builder.node.router')}
         >
-            <div style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: 1.4 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--slate-300)', lineHeight: 1.4 }}>
                 Analyzes input and dynamically routes execution to the optimal branch.
             </div>
         </BaseNode>
@@ -268,9 +268,9 @@ export const mapDSLToEdges = (topology: ISTopology): Edge[] => {
         target: e.to,
         label: e.trigger === 'data_flow' ? undefined : e.trigger,
         animated: true,
-        style: { stroke: '#64748b', strokeWidth: 2 },
-        labelStyle: { fill: '#94a3b8', fontSize: 10, fontWeight: 700 },
-        labelBgStyle: { fill: '#0f172a', stroke: '#1e293b' },
+        style: { stroke: 'var(--slate-500)', strokeWidth: 2 },
+        labelStyle: { fill: 'var(--slate-400)', fontSize: 10, fontWeight: 700 },
+        labelBgStyle: { fill: 'var(--slate-900)', stroke: 'var(--slate-800)' },
         labelBgPadding: [4, 4] as [number, number],
         labelBgBorderRadius: 4,
     }));

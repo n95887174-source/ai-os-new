@@ -116,7 +116,7 @@ export const AchievementList: React.FC<AchievementListProps> = ({ achievements, 
                 style={{
                     height: 4,
                     borderRadius: 2,
-                    background: 'rgba(255,255,255,0.08)',
+                    background: 'var(--border-subtle)',
                     overflow: 'hidden',
                     marginBottom: '1rem',
                 }}
@@ -143,7 +143,7 @@ export const AchievementList: React.FC<AchievementListProps> = ({ achievements, 
                             marginBottom: '0.5rem',
                             fontSize: '0.8rem',
                             fontWeight: 600,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             textTransform: 'capitalize',
                         }}
                     >
@@ -240,7 +240,7 @@ export const AchievementList: React.FC<AchievementListProps> = ({ achievements, 
             ))}
 
             {filtered.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
+                <div style={{ textAlign: 'center', color: 'var(--slate-500)', padding: '2rem' }}>
                     <Trophy size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
                     <div style={{ fontSize: '0.85rem' }}>No achievements match this filter</div>
                 </div>

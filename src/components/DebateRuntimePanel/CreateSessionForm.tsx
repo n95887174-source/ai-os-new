@@ -111,7 +111,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                     margin: '0 0 1rem',
                     fontSize: '0.9rem',
                     fontWeight: 600,
-                    color: '#a78bfa',
+                    color: 'var(--purple-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
@@ -130,7 +130,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(100,116,139,0.3)',
                         background: 'rgba(15,15,30,0.6)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                     }}
@@ -145,7 +145,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(100,116,139,0.3)',
                         background: 'rgba(15,15,30,0.6)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                     }}
@@ -180,7 +180,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         padding: '0.15rem 0.5rem',
-                                        color: '#a78bfa',
+                                        color: 'var(--purple-muted)',
                                         border: '1px solid rgba(167,139,250,0.3)',
                                         borderRadius: 4,
                                         cursor: 'pointer',
@@ -194,7 +194,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                     style={{
                                         fontSize: '0.65rem',
                                         padding: '0.15rem 0.5rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         borderRadius: 4,
                                         cursor: 'pointer',
@@ -248,11 +248,11 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                         >
                                             {sel && <Check size={12} color="#fff" />}
                                         </div>
-                                        <span style={{ color: '#e2e8f0', fontWeight: 500 }}>
+                                        <span style={{ color: 'var(--slate-200)', fontWeight: 500 }}>
                                             {node.label}
                                         </span>
                                         {node.provider && (
-                                            <span style={{ color: '#64748b', marginLeft: 'auto' }}>
+                                            <span style={{ color: 'var(--slate-500)', marginLeft: 'auto' }}>
                                                 {node.provider}
                                             </span>
                                         )}
@@ -281,7 +281,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                         fontSize: '0.75rem',
                                     }}
                                 >
-                                    <span style={{ color: '#e2e8f0', minWidth: 80 }}>
+                                    <span style={{ color: 'var(--slate-200)', minWidth: 80 }}>
                                         {node?.label || id}
                                     </span>
                                     <select
@@ -297,7 +297,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
                                             borderRadius: 4,
                                             border: '1px solid rgba(100,116,139,0.3)',
                                             background: 'rgba(15,15,30,0.6)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.7rem',
                                             outline: 'none',
                                         }}

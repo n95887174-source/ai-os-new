@@ -4,7 +4,7 @@
  */
 
 import { rootLogger } from '../logger-service';
-import { eventBus } from '../../events/event-bus';
+import type { IEventBus } from '../../types/interfaces';
 import { EVENTS } from '../../events/event-names';
 import type { ILocalStorageAdapter } from '../../contracts/storage-adapter';
 import { LocalStorageAdapter } from '../storage/local-storage-adapter';
@@ -77,10 +77,12 @@ export class EloRatingService {
     private storage: ILocalStorageAdapter;
     private config: EloConfig;
     private _initialized = false;
+    private readonly _eventBus: IEventBus | null;
 
-    constructor(config: Partial<EloConfig> = {}) {
+    constructor(config: Partial<EloConfig> = {}, eventBus?: IEventBus) {
         this.storage = new LocalStorageAdapter();
         this.config = { ...DEFAULT_ELO_CONFIG, ...config };
+        this._eventBus = eventBus ?? null;
     }
 
     async init(): Promise<void> {
@@ -220,12 +222,12 @@ export class EloRatingService {
 
         this.save();
 
-        eventBus.emit(EVENTS.ELO_RATING_UPDATED, {
+        this._eventBus?.emit(EVENTS.ELO_RATING_UPDATED, {
             agentId: winnerId,
             newRating: winner.rating,
             change: winnerChange,
         });
-        eventBus.emit(EVENTS.ELO_RATING_UPDATED, {
+        this._eventBus?.emit(EVENTS.ELO_RATING_UPDATED, {
             agentId: loserId,
             newRating: loser.rating,
             change: loserChange,

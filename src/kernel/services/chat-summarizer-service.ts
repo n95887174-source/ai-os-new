@@ -4,8 +4,8 @@
  */
 
 import { rootLogger } from './logger-service';
-import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import type { IEventBus } from '../types/interfaces';
 import type { ILLMClientService } from '../contracts/provider-adapter';
 import { sanitizePromptVar } from '../utils/sanitize';
 import { BucketStorageAdapter } from './storage-adapter';
@@ -54,9 +54,16 @@ export class ChatSummarizerService {
     private llmClient: ILLMClientService;
     private loaded = false;
 
-    constructor(llmClient: ILLMClientService, config: Partial<SummarizationConfig> = {}) {
+    private _eventBus: IEventBus | null = null;
+
+    constructor(
+        llmClient: ILLMClientService,
+        config: Partial<SummarizationConfig> = {},
+        eventBus?: IEventBus,
+    ) {
         this.llmClient = llmClient;
         this.config = { ...DEFAULT_CONFIG, ...config };
+        this._eventBus = eventBus ?? null;
     }
 
     async #ensureLoaded(): Promise<void> {
@@ -148,7 +155,7 @@ UNRESOLVED: [questions or topics that remain open]`;
             });
 
             // Emit event
-            EventBus.emit(EVENTS.CHAT_SUMMARY_CREATED, {
+            this._eventBus?.emit(EVENTS.CHAT_SUMMARY_CREATED, {
                 sessionId,
                 messageCount: summary.messageCount,
                 keyFactsCount: summary.keyPoints.length,

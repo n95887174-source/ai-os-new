@@ -46,22 +46,22 @@ const ResearchExportPanel: React.FC = () => {
     <div style={{ padding: '1.25rem', borderRadius: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
         <Download size={16} color="#f59e0b" />
-        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>Export Research</span>
+        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>Export Research</span>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <span style={{ padding: '0.25rem 0.6rem', borderRadius: 6, background: 'rgba(59,130,246,0.1)', color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600 }}>
+        <span style={{ padding: '0.25rem 0.6rem', borderRadius: 6, background: 'var(--accent-tint)', color: '#60a5fa', fontSize: '0.75rem', fontWeight: 600 }}>
           {runs.length} runs ({completedRuns.length} completed)
         </span>
-        <span style={{ padding: '0.25rem 0.6rem', borderRadius: 6, background: 'rgba(168,85,247,0.1)', color: '#c084fc', fontSize: '0.75rem', fontWeight: 600 }}>
+        <span style={{ padding: '0.25rem 0.6rem', borderRadius: 6, background: 'var(--purple-tint)', color: '#c084fc', fontSize: '0.75rem', fontWeight: 600 }}>
           {hypotheses.length} hypotheses
         </span>
       </div>
 
       {/* Format selector */}
       <div style={{ marginBottom: '0.75rem' }}>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>Format</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>Format</div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {([
             { value: 'md' as ExportFormat, icon: <FileText size={14} />, label: 'Markdown' },
@@ -88,11 +88,11 @@ const ResearchExportPanel: React.FC = () => {
 
       {/* Checkboxes */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#94a3b8', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--slate-400)', cursor: 'pointer' }}>
           <input type="checkbox" checked={includeFindings} onChange={e => setIncludeFindings(e.target.checked)} style={{ accentColor: '#f59e0b' }} />
           Include findings
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#94a3b8', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--slate-400)', cursor: 'pointer' }}>
           <input type="checkbox" checked={includeHypotheses} onChange={e => setIncludeHypotheses(e.target.checked)} style={{ accentColor: '#f59e0b' }} />
           Include hypotheses
         </label>
@@ -105,7 +105,7 @@ const ResearchExportPanel: React.FC = () => {
           onClick={handleExport}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', borderRadius: 8,
-            border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem',
+            border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem',
           }}
         >
           <Download size={14} /> Export

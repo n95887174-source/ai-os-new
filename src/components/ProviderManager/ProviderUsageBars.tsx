@@ -22,7 +22,7 @@ export const ProviderUsageBars: React.FC<ProviderUsageBarsProps> = ({ apiKey }) 
         >
             {reqLimit && reqLimit > 0 && (
                 <div style={flexCenterGap6px}>
-                    <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)', minWidth: 48 }}>
                         {usage.requests}/{reqLimit}
                     </span>
                     <div
@@ -52,7 +52,7 @@ export const ProviderUsageBars: React.FC<ProviderUsageBarsProps> = ({ apiKey }) 
             )}
             {tokLimit && tokLimit > 0 && (
                 <div style={flexCenterGap6px}>
-                    <span style={{ fontSize: '0.6rem', color: '#64748b', minWidth: 48 }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)', minWidth: 48 }}>
                         {(usage.tokens / 1000).toFixed(0)}k/{(tokLimit / 1000).toFixed(0)}k
                     </span>
                     <div

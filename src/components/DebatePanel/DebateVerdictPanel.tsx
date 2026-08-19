@@ -65,12 +65,12 @@ export const DebateVerdictPanel: React.FC<DebateVerdictPanelProps> = ({
         {
             label: t('debate.verdict.for'),
             count: verdict.keyArguments.filter((a) => a.stance === 'pro').length,
-            color: '#10b981',
+            color: 'var(--success)',
         },
         {
             label: t('debate.verdict.against'),
             count: verdict.keyArguments.filter((a) => a.stance === 'con').length,
-            color: '#ef4444',
+            color: 'var(--error)',
         },
         {
             label: t('debate.verdict.neutral'),

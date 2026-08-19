@@ -25,7 +25,7 @@ export interface IExecutionDelegate {
         context: InvocationContext,
         mode: ExecutionMode,
         invocationId?: string,
-    ): Promise<ExecutionTarget>;
+    ): Promise<{ target: ExecutionTarget; completed: Promise<void> }>;
 }
 
 const DEFAULT_CONSTRAINTS = { mode: 'chat' as ExecutionMode };
@@ -122,23 +122,58 @@ export class InvocationEngineService implements IInvocationEngineService {
         }
 
         const mode = inv.constraints.mode ?? evaluation.policy.actions.mode ?? 'chat';
-        const sessionRef = await this.execution.start(agents, req.context, mode, inv.id);
 
-        inv.sessionRef = sessionRef;
+        // Mark executing BEFORE handing off so the lifecycle is honest:
+        // accepted → executing → done, with executing genuinely in-flight
+        // (the run proceeds while we await `completed`). On any failure the
+        // aggregate must not be orphaned in `accepted` (B-18).
         inv.status = 'executing';
+        inv.updatedAt = Date.now();
+        await this.repository.put(inv);
+
+        let execution: { target: ExecutionTarget; completed: Promise<void> };
+        try {
+            execution = await this.execution.start(agents, req.context, mode, inv.id);
+        } catch (e) {
+            inv.status = 'rejected';
+            inv.rejectionReason = e instanceof Error ? e.message : String(e);
+            inv.updatedAt = Date.now();
+            await this.repository.put(inv);
+            this.eventBus.emit(EVENTS.INVOCATION_REJECTED, {
+                invocationId: inv.id,
+                reason: inv.rejectionReason,
+            });
+            return inv;
+        }
+
+        inv.sessionRef = execution.target;
         inv.updatedAt = Date.now();
         await this.repository.put(inv);
         this.eventBus.emit(EVENTS.INVOCATION_EXECUTING, {
             invocationId: inv.id,
-            sessionRef,
+            sessionRef: execution.target,
         });
+
+        try {
+            await execution.completed;
+        } catch (e) {
+            inv.status = 'rejected';
+            inv.rejectionReason = e instanceof Error ? e.message : String(e);
+            inv.updatedAt = Date.now();
+            await this.repository.put(inv);
+            this.eventBus.emit(EVENTS.INVOCATION_REJECTED, {
+                invocationId: inv.id,
+                reason: inv.rejectionReason,
+            });
+            return inv;
+        }
 
         inv.status = 'done';
         inv.updatedAt = Date.now();
         await this.repository.put(inv);
         this.eventBus.emit(EVENTS.INVOCATION_DONE, {
             invocationId: inv.id,
-            resultRef: sessionRef.ref,
+            resultRef: execution.target.ref,
         });
 
         return inv;

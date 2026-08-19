@@ -151,19 +151,19 @@ const ABTestPanel: React.FC = () => {
                 }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <GitCompare size={28} style={{ color: '#8b5cf6' }} />
+                    <GitCompare size={28} style={{ color: 'var(--purple)' }} />
                     <div>
                         <h2
                             style={{
                                 margin: 0,
                                 fontSize: '1.5rem',
                                 fontWeight: 700,
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                             }}
                         >
                             {t('ab_test.title')}
                         </h2>
-                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                             {t('ab_test.subtitle')}
                         </p>
                     </div>
@@ -214,7 +214,7 @@ const ABTestPanel: React.FC = () => {
                             style={{
                                 margin: '0 0 8px',
                                 fontSize: '0.9rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontWeight: 600,
                             }}
                         >
@@ -231,7 +231,7 @@ const ABTestPanel: React.FC = () => {
                                 borderRadius: 8,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.85rem',
                                 outline: 'none',
                                 fontFamily: 'monospace',
@@ -246,7 +246,7 @@ const ABTestPanel: React.FC = () => {
                                 style={{
                                     margin: '0 0 8px',
                                     fontSize: '0.85rem',
-                                    color: '#a78bfa',
+                                    color: 'var(--purple-muted)',
                                     fontWeight: 600,
                                 }}
                             >
@@ -264,7 +264,7 @@ const ABTestPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -285,7 +285,7 @@ const ABTestPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -304,7 +304,7 @@ const ABTestPanel: React.FC = () => {
                                 style={{
                                     margin: '0 0 8px',
                                     fontSize: '0.85rem',
-                                    color: '#f59e0b',
+                                    color: 'var(--warning)',
                                     fontWeight: 600,
                                 }}
                             >
@@ -322,7 +322,7 @@ const ABTestPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -343,7 +343,7 @@ const ABTestPanel: React.FC = () => {
                                         borderRadius: 8,
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.85rem',
                                         outline: 'none',
                                     }}
@@ -418,7 +418,7 @@ const ABTestPanel: React.FC = () => {
                                 style={{
                                     margin: '0 0 12px',
                                     fontSize: '0.9rem',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontWeight: 700,
                                 }}
                             >
@@ -452,10 +452,10 @@ const ABTestPanel: React.FC = () => {
                                         gap: 8,
                                         padding: '6px 8px',
                                         fontSize: '0.8rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                     }}
                                 >
-                                    <span style={{ fontWeight: 600, color: '#64748b' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--slate-500)' }}>
                                         {t('ab_test.similarity')}
                                     </span>
                                     <span
@@ -487,7 +487,7 @@ const ABTestPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.78rem',
                                             fontWeight: 600,
-                                            color: '#a78bfa',
+                                            color: 'var(--purple-muted)',
                                             marginBottom: 4,
                                         }}
                                     >
@@ -496,7 +496,7 @@ const ABTestPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             maxHeight: 200,
                                             overflowY: 'auto',
                                             padding: 8,
@@ -517,7 +517,7 @@ const ABTestPanel: React.FC = () => {
                                         style={{
                                             fontSize: '0.78rem',
                                             fontWeight: 600,
-                                            color: '#f59e0b',
+                                            color: 'var(--warning)',
                                             marginBottom: 4,
                                         }}
                                     >
@@ -526,7 +526,7 @@ const ABTestPanel: React.FC = () => {
                                     <div
                                         style={{
                                             fontSize: '0.75rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             maxHeight: 200,
                                             overflowY: 'auto',
                                             padding: 8,
@@ -554,7 +554,7 @@ const ABTestPanel: React.FC = () => {
                         style={{
                             margin: '0 0 8px',
                             fontSize: '0.9rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 600,
                         }}
                     >
@@ -566,7 +566,7 @@ const ABTestPanel: React.FC = () => {
                                 textAlign: 'center',
                                 padding: '2rem',
                                 fontSize: '0.85rem',
-                                color: '#475569',
+                                color: 'var(--slate-600)',
                             }}
                         >
                             {t('ab_test.no_history')}
@@ -592,7 +592,7 @@ const ABTestPanel: React.FC = () => {
                                     background: 'rgba(255,255,255,0.02)',
                                     borderRadius: 6,
                                     fontSize: '0.75rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                 }}
                             >
                                 <span
@@ -638,12 +638,12 @@ const ResultRow: React.FC<{
             gap: 8,
             padding: '6px 8px',
             fontSize: '0.8rem',
-            color: '#94a3b8',
+            color: 'var(--slate-400)',
             background: 'rgba(255,255,255,0.02)',
             borderRadius: 6,
         }}
     >
-        <span style={{ fontWeight: 600, color: '#64748b' }}>{label}</span>
+        <span style={{ fontWeight: 600, color: 'var(--slate-500)' }}>{label}</span>
         <span
             style={{
                 color: winner === 'A' ? '#22c55e' : winner === 'B' ? '#f87171' : '#94a3b8',

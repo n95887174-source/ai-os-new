@@ -44,15 +44,15 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
 };
 
 const TABS = [
-    { id: 'citation', label: 'Citation Graph', color: '#3b82f6' },
-    { id: 'knowledge', label: 'Knowledge Graph', color: '#8b5cf6' },
-    { id: 'review', label: 'Systematic Review', color: '#10b981' },
-    { id: 'factcheck', label: 'Fact-Check', color: '#f59e0b' },
-    { id: 'anomalies', label: 'Anomalies', color: '#ef4444' },
+    { id: 'citation', label: 'Citation Graph', color: 'var(--accent)' },
+    { id: 'knowledge', label: 'Knowledge Graph', color: 'var(--purple)' },
+    { id: 'review', label: 'Systematic Review', color: 'var(--success)' },
+    { id: 'factcheck', label: 'Fact-Check', color: 'var(--warning)' },
+    { id: 'anomalies', label: 'Anomalies', color: 'var(--error)' },
     { id: 'summary', label: 'Summarize', color: '#06b6d4' },
     { id: 'citations', label: 'Cite', color: '#a855f7' },
     { id: 'peer', label: 'Peer Review', color: '#ec4899' },
-    { id: 'discovery', label: 'Auto-Discovery', color: '#22c55e' },
+    { id: 'discovery', label: 'Auto-Discovery', color: 'var(--success)' },
     { id: 'report', label: 'Report', color: '#f97316' },
 ];
 
@@ -83,7 +83,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
     const renderTab = () => {
         if (!selectedSession && activeTab !== 'discovery') {
             return (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--slate-500)' }}>
                     <div style={{ opacity: 0.3, marginBottom: 8 }}>
                         <Layers size={40} />
                     </div>
@@ -140,7 +140,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
                         style={{
                             fontSize: '1.2rem',
                             fontWeight: 700,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
@@ -148,7 +148,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
                     >
                         <Layers size={22} color="#8b5cf6" /> Research Engine — Advanced
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: 2 }}>
                         Citation Graph · Knowledge Graph · PRISMA · Fact-Check · Anomalies ·
                         Summarization · Citations · Peer Review · Auto-Discovery · Reports
                     </div>
@@ -164,8 +164,8 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
                         padding: '10px 12px',
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
-                        background: '#0f172a',
-                        color: '#e2e8f0',
+                        background: 'var(--slate-900)',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                         outline: 'none',
                     }}
@@ -191,7 +191,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
                         background: 'rgba(139,92,246,0.05)',
                         border: '1px solid rgba(139,92,246,0.1)',
                         fontSize: '0.72rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <span>{selectedSession.loops.length} epistemic loops</span>
@@ -234,7 +234,7 @@ export const ResearchEngineAdvancedPanel: React.FC = () => {
                             borderRadius: 6,
                             border: 'none',
                             background: activeTab === tab.id ? `${tab.color}20` : 'transparent',
-                            color: activeTab === tab.id ? tab.color : '#64748b',
+                            color: activeTab === tab.id ? tab.color : 'var(--slate-500)',
                             cursor: 'pointer',
                             fontSize: '0.72rem',
                             fontWeight: activeTab === tab.id ? 600 : 400,

@@ -53,7 +53,7 @@ const TutorialCard: React.FC<{
                                 style={{
                                     marginLeft: '0.3rem',
                                     fontSize: '0.7rem',
-                                    color: '#22c55e',
+                                    color: 'var(--success)',
                                 }}
                             >
                                 Done
@@ -74,7 +74,7 @@ const TutorialCard: React.FC<{
                 >
                     {tutorial.estimatedMinutes} min
                     {tutorial.required && (
-                        <div style={{ color: '#f59e0b', fontWeight: 600 }}>Required</div>
+                        <div style={{ color: 'var(--warning)', fontWeight: 600 }}>Required</div>
                     )}
                 </div>
             </div>
@@ -276,7 +276,7 @@ const TutorialPanel: React.FC = () => {
                         borderRadius: '6px',
                         border: 'none',
                         background: 'rgba(34,197,94,0.15)',
-                        color: '#22c55e',
+                        color: 'var(--success)',
                         cursor: 'pointer',
                         fontSize: '0.7rem',
                     }}
@@ -290,7 +290,7 @@ const TutorialPanel: React.FC = () => {
                         borderRadius: '6px',
                         border: 'none',
                         background: 'rgba(239,68,68,0.15)',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         fontSize: '0.7rem',
                     }}

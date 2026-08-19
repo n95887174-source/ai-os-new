@@ -64,7 +64,7 @@ const DebateHistoryPage: React.FC = () => {
                         border: 'none',
                         borderRadius: 8,
                         padding: 8,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -77,7 +77,7 @@ const DebateHistoryPage: React.FC = () => {
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Clock size={20} color="#3b82f6" />
-                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                         {t('debate_runtime.title')}
                     </span>
                 </div>

@@ -15,7 +15,7 @@ export function ProviderListItem({
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem' }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.text }} />
-            <span style={{ flex: 1, color: '#cbd5e1' }}>{provider}</span>
+            <span style={{ flex: 1, color: 'var(--slate-300)' }}>{provider}</span>
             <span style={{ color: c.text, fontWeight: 600 }}>{(score * 100).toFixed(0)}</span>
             <MiniBar pct={score} color={c.text} />
         </div>
@@ -38,7 +38,7 @@ export function SessionListItem({
             <span
                 style={{
                     flex: 1,
-                    color: '#cbd5e1',
+                    color: 'var(--slate-300)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -59,12 +59,12 @@ export function BreakdownGrid({ breakdown }: { breakdown: Record<string, number>
                 gridTemplateColumns: '1fr 1fr',
                 gap: '2px 12px',
                 fontSize: '0.7rem',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
             }}
         >
             {Object.entries(breakdown).map(([k, v]) => (
                 <React.Fragment key={k}>
-                    <span style={{ color: '#64748b' }}>{k}</span>
+                    <span style={{ color: 'var(--slate-500)' }}>{k}</span>
                     <span>{(v * 100).toFixed(0)}%</span>
                 </React.Fragment>
             ))}

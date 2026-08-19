@@ -49,7 +49,7 @@ export const LayoutSelector: React.FC = () => {
                 style={{
                     width: 1,
                     height: 16,
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'var(--border-default)',
                     margin: '0 0.25rem',
                 }}
             />

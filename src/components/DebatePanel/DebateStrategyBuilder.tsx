@@ -238,7 +238,7 @@ const DebateStrategyBuilder: React.FC = () => {
                         {validation.valid ? '✓ Valid' : `✗ ${validation.errors.length} error(s)`}
                     </span>
                 )}
-                <span style={{ fontSize: 10, color: '#64748b', marginLeft: 'auto' }}>
+                <span style={{ fontSize: 10, color: 'var(--slate-500)', marginLeft: 'auto' }}>
                     {primitives.length} primitive{primitives.length !== 1 ? 's' : ''}
                 </span>
             </div>
@@ -257,7 +257,7 @@ const DebateStrategyBuilder: React.FC = () => {
                 <span
                     style={{
                         fontSize: 9,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         marginRight: 4,
@@ -275,7 +275,7 @@ const DebateStrategyBuilder: React.FC = () => {
                             borderRadius: 3,
                             border: '1px solid rgba(100,116,139,0.2)',
                             background: 'rgba(30,41,59,0.6)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontSize: 10,
                         }}
@@ -327,7 +327,7 @@ const DebateStrategyBuilder: React.FC = () => {
                 {/* Inspector */}
                 <div style={s.inspector}>
                     {!selectedPrimitive ? (
-                        <div style={{ fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 10, color: 'var(--slate-500)', fontStyle: 'italic' }}>
                             Click a primitive to edit its properties
                         </div>
                     ) : (
@@ -351,7 +351,7 @@ const DebateStrategyBuilder: React.FC = () => {
                                             key={e.path}
                                             style={{
                                                 fontSize: 9,
-                                                color: '#ef4444',
+                                                color: 'var(--error)',
                                                 marginBottom: 1,
                                             }}
                                         >
@@ -362,7 +362,7 @@ const DebateStrategyBuilder: React.FC = () => {
                             )}
                         </>
                     ) : (
-                        <div style={{ fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 10, color: 'var(--slate-500)', fontStyle: 'italic' }}>
                             Click <strong>Export</strong> to generate the strategy JSON
                         </div>
                     )}

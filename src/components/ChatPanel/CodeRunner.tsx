@@ -372,7 +372,7 @@ try {
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             padding: '0.3rem 0.6rem',
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             borderBottom: '1px solid rgba(59,130,246,0.2)',
                         }}
                     >
@@ -396,7 +396,7 @@ try {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 padding: 2,
                             }}
@@ -418,10 +418,10 @@ try {
                             wordBreak: 'break-all',
                         }}
                     >
-                        {error && <span style={{ color: '#ef4444' }}>Error: {error}</span>}
+                        {error && <span style={{ color: 'var(--error)' }}>Error: {error}</span>}
                         {output && !error && output}
                         {!output && !error && isRunning && (
-                            <span style={{ color: '#64748b' }}>Executing...</span>
+                            <span style={{ color: 'var(--slate-500)' }}>Executing...</span>
                         )}
                     </pre>
                 </div>

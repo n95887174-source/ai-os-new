@@ -18,12 +18,12 @@ const CATEGORY_LABELS: Record<
     { en: string; ru: string; color: string }
 > = {
     ethics: { en: 'Ethics', ru: 'Этика', color: '#a855f7' },
-    technology: { en: 'Tech', ru: 'Технологии', color: '#3b82f6' },
-    society: { en: 'Society', ru: 'Общество', color: '#10b981' },
+    technology: { en: 'Tech', ru: 'Технологии', color: 'var(--accent)' },
+    society: { en: 'Society', ru: 'Общество', color: 'var(--success)' },
     science: { en: 'Science', ru: 'Наука', color: '#06b6d4' },
-    philosophy: { en: 'Philosophy', ru: 'Философия', color: '#8b5cf6' },
-    politics: { en: 'Politics', ru: 'Политика', color: '#ef4444' },
-    creative: { en: 'Creative', ru: 'Творчество', color: '#f59e0b' },
+    philosophy: { en: 'Philosophy', ru: 'Философия', color: 'var(--purple)' },
+    politics: { en: 'Politics', ru: 'Политика', color: 'var(--error)' },
+    creative: { en: 'Creative', ru: 'Творчество', color: 'var(--warning)' },
     business: { en: 'Business', ru: 'Бизнес', color: '#84cc16' },
 };
 
@@ -93,12 +93,12 @@ const TopicSuggesterPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <Sparkles size={26} color="#a855f7" /> {t('topic_suggester.title')}
                 </h2>
-                <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                     {t('topic_suggester.subtitle')}
                 </p>
             </div>
@@ -175,11 +175,11 @@ const TopicSuggesterPanel: React.FC = () => {
                                     style={{
                                         padding: '0.2rem 0.6rem',
                                         borderRadius: 10,
-                                        border: `1px solid ${active ? CATEGORY_LABELS[cat].color : 'rgba(255,255,255,0.1)'}`,
+                                        border: `1px solid ${active ? CATEGORY_LABELS[cat].color : 'var(--border-default)'}`,
                                         background: active
                                             ? `${CATEGORY_LABELS[cat].color}30`
                                             : 'transparent',
-                                        color: active ? CATEGORY_LABELS[cat].color : '#94a3b8',
+                                        color: active ? CATEGORY_LABELS[cat].color : 'var(--slate-400)',
                                         cursor: 'pointer',
                                         fontSize: '0.7rem',
                                     }}
@@ -218,7 +218,7 @@ const TopicSuggesterPanel: React.FC = () => {
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: '0.8rem',
                     }}
@@ -351,7 +351,7 @@ const TopicSuggesterPanel: React.FC = () => {
             </div>
 
             {topics.length === 0 && (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                     <p>{t('topic_suggester.empty')}</p>
                     <button
                         onClick={reset}
@@ -361,7 +361,7 @@ const TopicSuggesterPanel: React.FC = () => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             cursor: 'pointer',
                             fontSize: '0.8rem',
                         }}
@@ -400,7 +400,7 @@ const TopicSuggesterPanel: React.FC = () => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                         }}
                     />
@@ -412,7 +412,7 @@ const TopicSuggesterPanel: React.FC = () => {
                             padding: '0.4rem 0.8rem',
                             borderRadius: 6,
                             border: 'none',
-                            background: '#10b981',
+                            background: 'var(--success)',
                             color: '#fff',
                             cursor: 'pointer',
                             fontSize: '0.8rem',

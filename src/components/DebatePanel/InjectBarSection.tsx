@@ -1,5 +1,5 @@
 import { Send, Loader2 } from 'lucide-react';
-import { debateInjectButton } from '../../styles/common';
+import { Button } from '../Common';
 
 interface Props {
     userInjection: string;
@@ -27,11 +27,12 @@ export const InjectBarSection: React.FC<Props> = ({
             className="debate-inject-input"
             disabled={actionLoading === 'inject'}
         />
-        <button
+        <Button
+            variant="success"
             onClick={handleInject}
             className="btn-primary"
             aria-label={t('debate.inject')}
-            style={debateInjectButton}
+            style={{ padding: '0 1.5rem', fontWeight: 800 }}
             disabled={actionLoading === 'inject'}
         >
             {actionLoading === 'inject' ? (
@@ -40,6 +41,6 @@ export const InjectBarSection: React.FC<Props> = ({
                 <Send size={20} aria-hidden="true" />
             )}{' '}
             {t('debate.inject')}
-        </button>
+        </Button>
     </div>
 );

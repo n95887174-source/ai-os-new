@@ -23,7 +23,7 @@ import type { SourceAdapterConfig } from '../contracts/research-adapter';
 import type { SourceType } from '../contracts/research-engine';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from './logger-service';
-import { sourceAdapterRegistry } from '../instances/services-extras';
+import type { SourceAdapterRegistry } from './research-adapters/source-adapter-registry';
 import { BucketStorageAdapter } from './storage-adapter';
 import {
     getNextQuestion,
@@ -100,6 +100,7 @@ export class ResearchEngineService implements IResearchEngine {
     constructor(
         private deps: {
             eventBus: { emit: (event: string, data?: unknown) => void };
+            sourceAdapterRegistry: SourceAdapterRegistry;
         },
     ) {}
 
@@ -181,20 +182,20 @@ export class ResearchEngineService implements IResearchEngine {
     }
 
     getSourceAdapterRegistry() {
-        return sourceAdapterRegistry;
+        return this.deps.sourceAdapterRegistry;
     }
 
     updateSourceConfig(config: Partial<SourceAdapterConfig>): void {
-        sourceAdapterRegistry.updateConfig(config);
+        this.deps.sourceAdapterRegistry.updateConfig(config);
     }
 
     getEnabledSources(): SourceType[] {
-        return sourceAdapterRegistry.getConfig().enabledSources;
+        return this.deps.sourceAdapterRegistry.getConfig().enabledSources;
     }
 
     getSourceStats(): { total: number; enabled: number; byCategory: Record<string, number> } {
-        const all = sourceAdapterRegistry.getAllAdapters();
-        const enabled = sourceAdapterRegistry.getEnabledAdapters();
+        const all = this.deps.sourceAdapterRegistry.getAllAdapters();
+        const enabled = this.deps.sourceAdapterRegistry.getEnabledAdapters();
         const byCategory: Record<string, number> = {};
         for (const a of all) {
             byCategory[a.category] = (byCategory[a.category] || 0) + 1;
@@ -300,7 +301,7 @@ export class ResearchEngineService implements IResearchEngine {
             if (effectiveSignal.aborted) throw new DOMException('Aborted', 'AbortError');
             result.status = 'searching';
             const sources = await Promise.race([
-                searchSourcesAlgo(questionText, sourceAdapterRegistry),
+                searchSourcesAlgo(questionText, this.deps.sourceAdapterRegistry),
                 new Promise<ResearchSource[]>((_, reject) =>
                     setTimeout(() => reject(new Error('searchSources timed out')), 30000),
                 ),

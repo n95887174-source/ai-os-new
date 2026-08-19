@@ -1,6 +1,7 @@
 import type { ISTopology, ISNode, AgentLifecycleState } from '../contracts/topology';
 import type { NodeContext } from '../types/domain-types';
 import type { ChatMessage } from '../types/llm-types';
+import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { ExecutionQueue } from './execution-queue';
 import { estimateTokenCount } from '../../llm/utils/token-counter';
@@ -33,10 +34,7 @@ interface ExecutionStats {
 }
 
 export interface OrchestrationServiceDeps {
-    eventBus: {
-        on: (event: string, cb: (...args: unknown[]) => void) => () => void;
-        emit: (event: string, data?: unknown) => void;
-    };
+    eventBus: IEventBus;
     toolService: {
         execute: (
             toolId: string,
@@ -109,6 +107,7 @@ export class OrchestrationService {
             deps.executionQueueMaxConcurrency || 3,
             deps.deadLetterQueue as
                 import('../contracts/dead-letter-queue').IDeadLetterQueue | undefined,
+            deps.eventBus,
         );
     }
 

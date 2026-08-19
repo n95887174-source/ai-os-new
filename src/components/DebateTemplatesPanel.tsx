@@ -40,7 +40,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                 >
                     <FileText size={20} color="#06b6d4" /> Debate Templates Library
                 </h2>
-                <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                     Pre-built debate templates to quickly start structured discussions
                 </p>
                 <div
@@ -48,7 +48,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                         display: 'flex',
                         gap: 8,
                         alignItems: 'center',
-                        background: '#0f172a',
+                        background: 'var(--slate-900)',
                         borderRadius: 8,
                         padding: '8px 12px',
                     }}
@@ -62,12 +62,12 @@ const DebateTemplatesPanelContent: React.FC = () => {
                             flex: 1,
                             background: 'none',
                             border: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: 13,
                             outline: 'none',
                         }}
                     />
-                    <span style={{ fontSize: 11, color: '#475569' }}>
+                    <span style={{ fontSize: 11, color: 'var(--slate-600)' }}>
                         {filtered.length} templates
                     </span>
                 </div>
@@ -84,7 +84,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                     <div
                         key={tmpl.id}
                         style={{
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 12,
                             border: '1px solid rgba(255,255,255,0.06)',
                             padding: 16,
@@ -101,10 +101,10 @@ const DebateTemplatesPanelContent: React.FC = () => {
                             }}
                         >
                             <div>
-                                <div style={{ fontWeight: 700, fontSize: 14, color: '#e2e8f0' }}>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--slate-200)' }}>
                                     {tmpl.name}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                                <div style={{ fontSize: 12, color: 'var(--slate-500)', marginTop: 2 }}>
                                     {tmpl.description}
                                 </div>
                             </div>
@@ -129,7 +129,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                                 background: 'rgba(0,0,0,0.2)',
                                 borderRadius: 8,
                                 fontSize: 12,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontStyle: 'italic',
                                 borderLeft: '2px solid rgba(255,255,255,0.1)',
                             }}
@@ -139,7 +139,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
                                 : tmpl.topic}
                         </div>
 
-                        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#94a3b8' }}>
+                        <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--slate-400)' }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Users size={12} /> {tmpl.minAgents}+ agents
                             </span>
@@ -176,7 +176,7 @@ const DebateTemplatesPanelContent: React.FC = () => {
             </div>
 
             {filtered.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--slate-500)' }}>
                     <FileText size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                     <div style={{ fontSize: 14 }}>No templates match your search</div>
                 </div>

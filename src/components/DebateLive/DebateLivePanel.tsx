@@ -120,7 +120,7 @@ export const DebateLivePanel: React.FC = () => {
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.4)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                     }}
                 >
@@ -142,7 +142,7 @@ export const DebateLivePanel: React.FC = () => {
                         borderRadius: 8,
                         background: 'rgba(0,0,0,0.4)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.85rem',
                     }}
                 >
@@ -157,7 +157,7 @@ export const DebateLivePanel: React.FC = () => {
                     <span
                         style={{
                             fontSize: '0.75rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             padding: '4px 10px',
                             borderRadius: 6,
                             background: 'rgba(0,0,0,0.3)',
@@ -215,7 +215,7 @@ export const DebateLivePanel: React.FC = () => {
                     <SocratesMascot />
                 </>
             ) : (
-                <div style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center' }}>
+                <div style={{ color: 'var(--slate-500)', fontSize: '0.9rem', textAlign: 'center' }}>
                     {t('debate_live.empty')}
                 </div>
             )}

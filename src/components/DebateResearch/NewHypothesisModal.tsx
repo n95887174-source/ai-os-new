@@ -52,7 +52,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                 style={{
                     width: 500,
                     maxWidth: '92vw',
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     borderRadius: 14,
                     border: '1px solid rgba(255,255,255,0.1)',
                     padding: '1.5rem',
@@ -71,7 +71,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                         style={{
                             fontSize: '1rem',
                             fontWeight: 700,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
@@ -84,7 +84,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             padding: 3,
                         }}
@@ -100,7 +100,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 display: 'block',
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.25rem',
                             }}
                         >
@@ -119,7 +119,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 borderRadius: 7,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.82rem',
                                 outline: 'none',
                                 boxSizing: 'border-box',
@@ -132,7 +132,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 display: 'block',
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.25rem',
                             }}
                         >
@@ -151,7 +151,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 borderRadius: 7,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.82rem',
                                 outline: 'none',
                                 resize: 'vertical',
@@ -166,7 +166,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 display: 'block',
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.25rem',
                             }}
                         >
@@ -199,7 +199,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                             border: isActive
                                                 ? `1px solid ${cfg.color}40`
                                                 : '1px solid rgba(255,255,255,0.06)',
-                                            color: isActive ? cfg.color : '#64748b',
+                                            color: isActive ? cfg.color : 'var(--slate-500)',
                                         }}
                                     >
                                         {cfg.icon} {t(cfg.labelKey)}
@@ -214,7 +214,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                 display: 'block',
                                 fontSize: '0.72rem',
                                 fontWeight: 600,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.25rem',
                             }}
                         >
@@ -234,7 +234,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                     borderRadius: 7,
                                     background: 'rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.82rem',
                                     outline: 'none',
                                     boxSizing: 'border-box',
@@ -251,7 +251,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                                         padding: '0.55rem 0.7rem',
                                         borderRadius: 7,
                                         border: '1px solid rgba(139,92,246,0.3)',
-                                        background: 'rgba(139,92,246,0.1)',
+                                        background: 'var(--purple-tint)',
                                         color: '#a855f7',
                                         cursor: 'pointer',
                                         display: 'flex',
@@ -299,7 +299,7 @@ const NewHypothesisModal: React.FC<NewHypothesisModalProps> = ({
                             borderRadius: 7,
                             border: '1px solid rgba(255,255,255,0.08)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.8rem',

@@ -54,7 +54,7 @@ const MatchCard: React.FC<Props> = ({ match, compact, onClick }) => {
                     {match.status}
                 </span>
                 {match.strategy && (
-                    <span style={{ fontSize: '0.5rem', color: '#64748b', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: '0.5rem', color: 'var(--slate-500)', marginLeft: 'auto' }}>
                         {match.strategy}
                     </span>
                 )}
@@ -99,7 +99,7 @@ const MatchCard: React.FC<Props> = ({ match, compact, onClick }) => {
                     style={{
                         textAlign: 'center',
                         fontSize: '0.5rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontWeight: 700,
                     }}
                 >
@@ -148,7 +148,7 @@ const MatchCard: React.FC<Props> = ({ match, compact, onClick }) => {
                         paddingTop: '0.3rem',
                         borderTop: '1px solid rgba(255,255,255,0.05)',
                         fontSize: '0.6rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -165,7 +165,7 @@ const MatchCard: React.FC<Props> = ({ match, compact, onClick }) => {
                         display: 'flex',
                         gap: '0.75rem',
                         fontSize: '0.5rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     {match.rounds != null && <span>{match.rounds} rounds</span>}

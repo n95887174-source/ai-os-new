@@ -239,12 +239,12 @@ const ChatExportPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <FileDown size={26} color="#10b981" /> {t('chat_export.title')}
                 </h2>
-                <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                     {t('chat_export.subtitle')}
                 </p>
             </div>

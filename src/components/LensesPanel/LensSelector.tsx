@@ -79,7 +79,7 @@ const LensSelector: React.FC<LensSelectorProps> = ({
                                 background: 'none',
                                 border: 'none',
                                 outline: 'none',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.75rem',
                             }}
                         />
@@ -132,7 +132,7 @@ const LensSelector: React.FC<LensSelectorProps> = ({
                         style={{
                             padding: '1rem',
                             textAlign: 'center',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             fontSize: '0.75rem',
                         }}
                     >
@@ -173,7 +173,7 @@ const LensSelector: React.FC<LensSelectorProps> = ({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        background: isSelected ? color : 'rgba(255,255,255,0.08)',
+                                        background: isSelected ? color : 'var(--border-subtle)',
                                         color: isSelected ? '#0f172a' : '#64748b',
                                         flexShrink: 0,
                                     }}
@@ -185,7 +185,7 @@ const LensSelector: React.FC<LensSelectorProps> = ({
                                         style={{
                                             fontSize: '0.78rem',
                                             fontWeight: 600,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                         }}
                                     >
                                         {lens.name}
@@ -193,7 +193,7 @@ const LensSelector: React.FC<LensSelectorProps> = ({
                                     <div
                                         style={{
                                             fontSize: '0.68rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',

@@ -210,15 +210,15 @@ const ProjectOsExplorer: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Code size={18} color="#8b5cf6" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Project OS Explorer
                     </span>
                     {attached && workspaceName && (
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#10b981',
-                                background: 'rgba(16,185,129,0.1)',
+                                color: 'var(--success)',
+                                background: 'var(--success-tint)',
                                 padding: '0.1rem 0.45rem',
                                 borderRadius: 4,
                             }}
@@ -233,7 +233,7 @@ const ProjectOsExplorer: React.FC = () => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             padding: 4,
                             borderRadius: 5,

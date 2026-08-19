@@ -63,10 +63,10 @@ const JunctionPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Waypoints size={18} color="#8b5cf6" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('junctions.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {junctions.length} {t('junctions.total')}
                     </span>
                 </div>
@@ -79,7 +79,7 @@ const JunctionPanel: React.FC = () => {
                             borderRadius: 7,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -95,7 +95,7 @@ const JunctionPanel: React.FC = () => {
                             padding: '0.45rem 0.9rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#8b5cf6',
+                            background: 'var(--purple)',
                             color: '#fff',
                             cursor: detecting ? 'wait' : 'pointer',
                             fontWeight: 700,
@@ -119,18 +119,18 @@ const JunctionPanel: React.FC = () => {
                     display: 'flex',
                     gap: 14,
                     fontSize: '0.7rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <span>
-                    <span style={{ color: '#8b5cf6' }}>{crystalCount}</span>{' '}
+                    <span style={{ color: 'var(--purple)' }}>{crystalCount}</span>{' '}
                     {t('junctions.sources_crystals')}
                 </span>
                 <span>
-                    <span style={{ color: '#10b981' }}>{debateCount}</span>{' '}
+                    <span style={{ color: 'var(--success)' }}>{debateCount}</span>{' '}
                     {t('junctions.sources_debates')}
                 </span>
-                {message && <span style={{ color: '#f59e0b' }}>{message}</span>}
+                {message && <span style={{ color: 'var(--warning)' }}>{message}</span>}
             </div>
 
             {/* List */}

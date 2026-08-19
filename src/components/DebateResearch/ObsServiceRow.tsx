@@ -31,7 +31,7 @@ const ObsServiceRow: React.FC<Props> = ({ service }) => {
                 style={{
                     flex: 1,
                     fontSize: '0.72rem',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontFamily: 'monospace',
                 }}
             >
@@ -76,7 +76,7 @@ const ObsServiceRow: React.FC<Props> = ({ service }) => {
                 {passed}/{total}
             </span>
             {service.notes && (
-                <span style={{ fontSize: '0.6rem', color: '#f59e0b' }}>{service.notes}</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--warning)' }}>{service.notes}</span>
             )}
         </div>
     );

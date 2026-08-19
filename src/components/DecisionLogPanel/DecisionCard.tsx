@@ -62,7 +62,7 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({ entry: d, isExpanded
                     </div>
                 </div>
                 <span style={textMutedXs}>{d.latencyMs}ms</span>
-                <span style={{ ...textSecondaryXs, color: '#fbbf24' }}>
+                <span style={{ ...textSecondaryXs, color: 'var(--warning)' }}>
                     ${d.estimatedCost.toFixed(4)}
                 </span>
                 <span style={textMutedXs}>{new Date(d.timestamp).toLocaleTimeString()}</span>
@@ -110,7 +110,7 @@ export const DecisionCard: React.FC<DecisionCardProps> = ({ entry: d, isExpanded
                                                     style={{
                                                         padding: '0.1rem 0.4rem',
                                                         borderRadius: 6,
-                                                        background: 'rgba(59,130,246,0.1)',
+                                                        background: 'var(--accent-tint)',
                                                         color: '#93c5fd',
                                                         fontSize: '0.7rem',
                                                     }}

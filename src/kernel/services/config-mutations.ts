@@ -1,10 +1,17 @@
 import type { ConfigRegistry } from '../contracts/config-registry';
 import { EVENTS } from '../events/event-names';
-import { eventBus } from '../events/event-bus';
+import type { IEventBus } from '../types/interfaces';
 import { rawConfig } from './config-registry';
 import { rootLogger } from './logger-service';
 
 const LOGGER = rootLogger.child('ConfigMutations');
+
+let _configEventBus: IEventBus | null = null;
+
+/** Inject the event bus (called once at bootstrap). */
+export function setConfigEventBus(bus: IEventBus): void {
+    _configEventBus = bus;
+}
 
 const CONFIG_TOP_LEVEL_KEYS = new Set<string>([
     'version',
@@ -35,7 +42,7 @@ export function replaceConfig(next: ConfigRegistry): void {
         }
         target[key] = value;
     }
-    eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
+    _configEventBus?.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { full: true } });
 }
 
 /** Update a single top-level section in rawConfig (used by config-service). */
@@ -45,7 +52,7 @@ export function setConfig<K extends keyof ConfigRegistry>(key: K, value: ConfigR
         return;
     }
     rawConfig[key] = value;
-    eventBus.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
+    _configEventBus?.emit(EVENTS.SETTINGS_UPDATED, { settings: {}, changes: { [key]: true } });
 }
 
 /** Update a feature flag value in rawConfig. Clones the section, mutates, and replaces via setConfig. */

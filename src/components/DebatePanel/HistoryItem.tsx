@@ -135,7 +135,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                         style={{
                             fontSize: '0.95rem',
                             fontWeight: 700,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             marginBottom: '0.25rem',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -149,7 +149,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                             display: 'flex',
                             gap: '1rem',
                             fontSize: '0.8rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     >
                         <span>
@@ -175,11 +175,11 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                             onRestore(h.id);
                         }}
                         style={{
-                            background: 'rgba(16,185,129,0.1)',
+                            background: 'var(--success-tint)',
                             border: '1px solid rgba(16,185,129,0.2)',
                             borderRadius: 8,
                             padding: 6,
-                            color: '#10b981',
+                            color: 'var(--success)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -192,11 +192,11 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                     <button
                         onClick={handleArchive}
                         style={{
-                            background: 'rgba(245,158,11,0.1)',
+                            background: 'var(--warning-tint)',
                             border: '1px solid rgba(245,158,11,0.2)',
                             borderRadius: 8,
                             padding: 6,
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -212,11 +212,11 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                             onDelete(h.id);
                         }}
                         style={{
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             borderRadius: 8,
                             padding: 6,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                             fontWeight: 700,
@@ -283,13 +283,13 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                 style={{
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
-                                    color: '#10b981',
+                                    color: 'var(--success)',
                                     marginBottom: '0.5rem',
                                 }}
                             >
                                 {t('debate.consensus')}
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--slate-200)', lineHeight: 1.5 }}>
                                 {h.consensus}
                             </div>
                         </div>
@@ -354,7 +354,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                     borderRadius: 6,
                                     border: '1px solid var(--border)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.7rem',
                                     outline: 'none',
                                 }}
@@ -367,7 +367,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                     </option>
                                 ))}
                             </select>
-                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                 {filteredArguments.length}/{h.arguments?.length ?? 0}{' '}
                                 {t('debate.arguments')}
                             </span>
@@ -391,7 +391,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                 border: '1px solid var(--border)',
                                 borderRadius: 8,
                                 padding: '0.35rem 1rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.75rem',
                                 cursor: 'pointer',
                                 width: '100%',
@@ -408,7 +408,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({
                                 marginTop: '0.75rem',
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: '0.7rem',
                                 cursor: 'pointer',
                                 width: '100%',

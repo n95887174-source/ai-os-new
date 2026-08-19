@@ -154,6 +154,7 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         'autoDebateService',
         (c) =>
             new AutoDebateService({
+                eventBus: c.get<IEventBus>('eventBus'),
                 keyService: c.get<KeyService>('keyService'),
                 getKeyStateStore: () => c.get<KeyStateStore>('keyStateStore'),
                 getAdapterRegistry: () => c.get<ProviderAdapterRegistry>('providerAdapterRegistry'),
@@ -243,11 +244,16 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         return svc;
     });
 
-    register('eloService', (_c) => new EloRatingService());
+    register('eloService', (c) => new EloRatingService({}, c.get<IEventBus>('eventBus')));
 
     register(
         'chatSummarizerService',
-        (c) => new ChatSummarizerService(c.get<LLMClientService>('llmClientService')),
+        (c) =>
+            new ChatSummarizerService(
+                c.get<LLMClientService>('llmClientService'),
+                {},
+                c.get<IEventBus>('eventBus'),
+            ),
     );
     register(
         'agentWizardService',
@@ -259,12 +265,19 @@ export const registerPhase6: Phase = (helpers, ctx) => {
     );
     register(
         'roleTestingSandboxService',
-        (c) => new RoleTestingSandboxService(c.get<LLMClientService>('llmClientService')),
+        (c) =>
+            new RoleTestingSandboxService(
+                c.get<LLMClientService>('llmClientService'),
+                {},
+                c.get<IEventBus>('eventBus'),
+            ),
     );
 
     register('personaService', (c) => {
-        const svc = new PersonaService();
-        svc.setDatabase(c.get<IDatabaseService>('database'));
+        const svc = new PersonaService(
+            c.get<IDatabaseService>('database'),
+            c.get<IEventBus>('eventBus'),
+        );
         void svc.init().catch((e) => console.error('[PersonaService] init() failed', e));
         return svc;
     });
@@ -421,7 +434,10 @@ export const registerPhase6: Phase = (helpers, ctx) => {
         (c) => new ProviderAchievementService(c.get<IDatabaseService>('database')),
     );
     // ── Gemini Live Service ───────────────────────
-    register('geminiLiveService', (_c) => new GeminiLiveService());
+    register(
+        'geminiLiveService',
+        (c) => new GeminiLiveService(c.get<GoogleGenAIService>('googleGenAIService')),
+    );
     // ── Connector Service ──────────────────────────
     register(
         'connectorService',

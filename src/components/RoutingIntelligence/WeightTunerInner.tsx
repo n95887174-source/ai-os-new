@@ -29,7 +29,7 @@ function WeightTunerInner({ profile, actions }: Props) {
     ]);
 
     if (!profile)
-        return <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>;
+        return <div style={{ color: 'var(--slate-500)', fontSize: '0.8rem' }}>No active profile</div>;
 
     const hasChanges =
         localWeights.ttft !== w.ttft ||
@@ -69,7 +69,7 @@ function WeightTunerInner({ profile, actions }: Props) {
                                     fontSize: '0.8rem',
                                     fontFamily: 'monospace',
                                     fontWeight: 700,
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                 }}
                             >
                                 {localWeights[key].toFixed(2)}
@@ -87,7 +87,7 @@ function WeightTunerInner({ profile, actions }: Props) {
                     </div>
                 );
             })}
-            <div style={{ fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', fontStyle: 'italic' }}>
                 Weights are renormalized automatically
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -126,7 +126,7 @@ function WeightTunerInner({ profile, actions }: Props) {
                         fontSize: '0.75rem',
                         cursor: hasChanges ? 'pointer' : 'default',
                         background: 'transparent',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         border: '1px solid rgba(255,255,255,0.08)',
                         display: 'flex',
                         alignItems: 'center',

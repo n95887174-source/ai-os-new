@@ -44,7 +44,7 @@ const ProviderHealthSection: React.FC<ProviderHealthSectionProps> = ({
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
                 <Activity size={18} color="#3b82f6" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                     {t('analytics.provider_health')}
                 </span>
             </div>
@@ -123,7 +123,7 @@ const ProviderHealthSection: React.FC<ProviderHealthSectionProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: 6,
                                     fontWeight: 600,
                                 }}
@@ -140,7 +140,7 @@ const ProviderHealthSection: React.FC<ProviderHealthSectionProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     marginBottom: 6,
                                     fontWeight: 600,
                                 }}
@@ -169,7 +169,7 @@ const ProviderHealthSection: React.FC<ProviderHealthSectionProps> = ({
                     <div
                         style={{
                             fontSize: '0.7rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontWeight: 700,
                             marginBottom: '0.5rem',
                         }}
@@ -219,8 +219,8 @@ const ProviderHealthSection: React.FC<ProviderHealthSectionProps> = ({
                                 >
                                     {ev.type.replace('_', ' ')}
                                 </span>
-                                <span style={{ color: '#94a3b8', flex: 1 }}>
-                                    <strong style={{ color: '#e2e8f0' }}>{ev.provider}</strong> —{' '}
+                                <span style={{ color: 'var(--slate-400)', flex: 1 }}>
+                                    <strong style={{ color: 'var(--slate-200)' }}>{ev.provider}</strong> —{' '}
                                     {ev.detail}
                                 </span>
                             </div>
@@ -239,11 +239,11 @@ const StatBox: React.FC<{ label: string; value: string; sub?: string; color: str
     color,
 }) => (
     <div style={{ padding: '0.75rem', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--slate-400)', fontWeight: 600 }}>{label}</div>
         <div style={{ fontSize: '1.1rem', fontWeight: 800, color }}>
             {value}
             {sub && (
-                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 400 }}>{sub}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)', fontWeight: 400 }}>{sub}</span>
             )}
         </div>
     </div>

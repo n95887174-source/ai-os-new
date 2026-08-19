@@ -87,7 +87,7 @@ const KeyMetadataGrid: React.FC<Props> = ({ apiKey, stats }) => {
                         style={{
                             background: 'none',
                             border: 'none',
-                            color: '#3b82f6',
+                            color: 'var(--accent)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

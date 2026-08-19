@@ -147,10 +147,10 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <MessageSquare size={18} color="#a78bfa" />
                         <div>
-                            <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9rem' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--slate-200)', fontSize: '0.9rem' }}>
                                 {team.icon} {team.name}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                 {team.roleIds.length} roles · {team.coordinationStrategy}
                                 {activeRole && ` · Active: @${activeRole}`}
                             </div>
@@ -163,7 +163,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                         }}
@@ -197,8 +197,8 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                     padding: '3px 8px',
                                     borderRadius: 20,
                                     background: isActive ? `${color}25` : 'rgba(255,255,255,0.04)',
-                                    border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.08)'}`,
-                                    color: isActive ? color : '#94a3b8',
+                                    border: `1px solid ${isActive ? color : 'var(--border-subtle)'}`,
+                                    color: isActive ? color : 'var(--slate-400)',
                                     fontSize: '0.7rem',
                                     fontWeight: isActive ? 700 : 400,
                                     cursor: 'pointer',
@@ -244,7 +244,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                     style={{
                                         textAlign: 'center',
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         padding: '6px 12px',
                                         background: 'rgba(255,255,255,0.03)',
                                         borderRadius: 8,
@@ -316,7 +316,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                                     : 'rgba(255,255,255,0.06)'
                                             }`,
                                             fontSize: '0.78rem',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             lineHeight: 1.4,
                                             whiteSpace: 'pre-wrap',
                                         }}
@@ -326,7 +326,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                     <div
                                         style={{
                                             fontSize: '0.6rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginTop: 2,
                                             textAlign: isUser ? 'right' : 'left',
                                         }}
@@ -351,7 +351,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                             alignItems: 'center',
                             gap: 8,
                             fontSize: '0.75rem',
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                         }}
                     >
                         <ArrowRight size={12} />
@@ -366,7 +366,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                 borderRadius: 6,
                                 border: '1px solid rgba(139,92,246,0.2)',
                                 background: 'rgba(0,0,0,0.3)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.75rem',
                             }}
                         >
@@ -384,7 +384,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                 borderRadius: 4,
                                 border: 'none',
                                 background: 'transparent',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 fontSize: '0.7rem',
                             }}
@@ -434,7 +434,7 @@ const TeamChat: React.FC<TeamChatProps> = ({ team, onClose }) => {
                                 borderRadius: 8,
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 background: 'rgba(0,0,0,0.3)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.82rem',
                                 outline: 'none',
                             }}

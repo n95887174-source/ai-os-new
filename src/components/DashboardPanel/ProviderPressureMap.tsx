@@ -25,7 +25,7 @@ const ThresholdBar: React.FC<{ pct: number }> = ({ pct }) => (
             width: '100%',
             height: 4,
             borderRadius: 2,
-            background: 'rgba(255,255,255,0.08)',
+            background: 'var(--border-subtle)',
             overflow: 'hidden',
         }}
     >
@@ -99,7 +99,7 @@ export const ProviderPressureMap: React.FC<ProviderPressureMapProps> = ({ keys, 
                                 <span
                                     style={{
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         textTransform: 'capitalize',
                                     }}
                                 >
@@ -114,7 +114,7 @@ export const ProviderPressureMap: React.FC<ProviderPressureMapProps> = ({ keys, 
                                 style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontSize: '0.6rem',
                                 }}
                             >
@@ -159,7 +159,7 @@ export const ProviderPressureMap: React.FC<ProviderPressureMapProps> = ({ keys, 
                                         marginBottom: '0.15rem',
                                     }}
                                 >
-                                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                                    <span style={{ color: 'var(--slate-200)', fontWeight: 600 }}>
                                         {key.label}
                                     </span>
                                     <span style={{ color: thresholdColor(pct, 70, 90) }}>

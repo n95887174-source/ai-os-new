@@ -30,7 +30,7 @@ export const KernelServicesSection: React.FC<KernelServicesSectionProps> = ({
                         fontSize: '1.2rem',
                         fontWeight: 800,
                         margin: 0,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     {t('health.kernel_services')}
@@ -43,7 +43,7 @@ export const KernelServicesSection: React.FC<KernelServicesSectionProps> = ({
                         style={{
                             padding: '2rem',
                             textAlign: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.85rem',
                         }}
                     >
@@ -79,7 +79,7 @@ export const KernelServicesSection: React.FC<KernelServicesSectionProps> = ({
                                             style={{
                                                 fontSize: '0.95rem',
                                                 fontWeight: 700,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                             }}
                                         >
                                             {svc.name}

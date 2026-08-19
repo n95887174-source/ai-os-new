@@ -48,7 +48,7 @@ const CrystalLifecycleBadge: React.FC<CrystalLifecycleBadgeProps> = ({ status, c
                     width: 60,
                     height: 5,
                     borderRadius: 3,
-                    background: 'rgba(255,255,255,0.08)',
+                    background: 'var(--border-subtle)',
                     overflow: 'hidden',
                 }}
             >
@@ -61,7 +61,7 @@ const CrystalLifecycleBadge: React.FC<CrystalLifecycleBadgeProps> = ({ status, c
                     }}
                 />
             </div>
-            <span style={{ fontSize: '0.62rem', color: '#64748b' }}>{pct}%</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>{pct}%</span>
         </div>
     );
 };

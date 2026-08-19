@@ -75,7 +75,7 @@ function AdvancedTab({
                         actions={actions}
                     />
                 ) : (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem' }}>No active profile</div>
+                    <div style={{ color: 'var(--slate-500)', fontSize: '0.8rem' }}>No active profile</div>
                 )}
             </div>
             <div

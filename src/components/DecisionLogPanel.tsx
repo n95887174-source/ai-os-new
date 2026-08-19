@@ -107,7 +107,7 @@ const DecisionLogPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <Loader2 size={20} className="animate-spin" />
@@ -146,12 +146,12 @@ const DecisionLogPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <ClipboardList size={26} color="#10b981" /> {t('decision_log.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('decision_log.subtitle', { count: decisions.length })}
                     </p>
                 </div>
@@ -247,7 +247,7 @@ const DecisionLogPanel: React.FC = () => {
                 <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
                     <Search
                         size={14}
-                        style={{ position: 'absolute', left: 8, top: 8, color: '#94a3b8' }}
+                        style={{ position: 'absolute', left: 8, top: 8, color: 'var(--slate-400)' }}
                     />
                     <input
                         value={search}
@@ -259,7 +259,7 @@ const DecisionLogPanel: React.FC = () => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                         }}
                     />
@@ -272,7 +272,7 @@ const DecisionLogPanel: React.FC = () => {
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                     }}
                 >
@@ -297,7 +297,7 @@ const DecisionLogPanel: React.FC = () => {
                     ))}
                 </AnimatePresence>
                 {decisions.length === 0 && (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                         <ClipboardList size={48} color="#475569" />
                         <p style={{ marginTop: '1rem' }}>{t('decision_log.empty')}</p>
                     </div>

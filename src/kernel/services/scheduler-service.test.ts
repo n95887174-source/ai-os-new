@@ -1,21 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SchedulerService, initSchedulerService, type Schedule } from './scheduler-service';
-import { EventBus } from '../instances';
 import { BucketStorageAdapter } from './storage-adapter';
+import type { IEventBus } from '../types/interfaces';
 
 describe('SchedulerService', () => {
     let service: SchedulerService;
     let db: { getKv: ReturnType<typeof vi.fn>; setKv: ReturnType<typeof vi.fn> };
+    let eventBus: IEventBus;
     let emitSpy: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
-        emitSpy = vi.spyOn(EventBus, 'emit').mockImplementation(() => {});
+        eventBus = {
+            emit: vi.fn(),
+            on: vi.fn(),
+            onSafe: vi.fn(),
+            emitOnce: vi.fn(),
+            off: vi.fn(),
+        } as unknown as IEventBus;
+        emitSpy = eventBus.emit as ReturnType<typeof vi.fn>;
         vi.spyOn(BucketStorageAdapter.AGENTS, 'get').mockResolvedValue(null);
         vi.spyOn(BucketStorageAdapter.AGENTS, 'set').mockResolvedValue(undefined);
         vi.spyOn(BucketStorageAdapter.AGENTS, 'remove').mockResolvedValue(undefined);
 
         db = { getKv: vi.fn(), setKv: vi.fn() };
-        service = new SchedulerService(db as never);
+        service = new SchedulerService(db as never, eventBus);
     });
 
     afterEach(() => {
@@ -496,8 +504,8 @@ describe('SchedulerService', () => {
         });
 
         it('initSchedulerService creates singleton', () => {
-            const s1 = initSchedulerService(db as never);
-            const s2 = initSchedulerService(db as never);
+            const s1 = initSchedulerService(db as never, eventBus);
+            const s2 = initSchedulerService(db as never, eventBus);
             expect(s1).toBe(s2);
         });
     });

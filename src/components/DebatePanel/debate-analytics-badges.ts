@@ -13,7 +13,7 @@ export const badgeAmber: CSSProperties = {
     borderRadius: 6,
     background: 'rgba(245,158,11,0.12)',
     border: '1px solid rgba(245,158,11,0.25)',
-    color: '#f59e0b',
+    color: 'var(--warning)',
     fontWeight: 600,
 };
 export const badgeRed: CSSProperties = {
@@ -21,7 +21,7 @@ export const badgeRed: CSSProperties = {
     borderRadius: 6,
     background: 'rgba(239,68,68,0.12)',
     border: '1px solid rgba(239,68,68,0.25)',
-    color: '#ef4444',
+    color: 'var(--error)',
     fontWeight: 600,
 };
 export const badgePink: CSSProperties = {
@@ -37,6 +37,6 @@ export const badgeBlue: CSSProperties = {
     borderRadius: 6,
     background: 'rgba(56,189,248,0.12)',
     border: '1px solid rgba(56,189,248,0.25)',
-    color: '#38bdf8',
+    color: 'var(--info)',
     fontWeight: 600,
 };

@@ -109,6 +109,20 @@ export interface RouterServiceDeps {
     keyStateStore?: IKeyStateStore;
 }
 
+/**
+ * RouterService — SINGLE SOURCE OF TRUTH for live provider routing (B-21).
+ *
+ * All execution consumers (chat-executor, debate-query-engine, cognitive-service,
+ * advisor/insight-engine, temporal-replay, counterfactual-engine) resolve providers
+ * exclusively through `getRankedProviders(...)` (and the related `trySelectProvider` /
+ * `resolveWithFallback` / `getDebateProviders` helpers). Its authoritative rule surface
+ * is `config.semanticRouteRules` (via `trySelectProvider` → `matchSemanticRule`) plus the
+ * `routingPolicyService` fallback/downgrade chains.
+ *
+ * NOTE: `SmartRoutingService` is a separate, simulation-only store (see its own JSDoc);
+ * its rules do NOT affect routing here. This class is authoritative — do not add a second
+ * routing-rule store or consult `SmartRoutingService` from the execution path.
+ */
 export class RouterService {
     private decisionHistory: RouterDecision[] = [];
     private simulationHistory: RouterDecision[] = [];

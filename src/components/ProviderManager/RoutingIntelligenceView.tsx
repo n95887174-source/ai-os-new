@@ -20,10 +20,10 @@ const RoutingIntelligenceView: React.FC = () => {
       }}
     >
       <GitBranch size={32} color="#8b5cf6" aria-hidden />
-      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-50)' }}>
         Routing Intelligence
       </h3>
-      <p style={{ margin: 0, maxWidth: 420, fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.6 }}>
+      <p style={{ margin: 0, maxWidth: 420, fontSize: '0.85rem', color: 'var(--slate-400)', lineHeight: 1.6 }}>
         A/B tests, weight tuning, fallback chains, and live decision traces are in the full Routing Intelligence panel.
       </p>
       <button

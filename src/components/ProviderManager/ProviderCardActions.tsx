@@ -121,7 +121,7 @@ export const ConfirmRemoveBanner: React.FC<{ onCancel: () => void; onConfirm: ()
             style={{
                 marginTop: '0.5rem',
                 padding: '0.5rem 0.75rem',
-                background: 'rgba(239,68,68,0.1)',
+                background: 'var(--error-tint)',
                 border: '1px solid rgba(239,68,68,0.3)',
                 borderRadius: 8,
                 fontSize: '0.75rem',
@@ -136,7 +136,7 @@ export const ConfirmRemoveBanner: React.FC<{ onCancel: () => void; onConfirm: ()
                     onCancel();
                 }}
                 style={{
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     textDecoration: 'underline',
                     marginLeft: 8,
                     background: 'none',

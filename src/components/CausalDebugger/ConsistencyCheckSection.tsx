@@ -38,15 +38,15 @@ const ConsistencyCheckSection: React.FC<Props> = ({ report, onCheck }) => (
         {report && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.65rem' }}>
                 <span style={statusStyle(report.status)}>{report.status}</span>
-                <span style={{ color: '#64748b' }}>
+                <span style={{ color: 'var(--slate-500)' }}>
                     drift{' '}
                     {report.driftScore > 0.01 ? (report.driftScore * 100).toFixed(0) + '%' : '0%'}
                 </span>
-                <span style={{ color: '#64748b' }}>
+                <span style={{ color: 'var(--slate-500)' }}>
                     {report.mismatches.length} mismatch{report.mismatches.length !== 1 ? 'es' : ''}
                 </span>
                 {report.mismatches.length > 0 && (
-                    <span style={{ color: '#94a3b8' }}>
+                    <span style={{ color: 'var(--slate-400)' }}>
                         ({report.mismatches.filter((m) => m.severity === 'critical').length}{' '}
                         critical, {report.mismatches.filter((m) => m.severity === 'major').length}{' '}
                         major)

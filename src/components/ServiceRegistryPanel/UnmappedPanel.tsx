@@ -40,7 +40,7 @@ const UnmappedPanel: React.FC<UnmappedPanelProps> = ({
                     padding: '4px 8px',
                 }}
             >
-                <span style={{ fontSize: 11, color: '#64748b' }}>
+                <span style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                     Services without a UI panel — assign a route or mark "no panel needed"
                 </span>
                 <button
@@ -51,7 +51,7 @@ const UnmappedPanel: React.FC<UnmappedPanelProps> = ({
                         borderRadius: 4,
                         border: '1px solid rgba(148,163,184,0.2)',
                         background: 'rgba(148,163,184,0.1)',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                     }}
                 >
@@ -132,7 +132,7 @@ const UnmappedPanel: React.FC<UnmappedPanelProps> = ({
                     <div style={styles.phaseBlockHeader}>
                         <span
                             style={{
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontSize: 11,
                                 fontWeight: 600,
                             }}

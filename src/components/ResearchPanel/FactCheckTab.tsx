@@ -49,19 +49,19 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(34,197,94,0.1)',
+                                background: 'var(--success-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Accuracy
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>
                                 {(data.overallAccuracy * 100).toFixed(0)}%
                             </div>
                         </div>
@@ -70,19 +70,19 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(34,197,94,0.1)',
+                                background: 'var(--success-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Verified
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>
                                 {data.verifiedCount}
                             </div>
                         </div>
@@ -91,13 +91,13 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -112,19 +112,19 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(245,158,11,0.1)',
+                                background: 'var(--warning-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Unverifiable
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fbbf24' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)' }}>
                                 {data.unverifiableCount}
                             </div>
                         </div>
@@ -167,7 +167,7 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                             style={{
                                                 fontSize: '0.72rem',
                                                 fontWeight: 600,
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                             }}
                                         >
                                             "{c.claim.slice(0, 80)}
@@ -178,7 +178,7 @@ export const FactCheckTab: React.FC<Props> = ({ engine, session }) => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginTop: 4,
                                         }}
                                     >

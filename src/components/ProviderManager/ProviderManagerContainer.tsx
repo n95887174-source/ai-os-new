@@ -251,7 +251,7 @@ const ProviderManagerContainer: React.FC = () => {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
-                                    background: '#1e293b',
+                                    background: 'var(--slate-800)',
                                     borderRadius: 16,
                                     padding: '1.5rem',
                                     width: 400,
@@ -284,7 +284,7 @@ const ProviderManagerContainer: React.FC = () => {
                                         style={{
                                             background: 'none',
                                             border: 'none',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             cursor: 'pointer',
                                         }}
                                         aria-label={t('common.aria.close')}
@@ -295,7 +295,7 @@ const ProviderManagerContainer: React.FC = () => {
                                 <p
                                     style={{
                                         fontSize: '0.78rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         marginBottom: '1rem',
                                     }}
                                 >
@@ -313,7 +313,7 @@ const ProviderManagerContainer: React.FC = () => {
                                         <label
                                             style={{
                                                 fontSize: '0.75rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 display: 'block',
                                                 marginBottom: '0.3rem',
                                             }}
@@ -333,7 +333,7 @@ const ProviderManagerContainer: React.FC = () => {
                                                 borderRadius: 8,
                                                 background: 'rgba(0,0,0,0.2)',
                                                 border: '1px solid rgba(255,255,255,0.06)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.85rem',
                                             }}
                                             autoFocus
@@ -343,7 +343,7 @@ const ProviderManagerContainer: React.FC = () => {
                                         <label
                                             style={{
                                                 fontSize: '0.75rem',
-                                                color: '#94a3b8',
+                                                color: 'var(--slate-400)',
                                                 display: 'block',
                                                 marginBottom: '0.3rem',
                                             }}
@@ -363,7 +363,7 @@ const ProviderManagerContainer: React.FC = () => {
                                                 borderRadius: 8,
                                                 background: 'rgba(0,0,0,0.2)',
                                                 border: '1px solid rgba(255,255,255,0.06)',
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 fontSize: '0.85rem',
                                             }}
                                         />

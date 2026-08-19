@@ -24,7 +24,7 @@ const tabStyle = (active: boolean, color: string): React.CSSProperties => ({
     alignItems: 'center',
     gap: 5,
     background: active ? `${color}18` : 'transparent',
-    color: active ? color : '#64748b',
+    color: active ? color : 'var(--slate-500)',
     transition: 'all 0.15s',
 });
 

@@ -104,7 +104,7 @@ const GroupsPanel: React.FC = () => {
 
     if (groups.length === 0) {
         return (
-            <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#e2e8f0' }}>
+            <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: 'var(--slate-200)' }}>
                 {error && <ErrorBanner error={error} onDismiss={() => setError(null)} />}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
                     <FolderTree size={24} color="#3b82f6" />
@@ -114,7 +114,7 @@ const GroupsPanel: React.FC = () => {
                 </div>
                 <div style={{ ...CARD, textAlign: 'center', padding: 40 }}>
                     <Users size={40} color="#64748b" style={{ marginBottom: 12 }} />
-                    <div style={{ color: '#94a3b8', marginBottom: 16 }}>{t('groups.empty')}</div>
+                    <div style={{ color: 'var(--slate-400)', marginBottom: 16 }}>{t('groups.empty')}</div>
                     <button
                         onClick={() => setCreateOpen(true)}
                         style={{
@@ -152,7 +152,7 @@ const GroupsPanel: React.FC = () => {
                 padding: 24,
                 maxWidth: 1200,
                 margin: '0 auto',
-                color: '#e2e8f0',
+                color: 'var(--slate-200)',
                 display: 'flex',
                 gap: 20,
                 height: 'calc(100vh - 120px)',
@@ -253,7 +253,7 @@ const GroupsPanel: React.FC = () => {
                                 <span
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         background: 'rgba(148,163,184,0.1)',
                                         borderRadius: 10,
                                         padding: '0.1rem 0.45rem',
@@ -278,7 +278,7 @@ const GroupsPanel: React.FC = () => {
                                 border: '1px solid rgba(148,163,184,0.2)',
                                 borderRadius: 6,
                                 padding: '0.4rem 0.6rem',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.8rem',
                                 outline: 'none',
                                 marginBottom: 6,
@@ -306,7 +306,7 @@ const GroupsPanel: React.FC = () => {
                                 }}
                                 style={{
                                     background: 'transparent',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     border: 'none',
                                     padding: '0.3rem 0.5rem',
                                     cursor: 'pointer',
@@ -335,7 +335,7 @@ const GroupsPanel: React.FC = () => {
                 ) : (
                     <div style={{ ...CARD, textAlign: 'center', padding: 60 }}>
                         <FolderTree size={48} color="#64748b" style={{ marginBottom: 12 }} />
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                        <div style={{ color: 'var(--slate-400)', fontSize: '0.9rem' }}>
                             {t('groups.select_hint')}
                         </div>
                     </div>
@@ -386,7 +386,7 @@ const CreateGroupForm: React.FC<{
                     border: '1px solid rgba(148,163,184,0.2)',
                     borderRadius: 8,
                     padding: '0.5rem 0.75rem',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.85rem',
                     outline: 'none',
                     marginBottom: 8,
@@ -411,7 +411,7 @@ const CreateGroupForm: React.FC<{
                     onClick={onCancel}
                     style={{
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         border: 'none',
                         padding: '0.4rem 1rem',
                         cursor: 'pointer',

@@ -58,19 +58,19 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                             style={{
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
                                 flexWrap: 'wrap',
                             }}
                         >
-                            <Info size={16} style={{ color: '#8b5cf6' }} />{' '}
+                            <Info size={16} style={{ color: 'var(--purple)' }} />{' '}
                             {t('router_trace.decision_trace')}
                             <span
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontFamily: 'monospace',
                                     fontWeight: 400,
                                 }}
@@ -84,7 +84,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: 4,
                                         background: 'rgba(245,158,11,0.15)',
-                                        color: '#f59e0b',
+                                        color: 'var(--warning)',
                                         fontWeight: 700,
                                     }}
                                 >
@@ -98,7 +98,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         padding: '0.15rem 0.4rem',
                                         borderRadius: 4,
                                         background: 'rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         fontWeight: 700,
                                     }}
                                 >
@@ -122,7 +122,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                         <div style={textMutedWeight700XsMargin}>
                             {t('router_trace.strategy_label')}
                         </div>
-                        <div style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: 700 }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--slate-50)', fontWeight: 700 }}>
                             {t(STRATEGY_LABELS[decision.strategy] || decision.strategy)}
                         </div>
                     </div>
@@ -167,7 +167,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
 
             <div className="glass-panel" style={panelRounded16}>
                 <div style={{ ...scoreHeader, marginBottom: '0.75rem' }}>
-                    <Scale size={16} style={{ color: '#f59e0b' }} />{' '}
+                    <Scale size={16} style={{ color: 'var(--warning)' }} />{' '}
                     {t('router_trace.effective_weights')}
                 </div>
                 <div
@@ -193,7 +193,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                 <div
                                     style={{
                                         width: `${ttftPct}%`,
-                                        background: '#3b82f6',
+                                        background: 'var(--accent)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -207,7 +207,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                 <div
                                     style={{
                                         width: `${tpsPct}%`,
-                                        background: '#10b981',
+                                        background: 'var(--success)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -221,7 +221,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                 <div
                                     style={{
                                         width: `${relPct}%`,
-                                        background: '#8b5cf6',
+                                        background: 'var(--purple)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -244,7 +244,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                         gap: '1rem',
                         marginTop: '0.5rem',
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     <span>
@@ -254,7 +254,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                         <span style={{ color: '#34d399' }}>■</span> {t('router_trace.legend_tps')}
                     </span>
                     <span>
-                        <span style={{ color: '#a78bfa' }}>■</span>{' '}
+                        <span style={{ color: 'var(--purple-muted)' }}>■</span>{' '}
                         {t('router_trace.legend_reliability')}
                     </span>
                 </div>
@@ -263,7 +263,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
             {decision.skipped && decision.skipped.length > 0 && (
                 <div className="glass-panel" style={panelRounded16}>
                     <div style={{ ...scoreHeader, marginBottom: '0.75rem' }}>
-                        <XCircle size={16} style={{ color: '#ef4444' }} />{' '}
+                        <XCircle size={16} style={{ color: 'var(--error)' }} />{' '}
                         {t('router_trace.skipped_providers', { count: decision.skipped.length })}
                     </div>
                     <div style={flexColGap1}>
@@ -286,7 +286,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         style={{
                                             fontSize: '0.75rem',
                                             fontWeight: 600,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             width: 100,
                                         }}
                                     >
@@ -301,11 +301,11 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                     >
                                         {s.stage}
                                     </span>
-                                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', flex: 1 }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-400)', flex: 1 }}>
                                         {s.reason}
                                     </span>
                                     {s.keyLabel && (
-                                        <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                             ({s.keyLabel})
                                         </span>
                                     )}
@@ -318,7 +318,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
 
             <div className="glass-panel" style={panelRounded16}>
                 <div style={scoreHeader}>
-                    <TrendingUp size={16} style={{ color: '#3b82f6' }} />{' '}
+                    <TrendingUp size={16} style={{ color: 'var(--accent)' }} />{' '}
                     {t('router_trace.score_breakdown')}
                 </div>
                 <div style={flexColGap4}>
@@ -352,7 +352,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                                 style={{
                                                     ...tagSmall,
                                                     background: 'rgba(16,185,129,0.15)',
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                     fontWeight: 700,
                                                 }}
                                             >
@@ -514,7 +514,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
             {decision.scores.length >= 2 && decision.scores[0]!.c && decision.scores[1]!.c && (
                 <div className="glass-panel" style={panelRounded16}>
                     <div style={scoreHeader}>
-                        <GitBranch size={16} style={{ color: '#10b981' }} />{' '}
+                        <GitBranch size={16} style={{ color: 'var(--success)' }} />{' '}
                         {t('router_trace.winner_vs_runner')}
                     </div>
                     {(() => {
@@ -563,7 +563,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#10b981',
+                                            color: 'var(--success)',
                                             fontWeight: 700,
                                             marginBottom: '0.25rem',
                                         }}
@@ -574,12 +574,12 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         style={{
                                             fontSize: '1rem',
                                             fontWeight: 800,
-                                            color: '#10b981',
+                                            color: 'var(--success)',
                                         }}
                                     >
                                         +{diff.toFixed(3)}
                                     </div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         {t('router_trace.vs_raw', {
                                             raw: w.c.raw.toFixed(3),
                                             bonuses: wTotalBonuses.toFixed(3),
@@ -587,7 +587,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         })}
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'center', color: '#64748b' }}>
+                                <div style={{ textAlign: 'center', color: 'var(--slate-500)' }}>
                                     <ArrowRight size={20} />
                                 </div>
                                 <div
@@ -602,7 +602,7 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                     <div
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             fontWeight: 700,
                                             marginBottom: '0.25rem',
                                         }}
@@ -613,12 +613,12 @@ const DecisionDetail: React.FC<DecisionDetailProps> = ({ decision }) => {
                                         style={{
                                             fontSize: '1rem',
                                             fontWeight: 800,
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                         }}
                                     >
                                         {rScore.toFixed(3)}
                                     </div>
-                                    <div style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         {t('router_trace.vs_raw', {
                                             raw: r.c.raw.toFixed(3),
                                             bonuses: rTotalBonuses.toFixed(3),

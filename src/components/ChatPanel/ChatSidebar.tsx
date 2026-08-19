@@ -152,9 +152,9 @@ const ChatSidebar: React.FC<Props> = ({
                                             style={{
                                                 padding: '0.4rem',
                                                 borderRadius: 8,
-                                                background: 'rgba(59,130,246,0.1)',
+                                                background: 'var(--accent-tint)',
                                                 border: '1px solid rgba(59,130,246,0.2)',
-                                                color: '#3b82f6',
+                                                color: 'var(--accent)',
                                                 cursor: 'pointer',
                                             }}
                                             title={t('chat.new_session')}
@@ -355,7 +355,7 @@ const ChatSidebar: React.FC<Props> = ({
                                         borderRadius: 8,
                                         background: 'rgba(239,68,68,0.08)',
                                         border: '1px solid rgba(239,68,68,0.15)',
-                                        color: '#ef4444',
+                                        color: 'var(--error)',
                                         cursor: 'pointer',
                                         fontSize: '0.7rem',
                                         fontWeight: 600,

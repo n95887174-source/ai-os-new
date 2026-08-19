@@ -150,7 +150,7 @@ export const JournalAddForm: React.FC<JournalAddFormProps> = ({
                                 padding: '0.4rem 0.8rem',
                                 borderRadius: 6,
                                 border: 'none',
-                                background: '#8b5cf6',
+                                background: 'var(--purple)',
                                 color: '#fff',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
@@ -166,7 +166,7 @@ export const JournalAddForm: React.FC<JournalAddFormProps> = ({
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 background: 'transparent',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 fontSize: '0.8rem',
                             }}
@@ -185,6 +185,6 @@ const inputStyle: React.CSSProperties = {
     borderRadius: 6,
     border: '1px solid rgba(255,255,255,0.1)',
     background: 'rgba(0,0,0,0.3)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     fontSize: '0.8rem',
 };

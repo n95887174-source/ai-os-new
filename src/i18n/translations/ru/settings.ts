@@ -85,6 +85,7 @@ const settings: Record<string, string> = {
     'settings.theme_cyberpunk': 'Киберпанк',
     'settings.theme_dark': 'Тёмная',
     'settings.theme_high_contrast': 'Высокая контрастность',
+    'settings.theme_high-contrast': 'Высокая контрастность',
     'settings.theme_light': 'Светлая',
     'settings.theme_nature': 'Природа',
     'settings.theme_ocean': 'Океан',

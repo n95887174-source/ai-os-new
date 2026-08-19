@@ -91,12 +91,12 @@ const DebateAnalysisPanel: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     <Brain size={26} color="#a855f7" /> {t('debate_analysis.title')}
                 </h2>
-                <p style={{ color: '#94a3b8' }}>{t('debate_analysis.no_sessions')}</p>
+                <p style={{ color: 'var(--slate-400)' }}>{t('debate_analysis.no_sessions')}</p>
             </div>
         );
     }
@@ -132,12 +132,12 @@ const DebateAnalysisPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Brain size={26} color="#a855f7" /> {t('debate_analysis.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('debate_analysis.subtitle')}
                     </p>
                 </div>
@@ -149,7 +149,7 @@ const DebateAnalysisPanel: React.FC = () => {
                         borderRadius: 8,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'rgba(0,0,0,0.3)',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         minWidth: 240,
                     }}

@@ -43,7 +43,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -61,7 +61,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                     <span
                                         style={{
                                             fontSize: '0.65rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             width: 80,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -80,7 +80,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                     <span
                                         style={{
                                             fontSize: '0.6rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             width: 30,
                                             textAlign: 'right',
                                         }}
@@ -94,7 +94,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textAlign: 'center',
                                 padding: '1rem',
                             }}
@@ -117,7 +117,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
@@ -134,7 +134,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             fontSize: '0.65rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 3,
                                         }}
                                     >
@@ -174,7 +174,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 textAlign: 'center',
                                 padding: '1rem',
                             }}
@@ -209,7 +209,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                             style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -226,7 +226,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.55rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         width: 70,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -262,7 +262,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                     <div
                         style={{
                             fontSize: '0.55rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginTop: 4,
                             textAlign: 'center',
                         }}
@@ -297,7 +297,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                             style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -324,7 +324,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         width: 80,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -343,7 +343,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                 <span
                                     style={{
                                         fontSize: '0.6rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 700,
                                         width: 32,
                                         textAlign: 'right',
@@ -380,7 +380,7 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                             style={{
                                 fontSize: '0.7rem',
                                 fontWeight: 700,
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                             }}
@@ -405,10 +405,10 @@ const AnalyticsAdvanced: React.FC<AnalyticsAdvancedProps> = ({
                                     size={12}
                                     color={f.status === 'critical' ? '#ef4444' : '#f59e0b'}
                                 />
-                                <span style={{ fontSize: '0.7rem', color: '#e2e8f0', flex: 1 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--slate-200)', flex: 1 }}>
                                     {f.name}
                                 </span>
-                                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                     {f.overallRate}% → {f.recentRate}%
                                 </span>
                                 <span

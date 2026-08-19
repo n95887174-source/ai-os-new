@@ -144,7 +144,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
             <div style={{ padding: '0.75rem', borderBottom: '1px solid rgba(100,116,139,0.15)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <MessageCircle size={18} color="#a855f7" />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--slate-100)' }}>
                         Rooms
                     </span>
                     {!showNewInput && (
@@ -155,7 +155,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                 padding: '3px 8px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(168,85,247,0.3)',
-                                background: 'rgba(168,85,247,0.1)',
+                                background: 'var(--purple-tint)',
                                 color: '#a855f7',
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -190,7 +190,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                 borderRadius: 6,
                                 border: '1px solid rgba(168,85,247,0.3)',
                                 background: 'rgba(15,23,42,0.8)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.78rem',
                                 outline: 'none',
                             }}
@@ -205,7 +205,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                 borderRadius: 6,
                                 border: 'none',
                                 background: 'transparent',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -225,7 +225,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                             left: 8,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             pointerEvents: 'none',
                         }}
                     />
@@ -239,7 +239,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                             borderRadius: 6,
                             border: '1px solid rgba(100,116,139,0.2)',
                             background: 'rgba(15,23,42,0.4)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.78rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -256,7 +256,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                 padding: 0,
                                 border: 'none',
                                 background: 'transparent',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -273,7 +273,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                         style={{
                             padding: '2rem 0.5rem',
                             textAlign: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.78rem',
                         }}
                     >
@@ -287,7 +287,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                     padding: '0.2rem 0.5rem',
                                     fontSize: '0.6rem',
                                     fontWeight: 700,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                     letterSpacing: 1,
                                     marginBottom: 2,
@@ -335,7 +335,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                             style={{
                                                 fontSize: '0.78rem',
                                                 fontWeight: 600,
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap',
@@ -343,7 +343,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                         >
                                             {room.topic}
                                         </div>
-                                        <div style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                                        <div style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                                             {formatTime(room.createdAt)}
                                         </div>
                                     </div>
@@ -363,7 +363,7 @@ const DebateSidebar: React.FC<DebateSidebarProps> = ({ isOpen = true }) => {
                                                 borderRadius: 4,
                                                 border: 'none',
                                                 background: 'transparent',
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 cursor: 'pointer',
                                                 transition: 'color 0.15s',
                                             }}

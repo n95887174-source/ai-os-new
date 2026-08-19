@@ -42,14 +42,14 @@ export const CitationGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                                 border: '1px solid rgba(59,130,246,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -64,20 +64,20 @@ export const CitationGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(139,92,246,0.1)',
+                                background: 'var(--purple-tint)',
                                 border: '1px solid rgba(139,92,246,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Citations
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--purple-muted)' }}>
                                 {data.totalCitations}
                             </div>
                         </div>
@@ -86,14 +86,14 @@ export const CitationGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(16,185,129,0.1)',
+                                background: 'var(--success-tint)',
                                 border: '1px solid rgba(16,185,129,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -108,25 +108,25 @@ export const CitationGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(245,158,11,0.1)',
+                                background: 'var(--warning-tint)',
                                 border: '1px solid rgba(245,158,11,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 H-Index
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fbbf24' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)' }}>
                                 {data.hIndex}
                             </div>
                         </div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                         {data.links.length} citation links between {data.nodes.length} papers
                     </div>
                 </div>

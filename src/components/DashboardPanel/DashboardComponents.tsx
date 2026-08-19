@@ -25,7 +25,7 @@ export function QuickActionBtn({
                 borderRadius: 10,
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 fontWeight: 600,
@@ -74,7 +74,7 @@ export const SectionTitle = ({
                 fontSize: '1.1rem',
                 fontWeight: 800,
                 margin: 0,
-                color: '#f8fafc',
+                color: 'var(--slate-50)',
             }}
         >
             <span aria-hidden="true">{icon}</span> {title}
@@ -85,7 +85,7 @@ export const SectionTitle = ({
                 style={{
                     background: 'none',
                     border: 'none',
-                    color: '#3b82f6',
+                    color: 'var(--accent)',
                     cursor: 'pointer',
                     fontWeight: 700,
                     fontSize: '0.8rem',
@@ -114,7 +114,7 @@ export const EmptyState = ({
         style={{
             padding: '2rem',
             textAlign: 'center',
-            color: '#64748b',
+            color: 'var(--slate-500)',
             border: '1px dashed rgba(255,255,255,0.1)',
             borderRadius: 12,
             fontSize: '0.9rem',

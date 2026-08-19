@@ -15,12 +15,12 @@ const SIGNALS = [
     {
         labelKey: 'overview.signal_latency',
         value: (s: Props['fourSignals']) => `${Math.round(s?.latency || 0)}ms`,
-        color: '#3b82f6',
+        color: 'var(--accent)',
     },
     {
         labelKey: 'overview.signal_throughput',
         value: (s: Props['fourSignals']) => `${Math.round(s?.throughput || 0)} t/s`,
-        color: '#10b981',
+        color: 'var(--success)',
     },
     {
         labelKey: 'overview.signal_error_rate',

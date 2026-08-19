@@ -15,7 +15,7 @@ const RecentFilesSection: React.FC<Props> = ({ recentFiles, onSelectFile }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#475569',
+                    color: 'var(--slate-600)',
                     gap: '0.75rem',
                     padding: '2rem',
                 }}
@@ -34,7 +34,7 @@ const RecentFilesSection: React.FC<Props> = ({ recentFiles, onSelectFile }) => {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#475569',
+                color: 'var(--slate-600)',
                 gap: '0.75rem',
                 padding: '2rem',
             }}
@@ -52,7 +52,7 @@ const RecentFilesSection: React.FC<Props> = ({ recentFiles, onSelectFile }) => {
                     style={{
                         fontSize: '0.65rem',
                         fontWeight: 700,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         textTransform: 'uppercase',
                         marginBottom: '0.3rem',
                         display: 'flex',
@@ -76,7 +76,7 @@ const RecentFilesSection: React.FC<Props> = ({ recentFiles, onSelectFile }) => {
                             borderRadius: 4,
                             cursor: 'pointer',
                             fontSize: '0.72rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4,

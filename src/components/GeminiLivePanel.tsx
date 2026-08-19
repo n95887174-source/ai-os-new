@@ -10,11 +10,11 @@ import { usePolling } from './Common/usePolling';
 import type { GeminiLiveSession } from '../kernel/contracts/gemini-live';
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-    idle: { color: '#64748b', label: 'Idle' },
-    listening: { color: '#22c55e', label: 'Listening...' },
-    thinking: { color: '#3b82f6', label: 'Thinking...' },
+    idle: { color: 'var(--slate-500)', label: 'Idle' },
+    listening: { color: 'var(--success)', label: 'Listening...' },
+    thinking: { color: 'var(--accent)', label: 'Thinking...' },
     speaking: { color: '#a855f7', label: 'Speaking...' },
-    error: { color: '#ef4444', label: 'Error' },
+    error: { color: 'var(--error)', label: 'Error' },
 };
 
 const GeminiLivePanelContent: React.FC = () => {
@@ -93,7 +93,7 @@ const GeminiLivePanelContent: React.FC = () => {
                     >
                         <Volume2 size={20} color="#4285F4" /> Gemini Live
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--slate-400)' }}>
                         Real-time voice conversation with Gemini
                     </p>
                 </div>
@@ -122,8 +122,8 @@ const GeminiLivePanelContent: React.FC = () => {
                         gap: 8,
                         padding: '10px 14px',
                         borderRadius: 8,
-                        background: 'rgba(239,68,68,0.1)',
-                        color: '#ef4444',
+                        background: 'var(--error-tint)',
+                        color: 'var(--error)',
                         fontSize: 13,
                         marginBottom: 16,
                     }}
@@ -142,7 +142,7 @@ const GeminiLivePanelContent: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 16,
-                        color: '#475569',
+                        color: 'var(--slate-600)',
                     }}
                 >
                     <Volume2 size={48} style={{ opacity: 0.3 }} />
@@ -154,8 +154,8 @@ const GeminiLivePanelContent: React.FC = () => {
                         <div
                             style={{
                                 fontSize: 12,
-                                color: '#ef4444',
-                                background: 'rgba(239,68,68,0.1)',
+                                color: 'var(--error)',
+                                background: 'var(--error-tint)',
                                 padding: '8px 14px',
                                 borderRadius: 8,
                             }}
@@ -215,7 +215,7 @@ const GeminiLivePanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginBottom: 4,
                                         fontWeight: 600,
                                     }}
@@ -225,7 +225,7 @@ const GeminiLivePanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 13,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         lineHeight: 1.5,
                                         whiteSpace: 'pre-wrap',
                                     }}
@@ -242,7 +242,7 @@ const GeminiLivePanelContent: React.FC = () => {
                                     alignItems: 'center',
                                     gap: 8,
                                     padding: '10px 14px',
-                                    color: '#3b82f6',
+                                    color: 'var(--accent)',
                                     fontSize: 13,
                                 }}
                             >
@@ -267,7 +267,7 @@ const GeminiLivePanelContent: React.FC = () => {
                                     fontSize: 13,
                                     fontWeight: 700,
                                     background: 'rgba(239,68,68,0.15)',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                 }}
                             >
                                 <Square size={16} /> Stop
@@ -284,8 +284,8 @@ const GeminiLivePanelContent: React.FC = () => {
                                     padding: '10px 14px',
                                     borderRadius: 10,
                                     border: '1px solid rgba(255,255,255,0.08)',
-                                    background: '#0f172a',
-                                    color: '#e2e8f0',
+                                    background: 'var(--slate-900)',
+                                    color: 'var(--slate-200)',
                                     fontSize: 13,
                                     outline: 'none',
                                 }}

@@ -6,10 +6,10 @@ interface Props {
 }
 
 const FEATURES = (t: (key: TranslationKey) => string) => [
-    { icon: <MessageSquare size={16} />, label: t('onboarding.feature_chat'), color: '#10b981' },
+    { icon: <MessageSquare size={16} />, label: t('onboarding.feature_chat'), color: 'var(--success)' },
     { icon: <Bot size={16} />, label: t('onboarding.feature_debates'), color: '#a855f7' },
-    { icon: <Zap size={16} />, label: t('onboarding.feature_agents'), color: '#f59e0b' },
-    { icon: <Shield size={16} />, label: t('onboarding.feature_private'), color: '#3b82f6' },
+    { icon: <Zap size={16} />, label: t('onboarding.feature_agents'), color: 'var(--warning)' },
+    { icon: <Shield size={16} />, label: t('onboarding.feature_private'), color: 'var(--accent)' },
 ];
 
 const WelcomeStep: React.FC<Props> = ({ t }) => (

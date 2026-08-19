@@ -25,7 +25,7 @@ export const ScoreBar: React.FC<{
     const isNegative = invert ? value > 0 : value < 0;
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.7rem' }}>
-            <span style={{ width: 90, color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+            <span style={{ width: 90, color: 'var(--slate-400)', flexShrink: 0, textAlign: 'right' }}>
                 {label}
             </span>
             <div
@@ -79,7 +79,7 @@ export const ClassificationBadge: React.FC<{ cls: DecisionPayload['classificatio
                   : '#10b981',
         icon: <BarChart3 size={12} />,
     });
-    if (cls.isCode) tags.push({ label: 'code', color: '#8b5cf6', icon: <Layers size={12} /> });
+    if (cls.isCode) tags.push({ label: 'code', color: 'var(--purple)', icon: <Layers size={12} /> });
     if (cls.isLong) tags.push({ label: 'long', color: '#06b6d4', icon: <Server size={12} /> });
     if (cls.isMultimodal)
         tags.push({ label: 'multimodal', color: '#ec4899', icon: <Wifi size={12} /> });
@@ -116,7 +116,7 @@ export const ComponentRow: React.FC<{
             }}
         >
             {icon}
-            <span style={{ color: '#94a3b8' }}>{label}</span>
+            <span style={{ color: 'var(--slate-400)' }}>{label}</span>
             <span style={{ fontWeight: 600, marginLeft: 'auto', fontFamily: 'monospace' }}>
                 {type === 'bonus' ? '+' : ''}
                 {value.toFixed(4)}

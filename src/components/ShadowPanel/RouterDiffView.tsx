@@ -10,10 +10,10 @@ interface Props {
 const SyncedRouter: React.FC = () => (
     <div style={{ ...CARD, textAlign: 'center', padding: 32, borderColor: 'rgba(34,197,94,0.2)' }}>
         <CheckCircle2 size={32} color="#22c55e" style={{ marginBottom: 8 }} />
-        <div style={{ fontSize: '1rem', color: '#22c55e', fontWeight: 600 }}>
+        <div style={{ fontSize: '1rem', color: 'var(--success)', fontWeight: 600 }}>
             Router Fully Synchronized
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
             RouterService history and event-sourced projection are identical
         </div>
     </div>
@@ -76,7 +76,7 @@ const RouterDiffView: React.FC<Props> = ({ report }) => {
                         style={{
                             fontSize: '0.75rem',
                             fontWeight: 700,
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             marginBottom: 8,
                         }}
                     >
@@ -90,7 +90,7 @@ const RouterDiffView: React.FC<Props> = ({ report }) => {
                                 padding: '0.4rem 0.75rem',
                                 marginBottom: 4,
                                 fontSize: '0.75rem',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                             }}
                         >
                             {id}
@@ -119,7 +119,7 @@ const RouterDiffView: React.FC<Props> = ({ report }) => {
                                 <span
                                     style={{
                                         fontWeight: 700,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         minWidth: 80,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
@@ -134,22 +134,22 @@ const RouterDiffView: React.FC<Props> = ({ report }) => {
                                 <span
                                     style={{
                                         ...BADGE,
-                                        background: 'rgba(139,92,246,0.1)',
-                                        color: '#a78bfa',
+                                        background: 'var(--purple-tint)',
+                                        color: 'var(--purple-muted)',
                                     }}
                                 >
                                     {m.field}
                                 </span>
-                                <span style={{ color: '#94a3b8' }}>
+                                <span style={{ color: 'var(--slate-400)' }}>
                                     live:{' '}
                                     <span style={{ color: '#fca5a5', fontWeight: 600 }}>
                                         {String(m.live)}
                                     </span>
                                 </span>
-                                <span style={{ color: '#64748b' }}>→</span>
-                                <span style={{ color: '#94a3b8' }}>
+                                <span style={{ color: 'var(--slate-500)' }}>→</span>
+                                <span style={{ color: 'var(--slate-400)' }}>
                                     projection:{' '}
-                                    <span style={{ color: '#22c55e', fontWeight: 600 }}>
+                                    <span style={{ color: 'var(--success)', fontWeight: 600 }}>
                                         {String(m.projected)}
                                     </span>
                                 </span>

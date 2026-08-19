@@ -40,7 +40,7 @@ export const StepCard: React.FC<{ title: string; text: string; icon: React.React
                     margin: '0 0 0.5rem',
                     fontSize: '1.05rem',
                     fontWeight: 800,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                 }}
             >
                 {title}
@@ -65,7 +65,7 @@ export const ArchCard: React.FC<{
             <div style={{ padding: '0.6rem', background: `rgba(${bgRgb},0.1)`, borderRadius: 10 }}>
                 {icon}
             </div>
-            <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-50)' }}>
                 {title}
             </h4>
         </div>
@@ -95,7 +95,7 @@ export const ApiCard: React.FC<{ title: string; desc: string; code: string }> = 
         <p
             style={{
                 fontSize: '0.9rem',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 lineHeight: 1.6,
                 marginBottom: '0.75rem',
             }}
@@ -124,8 +124,8 @@ export const InvariantCard: React.FC<{ inv: string; desc: string; detail: string
     >
         <div
             style={{
-                background: 'rgba(239,68,68,0.1)',
-                color: '#ef4444',
+                background: 'var(--error-tint)',
+                color: 'var(--error)',
                 fontSize: '0.75rem',
                 fontWeight: 900,
                 padding: '0.4rem 0.8rem',
@@ -142,7 +142,7 @@ export const InvariantCard: React.FC<{ inv: string; desc: string; detail: string
                     fontWeight: 800,
                     fontSize: '1.05rem',
                     marginBottom: '0.4rem',
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                 }}
             >
                 {desc}
@@ -172,7 +172,7 @@ export const FaqCard: React.FC<{ q: string; a: string }> = ({ q, a }) => (
             style={{
                 margin: 0,
                 fontSize: '0.95rem',
-                color: '#cbd5e1',
+                color: 'var(--slate-300)',
                 lineHeight: 1.6,
                 paddingLeft: '3.25rem',
             }}
@@ -202,13 +202,13 @@ export const ChangelogRelease: React.FC<{ version: string; date: string; changes
                 </div>
                 <h4 style={docCardTitle}>{version}</h4>
             </div>
-            <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{date}</span>
+            <span style={{ color: 'var(--slate-500)', fontSize: '0.85rem' }}>{date}</span>
         </div>
         <ul
             style={{
                 margin: 0,
                 paddingLeft: '1.5rem',
-                color: '#94a3b8',
+                color: 'var(--slate-400)',
                 fontSize: '0.9rem',
                 lineHeight: 2,
             }}

@@ -335,7 +335,7 @@ export class ToolService {
         }
         this.tools = [...this.tools, { ...tool, enabled: true }];
         await this.persist();
-        this.deps.eventBus.emitOnce(EVENTS.TOOLS_UPDATED, 'all', this.tools);
+        this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
     async updateTool(id: string, updates: Partial<ToolDefinition>) {
@@ -351,19 +351,19 @@ export class ToolService {
         }
         this.tools = this.tools.map((t) => (t.id === id ? { ...t, ...updates } : t));
         await this.persist();
-        this.deps.eventBus.emitOnce(EVENTS.TOOLS_UPDATED, 'all', this.tools);
+        this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
     async removeTool(id: string) {
         this.tools = this.tools.filter((t) => t.id !== id);
         await this.persist();
-        this.deps.eventBus.emitOnce(EVENTS.TOOLS_UPDATED, 'all', this.tools);
+        this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
     async toggleTool(id: string) {
         this.tools = this.tools.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t));
         await this.persist();
-        this.deps.eventBus.emitOnce(EVENTS.TOOLS_UPDATED, 'all', this.tools);
+        this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
     }
 
     private checkRateLimit(toolId: string): boolean {
@@ -699,7 +699,7 @@ export class ToolService {
                 }
             }
             await this.persist();
-            this.deps.eventBus.emitOnce(EVENTS.TOOLS_UPDATED, 'all', this.tools);
+            this.deps.eventBus.emit(EVENTS.TOOLS_UPDATED, this.tools);
             return count;
         } catch (e) {
             LOGGER.error('ToolService', 'Failed to import tools', { error: e });

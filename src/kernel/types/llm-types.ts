@@ -112,6 +112,19 @@ export interface SendMessageOptions {
      * When a datastore path is provided, uses Vertex AI Search retrieval tool.
      */
     vertexSearchGrounding?: boolean | VertexSearchConfig;
+
+    /**
+     * B-20: scopes the LLM response cache so identical prompts from different
+     * agents/sessions/roles do NOT collide. Without this, the CacheDecorator's
+     * key (apiKey + messages + model + options) lets one agent's cached answer
+     * be served to another agent that happens to send the same prompt — most
+     * harmful in debates where identical opening prompts are common.
+     */
+    cacheScope?: {
+        agentId?: string;
+        sessionId?: string;
+        role?: string;
+    };
 }
 
 export interface DynamicRetrievalConfig {

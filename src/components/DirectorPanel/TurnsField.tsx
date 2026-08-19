@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { TurnProposal } from '../../kernel/contracts/conversation/turn';
 import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
+import { agentService } from '../../kernel/instances/services-core';
 
 const TURN_TYPES: TurnProposal['objective']['type'][] = [
     'INTRODUCE',
@@ -134,7 +135,10 @@ const TurnsField: React.FC<{
                             ) : (
                                 participantIds.map((pid) => (
                                     <option key={pid} value={pid}>
-                                        {resolveAgentIdentity(pid).displayName}
+                                        {
+                                            resolveAgentIdentity(pid, { resolver: agentService })
+                                                .displayName
+                                        }
                                     </option>
                                 ))
                             )}

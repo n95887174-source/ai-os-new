@@ -70,7 +70,7 @@ function renderTree(nodes: TreeNode[], depth: number = 0): React.ReactNode {
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         marginTop: 2,
                                     }}
                                 >
@@ -122,22 +122,22 @@ function DecisionTreeTab({ decisions }: Props) {
                             {
                                 label: 'Incoming Request',
                                 sub: `${d.promptLength} chars`,
-                                color: '#8b5cf6',
+                                color: 'var(--purple)',
                                 children: [
                                     {
                                         label: `Classified: ${classification}`,
                                         sub: 'Prompt length threshold',
-                                        color: '#3b82f6',
+                                        color: 'var(--accent)',
                                         children: [
                                             {
                                                 label: `Strategy: ${STRATEGY_LABELS[d.strategy] || d.strategy}`,
                                                 sub: 'Selected based on classification & context',
-                                                color: '#f59e0b',
+                                                color: 'var(--warning)',
                                                 children: [
                                                     {
                                                         label: `Weights: TTFT ${(d.weights.ttft * 100).toFixed(0)}% / TPS ${(d.weights.tps * 100).toFixed(0)}% / Reliability ${(d.weights.reliability * 100).toFixed(0)}%`,
                                                         sub: 'Balanced for request type',
-                                                        color: '#10b981',
+                                                        color: 'var(--success)',
                                                         children: d.scores.slice(0, 3).map((s) => {
                                                             const breakdown = scoreBreakdown(s);
                                                             return {
@@ -155,7 +155,7 @@ function DecisionTreeTab({ decisions }: Props) {
                                                                                   sub: d.secondBest
                                                                                       ? `Fallback: ${d.secondBest}`
                                                                                       : 'Primary route',
-                                                                                  color: '#10b981',
+                                                                                  color: 'var(--success)',
                                                                                   children: [],
                                                                               },
                                                                           ]
@@ -186,7 +186,7 @@ function DecisionTreeTab({ decisions }: Props) {
                     border: '1px solid rgba(255,255,255,0.05)',
                 }}
             >
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: '0.5rem' }}>
                     Legend
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.7rem' }}>
@@ -196,7 +196,7 @@ function DecisionTreeTab({ decisions }: Props) {
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                background: '#8b5cf6',
+                                background: 'var(--purple)',
                             }}
                         />{' '}
                         Input
@@ -207,7 +207,7 @@ function DecisionTreeTab({ decisions }: Props) {
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                background: '#3b82f6',
+                                background: 'var(--accent)',
                             }}
                         />{' '}
                         Classification
@@ -218,7 +218,7 @@ function DecisionTreeTab({ decisions }: Props) {
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                background: '#f59e0b',
+                                background: 'var(--warning)',
                             }}
                         />{' '}
                         Strategy
@@ -229,7 +229,7 @@ function DecisionTreeTab({ decisions }: Props) {
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                background: '#10b981',
+                                background: 'var(--success)',
                             }}
                         />{' '}
                         Weights / Scoring

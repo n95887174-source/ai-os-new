@@ -66,7 +66,7 @@ const ContributionGraphPanelContent: React.FC = () => {
             >
                 <GitCommit size={20} color="#10b981" /> Contribution Graph
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Your activity across the platform
             </p>
 
@@ -76,17 +76,17 @@ const ContributionGraphPanelContent: React.FC = () => {
                         flex: 1,
                         padding: 16,
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         textAlign: 'center',
                     }}
                 >
-                    <div style={{ fontSize: 24, fontWeight: 700, color: '#e2e8f0' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--slate-200)' }}>
                         {graph.totalContributions}
                     </div>
                     <div
                         style={{
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -101,17 +101,17 @@ const ContributionGraphPanelContent: React.FC = () => {
                         flex: 1,
                         padding: 16,
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         textAlign: 'center',
                     }}
                 >
-                    <div style={{ fontSize: 24, fontWeight: 700, color: '#f59e0b' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>
                         {streak.current}
                     </div>
                     <div
                         style={{
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -126,17 +126,17 @@ const ContributionGraphPanelContent: React.FC = () => {
                         flex: 1,
                         padding: 16,
                         borderRadius: 12,
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         textAlign: 'center',
                     }}
                 >
-                    <div style={{ fontSize: 24, fontWeight: 700, color: '#8b5cf6' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--purple)' }}>
                         {streak.longest}
                     </div>
                     <div
                         style={{
                             fontSize: 11,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -152,12 +152,12 @@ const ContributionGraphPanelContent: React.FC = () => {
                 style={{
                     padding: 16,
                     borderRadius: 12,
-                    background: '#1e293b',
+                    background: 'var(--slate-800)',
                     border: '1px solid rgba(255,255,255,0.06)',
                 }}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#64748b' }}>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--slate-500)' }}>
                         {months.map((m) => (
                             <span key={m.index} style={{ width: 14, textAlign: 'center' }}>
                                 {m.label}
@@ -199,7 +199,7 @@ const ContributionGraphPanelContent: React.FC = () => {
                         gap: 4,
                         marginTop: 8,
                         fontSize: 11,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                     }}
                 >
                     Less

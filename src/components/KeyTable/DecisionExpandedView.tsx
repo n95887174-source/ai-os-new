@@ -67,13 +67,13 @@ const DecisionExpandedView: React.FC<Props> = ({ decision: d, keyId }) => (
             {d.selected && (
                 <>
                     <span>Selected:</span>
-                    <span style={{ color: '#22c55e' }}>{d.selected}</span>
+                    <span style={{ color: 'var(--success)' }}>{d.selected}</span>
                 </>
             )}
             {d.secondBest && (
                 <>
                     <span>2nd best:</span>
-                    <span style={{ color: '#f59e0b' }}>{d.secondBest}</span>
+                    <span style={{ color: 'var(--warning)' }}>{d.secondBest}</span>
                 </>
             )}
         </div>
@@ -227,7 +227,7 @@ const DecisionExpandedView: React.FC<Props> = ({ decision: d, keyId }) => (
                                 background: '#f59e0b20',
                                 padding: '0.1rem 0.4rem',
                                 borderRadius: '3px',
-                                color: '#f59e0b',
+                                color: 'var(--warning)',
                                 fontFamily: 'monospace',
                                 fontSize: '0.65rem',
                                 textTransform: 'uppercase',

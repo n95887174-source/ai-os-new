@@ -24,7 +24,7 @@ const FindingItem: React.FC<FindingItemProps> = ({
             gap: 7,
         }}
     >
-        <span style={{ fontSize: '0.6rem', color: '#475569', marginTop: 2, minWidth: 20 }}>
+        <span style={{ fontSize: '0.6rem', color: 'var(--slate-600)', marginTop: 2, minWidth: 20 }}>
             #{index + 1}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -33,7 +33,7 @@ const FindingItem: React.FC<FindingItemProps> = ({
                     style={{
                         fontSize: '0.62rem',
                         fontWeight: 700,
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         padding: '0.1rem 0.35rem',
                         borderRadius: 3,
                         background: 'rgba(255,255,255,0.04)',
@@ -41,7 +41,7 @@ const FindingItem: React.FC<FindingItemProps> = ({
                 >
                     {f.category}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>{f.message}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--slate-300)' }}>{f.message}</span>
             </div>
             {f.file && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -59,7 +59,7 @@ const FindingItem: React.FC<FindingItemProps> = ({
                         {f.file}
                     </span>
                     {f.value && (
-                        <span style={{ fontSize: '0.65rem', color: '#64748b', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)', marginLeft: 'auto' }}>
                             {f.value}
                         </span>
                     )}
@@ -98,7 +98,7 @@ const FindingItem: React.FC<FindingItemProps> = ({
                                     onClick={() => onNavigateFile(item)}
                                     style={{
                                         fontSize: '0.62rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontFamily: 'monospace',
                                         cursor: 'pointer',
                                         borderBottom: '1px dashed rgba(148,163,184,0.2)',

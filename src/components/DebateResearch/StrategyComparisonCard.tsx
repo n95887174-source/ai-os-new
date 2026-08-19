@@ -21,7 +21,7 @@ const StrategyComparisonCard: React.FC<Props> = ({ comparison }) => {
                 style={{
                     fontSize: '0.7rem',
                     fontWeight: 700,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     marginBottom: '0.4rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -37,7 +37,7 @@ const StrategyComparisonCard: React.FC<Props> = ({ comparison }) => {
                     }
                     style={{
                         marginLeft: 'auto',
-                        background: 'rgba(139,92,246,0.1)',
+                        background: 'var(--purple-tint)',
                         border: '1px solid rgba(139,92,246,0.2)',
                         color: '#a855f7',
                         cursor: 'pointer',

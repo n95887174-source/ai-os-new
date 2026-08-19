@@ -46,13 +46,13 @@ export const ServiceDetailPanel: React.FC<ServiceDetailPanelProps> = ({
                     marginBottom: '0.5rem',
                 }}
             >
-                <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#f8fafc' }}>{sel.service}</h3>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--slate-50)' }}>{sel.service}</h3>
                 <button
                     onClick={onClose}
                     style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                     }}
                 >
@@ -115,7 +115,7 @@ export const ServiceDetailPanel: React.FC<ServiceDetailPanelProps> = ({
                             display: 'flex',
                             gap: 8,
                             fontSize: '0.7rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             fontFamily: 'ui-monospace, monospace',
                         }}
                     >
@@ -124,7 +124,7 @@ export const ServiceDetailPanel: React.FC<ServiceDetailPanelProps> = ({
                         </span>
                         <span
                             style={{
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 flex: 1,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -133,7 +133,7 @@ export const ServiceDetailPanel: React.FC<ServiceDetailPanelProps> = ({
                         >
                             {e.message.slice(0, 80)}
                         </span>
-                        <span style={{ color: '#a78bfa' }}>{e.latency}ms</span>
+                        <span style={{ color: 'var(--purple-muted)' }}>{e.latency}ms</span>
                     </div>
                 ))}
             </div>

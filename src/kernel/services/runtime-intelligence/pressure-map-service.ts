@@ -282,7 +282,7 @@ export class PressureMapService implements ILifecycle, IPressureMapService {
     private emit() {
         const snapshot = this.getSnapshot();
         // OBS-105: emit to eventBus too, not just local listeners
-        this.deps.eventBus.emitOnce(EVENTS.PRESSURE_MAP_UPDATED, 'global', snapshot);
+        this.deps.eventBus.emit(EVENTS.PRESSURE_MAP_UPDATED, snapshot);
         const activeAlerts = this.getAlerts().filter((a) => !a.acknowledged);
         for (const alert of activeAlerts) {
             this.deps.eventBus.emitOnce(

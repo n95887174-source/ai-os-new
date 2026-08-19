@@ -78,7 +78,7 @@ const StatCard: React.FC<{
     >
         {icon}
         <div>
-            <div style={{ fontSize: '0.6rem', color: '#64748b', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)', textTransform: 'uppercase' }}>
                 {label}
             </div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: valueColor }}>{value}</div>

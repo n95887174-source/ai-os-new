@@ -62,7 +62,7 @@ const VoiceInputPanelContent: React.FC = () => {
             >
                 <Mic size={20} color="#3b82f6" /> Voice & Multimodal Input
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Record voice input, attach files, and process multimodal data
             </p>
 
@@ -98,7 +98,7 @@ const VoiceInputPanelContent: React.FC = () => {
                         fontSize: 14,
                         fontWeight: 600,
                         background: 'rgba(16,185,129,0.15)',
-                        color: '#10b981',
+                        color: 'var(--success)',
                     }}
                 >
                     <FileUp size={18} /> Attach File
@@ -119,7 +119,7 @@ const VoiceInputPanelContent: React.FC = () => {
             {activeSession && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 10,
                         padding: 14,
                         marginBottom: 16,
@@ -132,11 +132,11 @@ const VoiceInputPanelContent: React.FC = () => {
                             alignItems: 'center',
                             gap: 8,
                             fontSize: 13,
-                            color: '#ef4444',
+                            color: 'var(--error)',
                         }}
                     >
                         <Loader size={14} /> Recording in progress...
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b' }}>
+                        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--slate-500)' }}>
                             Started {new Date(activeSession.startedAt).toLocaleTimeString()}
                         </span>
                     </div>
@@ -144,7 +144,7 @@ const VoiceInputPanelContent: React.FC = () => {
             )}
 
             <div style={{ marginBottom: 16 }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: 'var(--slate-200)' }}>
                     Attachments ({attachments.length})
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -157,16 +157,16 @@ const VoiceInputPanelContent: React.FC = () => {
                                 gap: 10,
                                 padding: '8px 12px',
                                 borderRadius: 8,
-                                background: '#0f172a',
+                                background: 'var(--slate-900)',
                                 border: '1px solid rgba(255,255,255,0.04)',
                             }}
                         >
                             {TYPE_ICONS[att.type] || <FileText size={14} />}
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
+                                <div style={{ fontSize: 12, color: 'var(--slate-200)', fontWeight: 600 }}>
                                     {att.name}
                                 </div>
-                                <div style={{ fontSize: 10, color: '#64748b' }}>
+                                <div style={{ fontSize: 10, color: 'var(--slate-500)' }}>
                                     {(att.size / 1024).toFixed(0)}KB · {att.mimeType}
                                 </div>
                             </div>
@@ -186,7 +186,7 @@ const VoiceInputPanelContent: React.FC = () => {
                                     border: 'none',
                                     cursor: 'pointer',
                                     background: 'rgba(239,68,68,0.15)',
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                 }}
                             >
                                 <Trash2 size={12} />
@@ -197,7 +197,7 @@ const VoiceInputPanelContent: React.FC = () => {
                         <div
                             style={{
                                 fontSize: 12,
-                                color: '#475569',
+                                color: 'var(--slate-600)',
                                 textAlign: 'center',
                                 padding: 16,
                             }}
@@ -208,7 +208,7 @@ const VoiceInputPanelContent: React.FC = () => {
                 </div>
             </div>
 
-            <h3 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: 'var(--slate-200)' }}>
                 Recording History ({sessions.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -221,7 +221,7 @@ const VoiceInputPanelContent: React.FC = () => {
                             gap: 10,
                             padding: '10px 12px',
                             borderRadius: 8,
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             border: '1px solid rgba(255,255,255,0.04)',
                         }}
                     >
@@ -239,11 +239,11 @@ const VoiceInputPanelContent: React.FC = () => {
                             }}
                         />
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 12, color: '#e2e8f0' }}>
+                            <div style={{ fontSize: 12, color: 'var(--slate-200)' }}>
                                 {s.duration > 0 ? `${s.duration}s recording` : 'In progress'}
                             </div>
                             {s.transcript && (
-                                <div style={{ fontSize: 11, color: '#64748b' }}>
+                                <div style={{ fontSize: 11, color: 'var(--slate-500)' }}>
                                     {s.transcript.slice(0, 100)}...
                                 </div>
                             )}
@@ -255,7 +255,7 @@ const VoiceInputPanelContent: React.FC = () => {
                 ))}
                 {sessions.length === 0 && (
                     <div
-                        style={{ fontSize: 12, color: '#475569', textAlign: 'center', padding: 16 }}
+                        style={{ fontSize: 12, color: 'var(--slate-600)', textAlign: 'center', padding: 16 }}
                     >
                         No recordings yet
                     </div>

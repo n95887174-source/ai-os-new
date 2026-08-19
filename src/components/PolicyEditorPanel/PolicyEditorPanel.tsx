@@ -153,7 +153,7 @@ const PolicyEditorPanel: React.FC = () => {
     return (
         <div style={s.panel}>
             <div style={s.toolbar}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--slate-200)' }}>
                     Debate Policy Rules Engine
                 </span>
                 <button style={s.btnSuccess} onClick={handleNew}>
@@ -171,7 +171,7 @@ const PolicyEditorPanel: React.FC = () => {
                 <button style={s.btnDanger} onClick={handleReset}>
                     <Trash2 size={12} /> Reset
                 </button>
-                <span style={{ fontSize: 10, color: '#64748b', marginLeft: 'auto' }}>
+                <span style={{ fontSize: 10, color: 'var(--slate-500)', marginLeft: 'auto' }}>
                     {rules.length} rule{rules.length !== 1 ? 's' : ''} ·{' '}
                     {rules.filter((r) => r.enabled).length} active
                 </span>
@@ -194,7 +194,7 @@ const PolicyEditorPanel: React.FC = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '100%',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 gap: 8,
                             }}
                         >
@@ -227,7 +227,7 @@ const PolicyEditorPanel: React.FC = () => {
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span
-                                        style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}
+                                        style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate-200)' }}
                                     >
                                         {editing.name || 'New Rule'}
                                     </span>
@@ -321,7 +321,7 @@ const PolicyEditorPanel: React.FC = () => {
                                     }}
                                 >
                                     <div style={s.sectionTitle}>Condition</div>
-                                    <span style={{ fontSize: 9, color: '#64748b' }}>
+                                    <span style={{ fontSize: 9, color: 'var(--slate-500)' }}>
                                         {conditionCount(editing.condition)} sub-condition
                                         {conditionCount(editing.condition) !== 1 ? 's' : ''}
                                     </span>
@@ -430,7 +430,7 @@ const PolicyEditorPanel: React.FC = () => {
                             style={{
                                 fontFamily: 'monospace',
                                 fontSize: 9,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-all',
                                 background: 'rgba(0,0,0,0.3)',
@@ -447,7 +447,7 @@ const PolicyEditorPanel: React.FC = () => {
                             style={{
                                 fontFamily: 'monospace',
                                 fontSize: 9,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-all',
                                 background: 'rgba(0,0,0,0.3)',
@@ -460,7 +460,7 @@ const PolicyEditorPanel: React.FC = () => {
                             {JSON.stringify(editing, null, 2)}
                         </div>
                     ) : (
-                        <div style={{ fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: 10, color: 'var(--slate-500)', fontStyle: 'italic' }}>
                             Select or create a rule to preview
                         </div>
                     )}

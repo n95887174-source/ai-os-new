@@ -40,6 +40,153 @@ export interface ExecutionFeedEntry {
     sessionId?: string;
 }
 
+/** Cap live output + audit log so the singleton store cannot grow without bound (FA-05). */
+const MAX_FEED = 300;
+const MAX_LOG = 500;
+
+/** Append an item and cap the array to `max` most-recent entries. */
+function appendCapped<T>(arr: T[], item: T, max: number): T[] {
+    const next = [...arr, item];
+    return next.length > max ? next.slice(next.length - max) : next;
+}
+
+const EMPTY_STATE = {
+    invocations: {} as Record<string, InvocationView>,
+    order: [] as string[],
+    log: [] as InvocationLogEntry[],
+    feed: [] as ExecutionFeedEntry[],
+    costs: {} as Record<string, number>,
+    selectedId: null as string | null,
+};
+
+// Subscription handles are retained (FA-04) so the store can be torn down and
+// re-subscribed instead of leaking an always-on event-bus subscription.
+let _unsubs: Array<() => void> = [];
+let _subscribed = false;
+
+function subscribeInvocationStore(): void {
+    if (_subscribed) return;
+
+    const upsert = (id: string, patch: Partial<InvocationView>) =>
+        useInvocationStore.setState((s) => {
+            const existing = s.invocations[id];
+            const next: InvocationView = {
+                id,
+                status: 'requested',
+                ...existing,
+                ...patch,
+                updatedAt: Date.now(),
+            };
+            const order = s.order.includes(id) ? s.order : [...s.order, id];
+            return { invocations: { ...s.invocations, [id]: next }, order };
+        });
+
+    const pushLog = (invocationId: string, event: string, detail?: string) =>
+        useInvocationStore.setState((s) => ({
+            log: appendCapped(s.log, { at: Date.now(), event, invocationId, detail }, MAX_LOG),
+        }));
+
+    const pushFeed = (entry: ExecutionFeedEntry) =>
+        useInvocationStore.setState((s) => ({
+            feed: appendCapped(s.feed, entry, MAX_FEED),
+        }));
+
+    _unsubs = [
+        eventBus.onSafe(
+            EVENTS.INVOCATION_REQUESTED,
+            (d: {
+                invocationId: string;
+                caller: InvocationCaller;
+                target: InvocationTarget;
+                context: InvocationContext;
+            }) => {
+                upsert(d.invocationId, {
+                    status: 'requested',
+                    caller: d.caller,
+                    target: d.target,
+                    context: d.context,
+                });
+                pushLog(d.invocationId, 'requested');
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.INVOCATION_ACCEPTED,
+            (d: { invocationId: string; policyRef: string; agents: AgentRef[] }) => {
+                upsert(d.invocationId, {
+                    status: 'accepted',
+                    policyRef: d.policyRef,
+                    agents: d.agents,
+                });
+                pushLog(d.invocationId, 'accepted');
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.INVOCATION_REJECTED,
+            (d: { invocationId: string; reason: string }) => {
+                upsert(d.invocationId, { status: 'rejected', rejectionReason: d.reason });
+                pushLog(d.invocationId, 'rejected', d.reason);
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.INVOCATION_EXECUTING,
+            (d: { invocationId: string; sessionRef: ExecutionTarget }) => {
+                upsert(d.invocationId, { status: 'executing', sessionRef: d.sessionRef });
+                pushLog(d.invocationId, 'executing', d.sessionRef.ref);
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.INVOCATION_DONE,
+            (d: { invocationId: string; resultRef?: string }) => {
+                upsert(d.invocationId, { status: 'done' });
+                pushLog(d.invocationId, 'done', d.resultRef);
+                // Reload accumulated cost now that the invocation's turns have
+                // streamed and populated the cost-attribution table.
+                void useInvocationStore.getState().loadCosts();
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.CONVERSATION_TURN_START,
+            (d: { sessionId: string; participantId: string }) => {
+                pushFeed({
+                    at: Date.now(),
+                    kind: 'turn-start',
+                    text: `▶ ${d.participantId}`,
+                    sessionId: d.sessionId,
+                });
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.CONVERSATION_TURN_COMPLETE,
+            (d: { sessionId: string; participantId: string; content?: string }) => {
+                pushFeed({
+                    at: Date.now(),
+                    kind: 'turn-complete',
+                    text: `${d.participantId}: ${d.content ?? ''}`,
+                    sessionId: d.sessionId,
+                });
+            },
+        ),
+        eventBus.onSafe(
+            EVENTS.CONVERSATION_TURN_ERROR,
+            (d: { sessionId: string; participantId: string; error: string }) => {
+                pushFeed({
+                    at: Date.now(),
+                    kind: 'turn-error',
+                    text: `✖ ${d.participantId}: ${d.error}`,
+                    sessionId: d.sessionId,
+                });
+            },
+        ),
+    ];
+    _subscribed = true;
+}
+
+function unsubscribeInvocationStore(): void {
+    _unsubs.forEach((u) => u());
+    _unsubs = [];
+    _subscribed = false;
+}
+
 export interface InvocationStoreState {
     invocations: Record<string, InvocationView>;
     order: string[];
@@ -56,6 +203,10 @@ export interface InvocationStoreState {
     clearView: () => void;
     /** Clears the persisted invocation history (history list + view). */
     clearHistory: () => void;
+    /** Ensures the event-bus subscriptions are active (idempotent, FA-04). */
+    ensureSubscribed: () => void;
+    /** Tears down event-bus subscriptions + resets state (FA-04). */
+    destroy: () => void;
     /** Full reset (retained for tests / emergency). */
     clear: () => void;
 }
@@ -68,166 +219,12 @@ export interface InvocationStoreState {
  * pure consumer — it never writes the `Invocation` aggregate.
  */
 export const useInvocationStore = create<InvocationStoreState>((set) => {
-    const upsert = (id: string, patch: Partial<InvocationView>) =>
-        set((s) => {
-            const existing = s.invocations[id];
-            const next: InvocationView = {
-                id,
-                status: 'requested',
-                ...existing,
-                ...patch,
-                updatedAt: Date.now(),
-            };
-            const order = s.order.includes(id) ? s.order : [...s.order, id];
-            return { invocations: { ...s.invocations, [id]: next }, order };
-        });
-
-    const subs = [
-        eventBus.onSafe<{
-            invocationId: string;
-            caller: InvocationCaller;
-            target: InvocationTarget;
-            context: InvocationContext;
-        }>(EVENTS.INVOCATION_REQUESTED, (d) => {
-            upsert(d.invocationId, {
-                status: 'requested',
-                caller: d.caller,
-                target: d.target,
-                context: d.context,
-            });
-            set((s) => ({
-                log: [
-                    ...s.log,
-                    { at: Date.now(), event: 'requested', invocationId: d.invocationId },
-                ],
-            }));
-        }),
-        eventBus.onSafe<{ invocationId: string; policyRef: string; agents: AgentRef[] }>(
-            EVENTS.INVOCATION_ACCEPTED,
-            (d) => {
-                upsert(d.invocationId, {
-                    status: 'accepted',
-                    policyRef: d.policyRef,
-                    agents: d.agents,
-                });
-                set((s) => ({
-                    log: [
-                        ...s.log,
-                        { at: Date.now(), event: 'accepted', invocationId: d.invocationId },
-                    ],
-                }));
-            },
-        ),
-        eventBus.onSafe<{ invocationId: string; reason: string }>(
-            EVENTS.INVOCATION_REJECTED,
-            (d) => {
-                upsert(d.invocationId, { status: 'rejected', rejectionReason: d.reason });
-                set((s) => ({
-                    log: [
-                        ...s.log,
-                        {
-                            at: Date.now(),
-                            event: 'rejected',
-                            invocationId: d.invocationId,
-                            detail: d.reason,
-                        },
-                    ],
-                }));
-            },
-        ),
-        eventBus.onSafe<{ invocationId: string; sessionRef: ExecutionTarget }>(
-            EVENTS.INVOCATION_EXECUTING,
-            (d) => {
-                upsert(d.invocationId, { status: 'executing', sessionRef: d.sessionRef });
-                set((s) => ({
-                    log: [
-                        ...s.log,
-                        {
-                            at: Date.now(),
-                            event: 'executing',
-                            invocationId: d.invocationId,
-                            detail: d.sessionRef.ref,
-                        },
-                    ],
-                }));
-            },
-        ),
-        eventBus.onSafe<{ invocationId: string; resultRef?: string }>(
-            EVENTS.INVOCATION_DONE,
-            (d) => {
-                upsert(d.invocationId, { status: 'done' });
-                set((s) => ({
-                    log: [
-                        ...s.log,
-                        {
-                            at: Date.now(),
-                            event: 'done',
-                            invocationId: d.invocationId,
-                            detail: d.resultRef,
-                        },
-                    ],
-                }));
-                // Reload accumulated cost now that the invocation's turns have
-                // streamed and populated the cost-attribution table.
-                void useInvocationStore.getState().loadCosts();
-            },
-        ),
-        // Live output from the execution subsystem (ConversationCore / Director).
-        eventBus.onSafe<{ sessionId: string; participantId: string }>(
-            EVENTS.CONVERSATION_TURN_START,
-            (d) =>
-                set((s) => ({
-                    feed: [
-                        ...s.feed,
-                        {
-                            at: Date.now(),
-                            kind: 'turn-start',
-                            text: `▶ ${d.participantId}`,
-                            sessionId: d.sessionId,
-                        },
-                    ],
-                })),
-        ),
-        eventBus.onSafe<{ sessionId: string; participantId: string; content?: string }>(
-            EVENTS.CONVERSATION_TURN_COMPLETE,
-            (d) =>
-                set((s) => ({
-                    feed: [
-                        ...s.feed,
-                        {
-                            at: Date.now(),
-                            kind: 'turn-complete',
-                            text: `${d.participantId}: ${d.content ?? ''}`,
-                            sessionId: d.sessionId,
-                        },
-                    ],
-                })),
-        ),
-        eventBus.onSafe<{ sessionId: string; participantId: string; error: string }>(
-            EVENTS.CONVERSATION_TURN_ERROR,
-            (d) =>
-                set((s) => ({
-                    feed: [
-                        ...s.feed,
-                        {
-                            at: Date.now(),
-                            kind: 'turn-error',
-                            text: `✖ ${d.participantId}: ${d.error}`,
-                            sessionId: d.sessionId,
-                        },
-                    ],
-                })),
-        ),
-    ];
-    void subs;
+    // Subscribe at module load (retained behaviour) but keep the handles so the
+    // store can be torn down and re-subscribed by its consuming panel (FA-04).
+    subscribeInvocationStore();
 
     return {
-        invocations: {},
-        order: [],
-        log: [],
-        feed: [],
-        costs: {},
-        selectedId: null,
+        ...EMPTY_STATE,
         loadHistory: async () => {
             let all: Invocation[] = [];
             try {
@@ -267,9 +264,14 @@ export const useInvocationStore = create<InvocationStoreState>((set) => {
             }
             set({ costs });
         },
-        clear: () => set({ invocations: {}, order: [], log: [], feed: [], costs: {} }),
+        clear: () => set({ ...EMPTY_STATE }),
         select: (id) => set({ selectedId: id }),
         clearView: () => set({ feed: [], log: [] }),
         clearHistory: () => set({ invocations: {}, order: [], costs: {}, feed: [], log: [] }),
+        ensureSubscribed: () => subscribeInvocationStore(),
+        destroy: () => {
+            unsubscribeInvocationStore();
+            set({ ...EMPTY_STATE });
+        },
     };
 });

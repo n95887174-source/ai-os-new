@@ -124,7 +124,7 @@ const DebateHistoryPanel: React.FC<DebateHistoryPanelProps> = ({
                             padding: '1rem',
                             background: 'none',
                             border: 'none',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             fontSize: '0.85rem',
                             fontWeight: 600,
                             cursor: 'pointer',

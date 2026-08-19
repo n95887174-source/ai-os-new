@@ -30,7 +30,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
     if (bulkReport) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
                     Import complete — {bulkReport.total} keys processed
                 </div>
 
@@ -41,12 +41,12 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                         style={{
                             padding: '0.75rem',
                             borderRadius: 12,
-                            background: 'rgba(16,185,129,0.1)',
+                            background: 'var(--success-tint)',
                             border: '1px solid rgba(16,185,129,0.2)',
                             textAlign: 'center',
                         }}
                     >
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success)' }}>
                             {bulkReport.added}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: '#6ee7b7' }}>
@@ -57,12 +57,12 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                         style={{
                             padding: '0.75rem',
                             borderRadius: 12,
-                            background: 'rgba(245,158,11,0.1)',
+                            background: 'var(--warning-tint)',
                             border: '1px solid rgba(245,158,11,0.2)',
                             textAlign: 'center',
                         }}
                     >
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--warning)' }}>
                             {bulkReport.duplicates}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: '#fde68a' }}>
@@ -73,12 +73,12 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                         style={{
                             padding: '0.75rem',
                             borderRadius: 12,
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             border: '1px solid rgba(239,68,68,0.2)',
                             textAlign: 'center',
                         }}
                     >
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ef4444' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--error)' }}>
                             {bulkReport.invalid}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: '#fca5a5' }}>
@@ -91,7 +91,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                     style={{
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginTop: '0.25rem',
                     }}
                 >
@@ -110,8 +110,8 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                                 borderRadius: 8,
                             }}
                         >
-                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{g.label}</span>
-                            <span style={{ color: '#94a3b8' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>{g.label}</span>
+                            <span style={{ color: 'var(--slate-400)' }}>
                                 {g.keyCount} key{g.keyCount > 1 ? 's' : ''} @ {g.provider}
                             </span>
                         </div>
@@ -124,7 +124,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                             style={{
                                 fontSize: '0.8rem',
                                 fontWeight: 600,
-                                color: '#ef4444',
+                                color: 'var(--error)',
                                 marginTop: '0.25rem',
                             }}
                         >
@@ -142,7 +142,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                                         borderRadius: 8,
                                     }}
                                 >
-                                    <span style={{ fontWeight: 600, color: '#ef4444' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--error)' }}>
                                         {h.provider}
                                     </span>
                                     <span style={{ color: '#fca5a5', marginLeft: '0.5rem' }}>
@@ -158,7 +158,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                     style={{
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         marginTop: '0.25rem',
                     }}
                 >
@@ -177,8 +177,8 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                                 borderRadius: 8,
                             }}
                         >
-                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{prov}</span>
-                            <span style={{ color: '#94a3b8' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--slate-200)' }}>{prov}</span>
+                            <span style={{ color: 'var(--slate-400)' }}>
                                 +{stats.added} / {stats.duplicates} dup / {stats.invalid} inv
                             </span>
                         </div>
@@ -198,7 +198,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
 
     return (
         <>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', marginBottom: '0.25rem' }}>
                 {t('add_key.bulk_instruction')}
             </div>
             <textarea
@@ -222,7 +222,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                             display: 'flex',
                             justifyContent: 'space-between',
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                         }}
                     >
                         <span>Importing keys...</span>
@@ -235,7 +235,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                             width: '100%',
                             height: 6,
                             borderRadius: 3,
-                            background: 'rgba(255,255,255,0.1)',
+                            background: 'var(--border-default)',
                             overflow: 'hidden',
                         }}
                     >
@@ -244,7 +244,7 @@ const BulkImportStep: React.FC<BulkImportStepProps> = ({
                                 width: `${(bulkProgress.current / bulkProgress.total) * 100}%`,
                                 height: '100%',
                                 borderRadius: 3,
-                                background: '#3b82f6',
+                                background: 'var(--accent)',
                                 transition: 'width 0.3s ease',
                             }}
                         />

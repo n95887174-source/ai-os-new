@@ -14,7 +14,7 @@ const MemoryEmptyState: React.FC<MemoryEmptyStateProps> = ({ isLoading, hasSearc
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}
+                style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--slate-500)' }}
                 aria-live="polite"
                 aria-busy="true"
             >
@@ -35,7 +35,7 @@ const MemoryEmptyState: React.FC<MemoryEmptyStateProps> = ({ isLoading, hasSearc
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ textAlign: 'center', padding: '6rem 0', color: '#64748b' }}
+            style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--slate-500)' }}
         >
             <Database size={56} style={{ opacity: 0.2, margin: '0 auto 1.5rem' }} />
             <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>

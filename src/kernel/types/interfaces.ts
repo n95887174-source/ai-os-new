@@ -23,6 +23,8 @@ export interface IEventBus {
     emitOnce<K extends keyof EventMap>(event: K, key: string, data?: EventMap[K]): boolean;
     emitOnce(event: string, key: string, data?: unknown): boolean;
     subscribeAll(callback: (payload: { event: string; data: unknown }) => void): () => void;
+    /** B-14: diagnostics — count of live subscriptions (used by memory tracker). */
+    getSubscriptionStats(): { totalCallbacks: number; perEvent: Record<string, number> };
 }
 
 export interface IDatabaseService {

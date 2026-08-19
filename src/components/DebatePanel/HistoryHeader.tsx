@@ -61,14 +61,14 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                     margin: 0,
                     fontSize: '1.2rem',
                     fontWeight: 800,
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
                 }}
             >
                 <Clock size={20} color="#3b82f6" /> {t('debate_runtime.title')}{' '}
-                <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--slate-500)', fontWeight: 600 }}>
                     ({filteredCount})
                 </span>
             </h3>
@@ -77,7 +77,7 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                 style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     cursor: 'pointer',
                     padding: 6,
                     borderRadius: 6,
@@ -111,7 +111,7 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                         flex: 1,
                         background: 'none',
                         border: 'none',
-                        color: '#e2e8f0',
+                        color: 'var(--slate-200)',
                         fontSize: '0.8rem',
                         outline: 'none',
                     }}
@@ -126,7 +126,7 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                     borderRadius: 10,
                     border: '1px solid var(--border)',
                     background: 'rgba(0,0,0,0.3)',
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.75rem',
                     outline: 'none',
                 }}
@@ -146,17 +146,17 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                 {[
                     {
                         icon: BarChart3,
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         label: `${stats.total} ${t('debate.debates')}`,
                     },
                     {
                         icon: MessageSquare,
-                        color: '#10b981',
+                        color: 'var(--success)',
                         label: `Ø ${stats.avgArgs} ${t('debate.arg_short')}`,
                     },
                     {
                         icon: ChevronsDown,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                         label: `Ø ${stats.avgRounds} ${t('debate.rounds')}`,
                     },
                     {
@@ -175,7 +175,7 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                                 background: `${s.color}15`,
                                 border: `1px solid ${s.color}20`,
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 4,
@@ -193,7 +193,7 @@ const HistoryHeader: React.FC<HistoryHeaderProps> = ({
                 style={{
                     padding: '0.75rem',
                     fontSize: '0.8rem',
-                    color: '#ef4444',
+                    color: 'var(--error)',
                     textAlign: 'center',
                 }}
             >

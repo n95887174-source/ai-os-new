@@ -36,7 +36,7 @@ export const DistributedNodesSection: React.FC<DistributedNodesSectionProps> = (
                         fontSize: '1.2rem',
                         fontWeight: 800,
                         margin: 0,
-                        color: '#f8fafc',
+                        color: 'var(--slate-50)',
                     }}
                 >
                     {t('health.distributed_nodes')}
@@ -48,7 +48,7 @@ export const DistributedNodesSection: React.FC<DistributedNodesSectionProps> = (
                         background: 'rgba(245,158,11,0.2)',
                         padding: '0.2rem 0.6rem',
                         borderRadius: 20,
-                        color: '#f59e0b',
+                        color: 'var(--warning)',
                     }}
                 >
                     🐝 {t('health.active_workers', { count: totalActive })}
@@ -123,7 +123,7 @@ export const DistributedNodesSection: React.FC<DistributedNodesSectionProps> = (
                                         style={{
                                             fontSize: '0.95rem',
                                             fontWeight: 700,
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             textTransform: 'uppercase',
                                         }}
                                     >
@@ -159,7 +159,7 @@ export const DistributedNodesSection: React.FC<DistributedNodesSectionProps> = (
                                 <div
                                     style={{
                                         fontSize: '0.65rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontWeight: 700,
                                         letterSpacing: '0.05em',
                                     }}
@@ -179,7 +179,7 @@ export const DistributedNodesSection: React.FC<DistributedNodesSectionProps> = (
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: '3rem 0',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             gap: '1rem',
                         }}
                     >

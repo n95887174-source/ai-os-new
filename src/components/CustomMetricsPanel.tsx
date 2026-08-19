@@ -17,7 +17,7 @@ const btn: React.CSSProperties = {
     padding: '8px 16px',
     borderRadius: 8,
     border: '1px solid rgba(255,255,255,0.1)',
-    color: '#e2e8f0',
+    color: 'var(--slate-200)',
     cursor: 'pointer',
     fontSize: '0.8rem',
     fontWeight: 600,
@@ -80,7 +80,7 @@ const CustomMetricsPanel: React.FC = () => {
                 source: 'system',
                 field,
                 unit: '',
-                color: '#3b82f6',
+                color: 'var(--accent)',
             });
             setName('');
             setField('');
@@ -141,11 +141,11 @@ const CustomMetricsPanel: React.FC = () => {
             >
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('metrics.title') || 'Custom Metrics'}
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('metrics.subtitle') || 'Define custom KPIs and dashboards'}
                     </p>
                 </div>
@@ -186,7 +186,7 @@ const CustomMetricsPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -201,7 +201,7 @@ const CustomMetricsPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -231,7 +231,7 @@ const CustomMetricsPanel: React.FC = () => {
 
             {showDash && dashboards.length > 0 && (
                 <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#94a3b8' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--slate-400)' }}>
                         {t('metrics.dashboards') || 'Dashboards'}
                     </div>
                     {dashboards.map((d) => (
@@ -244,8 +244,8 @@ const CustomMetricsPanel: React.FC = () => {
                                 alignItems: 'center',
                             }}
                         >
-                            <span style={{ color: '#e2e8f0' }}>{d.name}</span>
-                            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            <span style={{ color: 'var(--slate-200)' }}>{d.name}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
                                 {d.metricIds.length} metrics
                             </span>
                         </div>
@@ -261,7 +261,7 @@ const CustomMetricsPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: 40,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                     }}
                 >
@@ -291,7 +291,7 @@ const CustomMetricsPanel: React.FC = () => {
                                 <div
                                     style={{
                                         fontWeight: 600,
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.9rem',
                                     }}
                                 >
@@ -301,7 +301,7 @@ const CustomMetricsPanel: React.FC = () => {
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         cursor: 'pointer',
                                         padding: 0,
                                     }}
@@ -310,7 +310,7 @@ const CustomMetricsPanel: React.FC = () => {
                                     <Trash2 size={14} />
                                 </button>
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: 4 }}>
                                 {m.source} &middot; {m.aggregation} &middot; {m.field}
                             </div>
                             <div

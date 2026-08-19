@@ -5,6 +5,7 @@ import { eventBus, EVENTS } from '../kernel/events/event-bus';
 describe('DirectorStore (B4) — observes conversation:* events', () => {
     beforeEach(() => {
         useDirectorStore.getState().reset();
+        useDirectorStore.getState().ensureSubscribed();
     });
 
     it('starts idle with an empty turn log', () => {
@@ -92,5 +93,34 @@ describe('DirectorStore (B4) — observes conversation:* events', () => {
         const s = useDirectorStore.getState();
         expect(s.status).toBe('completed');
         expect(s.turnLog).toEqual([{ participantId: 'a', status: 'complete', success: true }]);
+    });
+
+    describe('teardown (FA-04)', () => {
+        it('destroy() resets state and stops observing events', () => {
+            eventBus.emit(EVENTS.CONVERSATION_TURN_START, { sessionId: 's1', participantId: 'a' });
+            expect(useDirectorStore.getState().turnLog.length).toBe(1);
+
+            useDirectorStore.getState().destroy();
+            const cleared = useDirectorStore.getState();
+            expect(cleared.status).toBe('idle');
+            expect(cleared.turnLog).toEqual([]);
+
+            eventBus.emit(EVENTS.CONVERSATION_TURN_START, { sessionId: 's2', participantId: 'b' });
+            expect(useDirectorStore.getState().turnLog.length).toBe(0);
+        });
+
+        it('ensureSubscribed() re-activates observation after destroy()', () => {
+            useDirectorStore.getState().destroy();
+            useDirectorStore.getState().ensureSubscribed();
+            eventBus.emit(EVENTS.CONVERSATION_TURN_START, { sessionId: 's1', participantId: 'a' });
+            expect(useDirectorStore.getState().turnLog.length).toBe(1);
+        });
+
+        it('ensureSubscribed() is idempotent', () => {
+            useDirectorStore.getState().ensureSubscribed();
+            useDirectorStore.getState().ensureSubscribed();
+            eventBus.emit(EVENTS.CONVERSATION_TURN_START, { sessionId: 's1', participantId: 'a' });
+            expect(useDirectorStore.getState().turnLog.length).toBe(1);
+        });
     });
 });

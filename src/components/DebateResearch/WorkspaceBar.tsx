@@ -20,7 +20,7 @@ const WorkspaceBar: React.FC<WorkspaceBarProps> = ({ workspaceName, onDetach }) 
             style={{
                 fontSize: '0.85rem',
                 fontWeight: 600,
-                color: '#10b981',
+                color: 'var(--success)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -34,7 +34,7 @@ const WorkspaceBar: React.FC<WorkspaceBarProps> = ({ workspaceName, onDetach }) 
                 marginLeft: 'auto',
                 background: 'none',
                 border: 'none',
-                color: '#ef4444',
+                color: 'var(--error)',
                 cursor: 'pointer',
                 padding: '2px 6px',
                 fontSize: '0.75rem',

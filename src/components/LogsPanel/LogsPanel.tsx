@@ -9,10 +9,10 @@ import { useTranslation } from '../../i18n/useTranslation';
 const ROW_HEIGHT = 36;
 
 const LEVEL_CONFIG: Record<LogLevel, { color: string; bg: string }> = {
-    debug: { color: '#64748b', bg: 'rgba(100,116,139,0.15)' },
-    info: { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
-    warn: { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-    error: { color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+    debug: { color: 'var(--slate-500)', bg: 'rgba(100,116,139,0.15)' },
+    info: { color: 'var(--accent)', bg: 'rgba(59,130,246,0.15)' },
+    warn: { color: 'var(--warning)', bg: 'rgba(245,158,11,0.15)' },
+    error: { color: 'var(--error)', bg: 'rgba(239,68,68,0.15)' },
 };
 
 function formatTime(ts: number): string {
@@ -150,7 +150,7 @@ export const LogsPanel: React.FC = () => {
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -164,7 +164,7 @@ export const LogsPanel: React.FC = () => {
                             borderRadius: 8,
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -217,7 +217,7 @@ export const LogsPanel: React.FC = () => {
                             fontSize: '0.75rem',
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             outline: 'none',
                             cursor: 'pointer',
                             marginLeft: 4,
@@ -242,7 +242,7 @@ export const LogsPanel: React.FC = () => {
                             fontSize: '0.8rem',
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             outline: 'none',
                             cursor: 'pointer',
                             maxWidth: 160,
@@ -267,7 +267,7 @@ export const LogsPanel: React.FC = () => {
                             fontSize: '0.7rem',
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             outline: 'none',
                             cursor: 'pointer',
                         }}
@@ -286,7 +286,7 @@ export const LogsPanel: React.FC = () => {
                             padding: '0.4rem 0.75rem',
                             borderRadius: 8,
                             border: '1px solid rgba(59,130,246,0.2)',
-                            background: 'rgba(59,130,246,0.1)',
+                            background: 'var(--accent-tint)',
                             color: '#93c5fd',
                             fontSize: '0.8rem',
                             cursor: 'pointer',
@@ -301,7 +301,7 @@ export const LogsPanel: React.FC = () => {
                             alignItems: 'center',
                             gap: 4,
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                         }}
                     >
@@ -322,7 +322,7 @@ export const LogsPanel: React.FC = () => {
                             padding: '0.4rem 0.75rem',
                             borderRadius: 8,
                             border: '1px solid rgba(239,68,68,0.2)',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             color: '#fca5a5',
                             fontSize: '0.8rem',
                             cursor: 'pointer',
@@ -353,7 +353,7 @@ export const LogsPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#334155',
+                            color: 'var(--slate-700)',
                             flexDirection: 'column',
                             gap: '1rem',
                         }}
@@ -368,7 +368,7 @@ export const LogsPanel: React.FC = () => {
                                 display: 'grid',
                                 gridTemplateColumns: '90px 70px 120px 100px 1fr',
                                 padding: '0.6rem 0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 fontSize: '0.65rem',
@@ -414,7 +414,7 @@ export const LogsPanel: React.FC = () => {
                                     >
                                         <div
                                             style={{
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontFamily: 'monospace',
                                                 fontSize: '0.75rem',
                                                 whiteSpace: 'nowrap',
@@ -441,7 +441,7 @@ export const LogsPanel: React.FC = () => {
                                         </div>
                                         <div
                                             style={{
-                                                color: '#cbd5e1',
+                                                color: 'var(--slate-300)',
                                                 whiteSpace: 'nowrap',
                                                 fontWeight: 600,
                                                 fontSize: '0.8rem',
@@ -451,7 +451,7 @@ export const LogsPanel: React.FC = () => {
                                         </div>
                                         <div
                                             style={{
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                                 fontFamily: 'monospace',
                                                 fontSize: '0.75rem',
                                             }}
@@ -460,7 +460,7 @@ export const LogsPanel: React.FC = () => {
                                         </div>
                                         <div
                                             style={{
-                                                color: '#e2e8f0',
+                                                color: 'var(--slate-200)',
                                                 wordBreak: 'break-word',
                                                 fontSize: '0.8rem',
                                             }}
@@ -469,7 +469,7 @@ export const LogsPanel: React.FC = () => {
                                             {entry.action && (
                                                 <span
                                                     style={{
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         marginLeft: 8,
                                                         fontSize: '0.75rem',
                                                     }}
@@ -480,7 +480,7 @@ export const LogsPanel: React.FC = () => {
                                             {entry.latency !== undefined && (
                                                 <span
                                                     style={{
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         marginLeft: 8,
                                                         fontSize: '0.75rem',
                                                     }}

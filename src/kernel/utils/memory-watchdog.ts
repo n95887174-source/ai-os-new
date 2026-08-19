@@ -9,7 +9,7 @@
  *   // later: watchdog.stop();
  */
 
-import { eventBus } from '../instances';
+import type { IEventBus } from '../types/interfaces';
 import { EVENTS } from '../events/event-names';
 import { rootLogger } from '../services/logger-service';
 
@@ -32,12 +32,14 @@ export class MemoryWatchdog {
     private readonly absoluteThresholdMB: number;
     private enabled: boolean;
     private pressureCallbacks: Array<() => void> = [];
+    private readonly _eventBus: IEventBus | null;
 
-    constructor(opts?: WatchdogOptions) {
+    constructor(opts?: WatchdogOptions, eventBus?: IEventBus) {
         this.intervalMs = opts?.intervalMs ?? 5000;
         this.thresholdMB = opts?.thresholdMB ?? 100;
         this.absoluteThresholdMB = opts?.absoluteThresholdMB ?? 200;
         this.enabled = typeof performance !== 'undefined' && 'memory' in performance;
+        this._eventBus = eventBus ?? null;
     }
 
     /** Register a callback to fire when heap exceeds absoluteThresholdMB. */
@@ -88,7 +90,7 @@ export class MemoryWatchdog {
                 const msg = `heap grew ${delta.toFixed(1)}MB in ${this.intervalMs}ms (now ${current.toFixed(1)}MB)`;
                 LOGGER.warn('MemoryWatchdog', 'OOM risk', { message: msg });
                 queueMicrotask(() =>
-                    eventBus.emit(EVENTS.NOTIFICATION, {
+                    this._eventBus?.emit(EVENTS.NOTIFICATION, {
                         message: `[MemoryWatchdog] ${msg}`,
                         type: 'warning',
                     }),
@@ -99,7 +101,7 @@ export class MemoryWatchdog {
                 const msg = `heap at ${current.toFixed(1)}MB exceeds absolute threshold ${this.absoluteThresholdMB}MB`;
                 LOGGER.warn('MemoryWatchdog', 'OOM risk', { message: msg });
                 queueMicrotask(() =>
-                    eventBus.emit(EVENTS.NOTIFICATION, {
+                    this._eventBus?.emit(EVENTS.NOTIFICATION, {
                         message: `[MemoryWatchdog] ${msg}`,
                         type: 'error',
                     }),

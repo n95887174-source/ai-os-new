@@ -26,17 +26,17 @@ export const DemoGate: React.FC<DemoGateProps> = ({ title, children }) => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 12,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textAlign: 'center',
                     height: '100%',
                     justifyContent: 'center',
                 }}
             >
                 <FlaskConical size={32} style={{ opacity: 0.35 }} aria-hidden="true" />
-                <div style={{ fontWeight: 600, fontSize: 14, color: '#94a3b8' }}>{title}</div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--slate-400)' }}>{title}</div>
                 <div style={{ fontSize: 12, maxWidth: 380 }}>
                     This demo feature is disabled (feature flag
-                    <code style={{ color: '#fbbf24', margin: '0 4px' }}>mockServices.enabled</code>
+                    <code style={{ color: 'var(--warning)', margin: '0 4px' }}>mockServices.enabled</code>
                     is off). Enable it in Settings → Feature Flags.
                 </div>
             </div>

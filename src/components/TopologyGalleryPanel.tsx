@@ -46,7 +46,7 @@ const TopologyGalleryPanelContent: React.FC = () => {
             <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 600 }}>
                 Topology Templates Gallery
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Pre-built topology patterns to jumpstart your workflows
             </p>
 
@@ -78,12 +78,12 @@ const TopologyGalleryPanelContent: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        background: '#0f172a',
+                        background: 'var(--slate-900)',
                         borderRadius: 6,
                         padding: '4px 10px',
                     }}
                 >
-                    <Search size={14} style={{ color: '#64748b' }} />
+                    <Search size={14} style={{ color: 'var(--slate-500)' }} />
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -111,7 +111,7 @@ const TopologyGalleryPanelContent: React.FC = () => {
                     <div
                         key={t.id}
                         style={{
-                            background: '#1e293b',
+                            background: 'var(--slate-800)',
                             borderRadius: 10,
                             padding: 14,
                             cursor: 'pointer',
@@ -166,19 +166,19 @@ const TopologyGalleryPanelContent: React.FC = () => {
                                     </span>
                                 </div>
                             </div>
-                            <ArrowUpRight size={14} style={{ color: '#64748b', flexShrink: 0 }} />
+                            <ArrowUpRight size={14} style={{ color: 'var(--slate-500)', flexShrink: 0 }} />
                         </div>
                         <p
                             style={{
                                 margin: '0 0 8px',
                                 fontSize: 12,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 lineHeight: 1.4,
                             }}
                         >
                             {t.description}
                         </p>
-                        <div style={{ display: 'flex', gap: 8, fontSize: 11, color: '#64748b' }}>
+                        <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--slate-500)' }}>
                             <span>{t.nodes.length} nodes</span>
                             <span>·</span>
                             <span>{t.edges.length} edges</span>

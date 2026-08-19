@@ -290,7 +290,7 @@ export class PricingService implements ICostCalculator {
                 this.lastFetch = Date.now();
                 this.prefixCache.clear();
                 await this.saveCache();
-                this.deps.eventBus.emitOnce(EVENTS.PRICING_UPDATED, 'global', this.pricingData);
+                this.deps.eventBus.emit(EVENTS.PRICING_UPDATED, this.pricingData);
             } catch {
                 LOGGER.warn('PricingService', 'OpenRouter sync failed, using fallback prices');
             } finally {

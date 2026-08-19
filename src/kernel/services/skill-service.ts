@@ -116,7 +116,7 @@ export class SkillService {
     }
 
     private emit() {
-        this.deps.eventBus.emitOnce(EVENTS.SKILLS_UPDATED, 'all', this.skills);
+        this.deps.eventBus.emit(EVENTS.SKILLS_UPDATED, this.skills);
     }
 
     getSkills(): CognitiveSkill[] {

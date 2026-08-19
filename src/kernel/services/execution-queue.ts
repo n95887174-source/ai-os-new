@@ -1,5 +1,5 @@
-import { EventBus } from '../events/event-bus';
 import { EVENTS } from '../events/event-names';
+import type { IEventBus } from '../types/interfaces';
 import type { IDeadLetterQueue } from '../contracts/dead-letter-queue';
 import { rootLogger } from './logger-service';
 
@@ -31,15 +31,18 @@ export class ExecutionQueue {
     private totalProcessed = 0;
     private totalErrors = 0;
     private deadLetterQueue?: IDeadLetterQueue;
+    private _eventBus: IEventBus | null = null;
 
     constructor(
         processor: (task: QueueTask) => Promise<void>,
         maxConcurrency = 3,
         deadLetterQueue?: IDeadLetterQueue,
+        eventBus?: IEventBus,
     ) {
         this.processor = processor;
         this.maxConcurrency = maxConcurrency;
         this.deadLetterQueue = deadLetterQueue;
+        this._eventBus = eventBus ?? null;
     }
 
     enqueue(priority: QueuePriority, payload: unknown): string {
@@ -78,7 +81,7 @@ export class ExecutionQueue {
                             age: Date.now() - task.enqueuedAt,
                             error: err,
                         });
-                        EventBus.emit(EVENTS.QUEUE_TASK_FAILED, {
+                        this._eventBus?.emit(EVENTS.QUEUE_TASK_FAILED, {
                             taskId: task.id,
                             priority: task.priority,
                             error: String(err),

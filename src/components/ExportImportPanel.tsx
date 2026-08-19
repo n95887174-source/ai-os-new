@@ -479,7 +479,7 @@ const ExportImportPanel: React.FC = () => {
                                 borderRadius: '6px',
                                 border: 'none',
                                 background: 'rgba(34,197,94,0.2)',
-                                color: '#22c55e',
+                                color: 'var(--success)',
                                 cursor: 'pointer',
                                 fontSize: '0.75rem',
                                 fontWeight: 600,

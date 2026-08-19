@@ -24,7 +24,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
     if (loading) return <PanelSkeleton title={false} />;
     if (versions.length === 0)
         return (
-            <div style={{ color: '#64748b', padding: '2rem', textAlign: 'center' }}>
+            <div style={{ color: 'var(--slate-500)', padding: '2rem', textAlign: 'center' }}>
                 No version history for this agent.
             </div>
         );
@@ -53,7 +53,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
                         <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                             v{versions.length - i}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                             {new Date(v.timestamp).toLocaleString()}
                         </span>
                     </div>
@@ -61,7 +61,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.3rem',
                             }}
                         >
@@ -81,7 +81,7 @@ export const AgentHistoryTab: React.FC<{ agentId: string }> = ({ agentId }) => {
                             }}
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#3b82f6',
+                                color: 'var(--accent)',
                                 background: 'none',
                                 border: 'none',
                                 cursor: 'pointer',

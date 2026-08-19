@@ -56,6 +56,8 @@ describe('Director controls + DirectorStore binding (B5.4b)', () => {
         service = new ConversationDirectorService(
             repo,
             new ChatExecutionEngine(makeChatExecutor(), eventBus),
+            undefined,
+            eventBus,
         );
         controls = createDirectorControls(service);
         const scenario = await repo.create({
@@ -173,6 +175,8 @@ describe('Director controls + DirectorStore binding (B5.4b)', () => {
         const failingService = new ConversationDirectorService(
             failingRepo,
             new ChatExecutionEngine(failingExecutor, eventBus),
+            undefined,
+            eventBus,
         );
         const failingControls = createDirectorControls(failingService);
         await failingControls.load(failingScenario.id);

@@ -150,12 +150,12 @@ const BookmarksPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <Bookmark size={26} color="#f59e0b" /> {t('bookmarks.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('bookmarks.subtitle', { count: total })}
                     </p>
                 </div>
@@ -171,7 +171,7 @@ const BookmarksPanel: React.FC = () => {
                             alignItems: 'center',
                         }}
                     >
-                        <Search size={14} style={{ marginLeft: 6, color: '#94a3b8' }} />
+                        <Search size={14} style={{ marginLeft: 6, color: 'var(--slate-400)' }} />
                         <input
                             type="text"
                             placeholder={t('bookmarks.search_placeholder')}
@@ -180,7 +180,7 @@ const BookmarksPanel: React.FC = () => {
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 padding: '0.4rem 0.5rem',
                                 fontSize: '0.8rem',
                                 outline: 'none',
@@ -193,7 +193,7 @@ const BookmarksPanel: React.FC = () => {
                                 style={{
                                     background: 'transparent',
                                     border: 'none',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                 }}
                             >
@@ -249,7 +249,7 @@ const BookmarksPanel: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: '3rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         textAlign: 'center',
                     }}
                 >

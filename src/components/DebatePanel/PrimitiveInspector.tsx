@@ -294,7 +294,7 @@ function PeerReviewEditor({
                                 alignItems: 'center',
                                 gap: 2,
                                 fontSize: 9,
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                             }}
                         >

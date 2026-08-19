@@ -100,7 +100,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                         <div
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginTop: '0.25rem',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -224,7 +224,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.15rem',
                                 }}
                             >
@@ -235,7 +235,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                                     style={{
                                         flex: 1,
                                         height: 6,
-                                        background: 'rgba(255,255,255,0.1)',
+                                        background: 'var(--border-default)',
                                         borderRadius: 3,
                                         overflow: 'hidden',
                                     }}
@@ -273,7 +273,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginTop: '0.15rem',
                                     textTransform: 'capitalize',
                                 }}
@@ -287,7 +287,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.25rem',
                                 }}
                             >
@@ -324,7 +324,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                     <div
                         style={{
                             fontSize: '0.65rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: '0.15rem',
                         }}
                     >
@@ -355,7 +355,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                                 style={{
                                     fontSize: '1.1rem',
                                     fontWeight: 800,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                 }}
                             >
                                 {keys.filter((_k) => _k.latency).length > 0
@@ -369,7 +369,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                                 style={{
                                     fontSize: '1.1rem',
                                     fontWeight: 800,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                 }}
                             >
                                 {todayRequests}
@@ -381,7 +381,7 @@ const SystemHealthPanel: React.FC<SystemHealthPanelProps> = ({
                                 style={{
                                     fontSize: '1.1rem',
                                     fontWeight: 800,
-                                    color: '#f59e0b',
+                                    color: 'var(--warning)',
                                 }}
                             >
                                 ${estimatedCost.toFixed(4)}

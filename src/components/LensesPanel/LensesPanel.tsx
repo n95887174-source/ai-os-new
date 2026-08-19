@@ -101,10 +101,10 @@ const LensesPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Layers size={18} color="#8b5cf6" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('lenses.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {lenses.length} {t('lenses.total')}
                     </span>
                 </div>
@@ -116,7 +116,7 @@ const LensesPanel: React.FC = () => {
                             padding: '0.45rem 0.9rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#8b5cf6',
+                            background: 'var(--purple)',
                             color: '#fff',
                             cursor: 'pointer',
                             fontWeight: 700,
@@ -138,7 +138,7 @@ const LensesPanel: React.FC = () => {
                             padding: '0.45rem 0.9rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#10b981',
+                            background: 'var(--success)',
                             color: '#022c22',
                             cursor: 'pointer',
                             fontWeight: 700,
@@ -170,7 +170,7 @@ const LensesPanel: React.FC = () => {
                             fontWeight: 700,
                             textTransform: 'uppercase',
                             letterSpacing: 0.5,
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginBottom: '0.5rem',
                         }}
                     >
@@ -202,7 +202,7 @@ const LensesPanel: React.FC = () => {
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
                                 letterSpacing: 0.5,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         >
                             {t('lenses.active_stack')}
@@ -214,7 +214,7 @@ const LensesPanel: React.FC = () => {
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -241,7 +241,7 @@ const LensesPanel: React.FC = () => {
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
                                     letterSpacing: 0.5,
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     marginBottom: '0.4rem',
                                 }}
                             >
@@ -260,12 +260,12 @@ const LensesPanel: React.FC = () => {
                                             borderRadius: 5,
                                             background: 'rgba(0,0,0,0.2)',
                                             fontSize: '0.72rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             marginBottom: 3,
                                         }}
                                     >
                                         <span>{lens.name}</span>
-                                        <span style={{ color: '#8b5cf6' }}>
+                                        <span style={{ color: 'var(--purple)' }}>
                                             {(s.confidence * 100).toFixed(0)}%
                                         </span>
                                     </div>

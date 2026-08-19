@@ -56,7 +56,7 @@ const TemplateSharingPanelContent: React.FC = () => {
             >
                 <Share2 size={20} color="#10b981" /> Template Sharing
             </h2>
-            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--slate-400)' }}>
                 Discover shared templates from the community
             </p>
 
@@ -64,7 +64,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                 <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
                     <Search
                         size={14}
-                        style={{ position: 'absolute', left: 10, top: 9, color: '#64748b' }}
+                        style={{ position: 'absolute', left: 10, top: 9, color: 'var(--slate-500)' }}
                     />
                     <input
                         value={search}
@@ -75,8 +75,8 @@ const TemplateSharingPanelContent: React.FC = () => {
                             padding: '7px 10px 7px 30px',
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
-                            background: '#0f172a',
-                            color: '#e2e8f0',
+                            background: 'var(--slate-900)',
+                            color: 'var(--slate-200)',
                             fontSize: 13,
                             outline: 'none',
                         }}
@@ -147,7 +147,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                     }}
                                 >
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 14, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 14, color: 'var(--slate-200)' }}
                                     >
                                         {t.name}
                                     </span>
@@ -159,7 +159,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                             fontWeight: 600,
                                             textTransform: 'capitalize',
                                             background: 'rgba(16,185,129,0.15)',
-                                            color: '#10b981',
+                                            color: 'var(--success)',
                                         }}
                                     >
                                         {t.category}
@@ -168,7 +168,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                         <span
                                             style={{
                                                 fontSize: 10,
-                                                color: '#3b82f6',
+                                                color: 'var(--accent)',
                                                 fontWeight: 600,
                                             }}
                                         >
@@ -176,7 +176,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                         </span>
                                     )}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                                <div style={{ fontSize: 12, color: 'var(--slate-500)', marginBottom: 4 }}>
                                     {t.description}
                                 </div>
                                 <div
@@ -185,7 +185,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                         alignItems: 'center',
                                         gap: 12,
                                         fontSize: 11,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                     }}
                                 >
                                     <span>{t.author}</span>
@@ -199,8 +199,8 @@ const TemplateSharingPanelContent: React.FC = () => {
                                         padding: '6px 12px',
                                         borderRadius: 6,
                                         fontSize: 12,
-                                        background: 'rgba(59,130,246,0.1)',
-                                        color: '#3b82f6',
+                                        background: 'var(--accent-tint)',
+                                        color: 'var(--accent)',
                                     }}
                                 >
                                     <FolderOpen size={12} style={{ marginRight: 4 }} /> In Library
@@ -218,7 +218,7 @@ const TemplateSharingPanelContent: React.FC = () => {
                                         cursor: 'pointer',
                                         fontSize: 12,
                                         background: 'rgba(16,185,129,0.15)',
-                                        color: '#10b981',
+                                        color: 'var(--success)',
                                     }}
                                 >
                                     <Download size={12} /> Import

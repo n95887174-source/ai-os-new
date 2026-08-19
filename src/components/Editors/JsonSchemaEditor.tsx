@@ -237,7 +237,7 @@ export const JsonSchemaEditor: React.FC<JsonSchemaEditorProps> = ({
                                 >
                                     {key}
                                     {isRequired && (
-                                        <span style={{ color: '#ef4444', marginLeft: '0.15rem' }}>
+                                        <span style={{ color: 'var(--error)', marginLeft: '0.15rem' }}>
                                             *
                                         </span>
                                     )}

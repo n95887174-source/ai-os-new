@@ -61,13 +61,13 @@ export const SystematicReviewTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '10px',
                                 borderRadius: 8,
-                                background: 'rgba(16,185,129,0.1)',
+                                background: 'var(--success-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -82,13 +82,13 @@ export const SystematicReviewTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '10px',
                                 borderRadius: 8,
-                                background: 'rgba(239,68,68,0.1)',
+                                background: 'var(--error-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -99,7 +99,7 @@ export const SystematicReviewTab: React.FC<Props> = ({ engine, session }) => {
                             </div>
                         </div>
                     </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate-300)' }}>
                         Bias Assessment
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -129,7 +129,7 @@ export const SystematicReviewTab: React.FC<Props> = ({ engine, session }) => {
                                 <div
                                     style={{
                                         fontSize: '0.55rem',
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         textTransform: 'uppercase',
                                     }}
                                 >

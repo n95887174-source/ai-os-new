@@ -62,10 +62,10 @@ export const ExperimentComparison: React.FC = () => {
 
   if (completedRuns.length < 2) {
     return (
-      <div style={{ ...glassPanel, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', minHeight: 200, color: '#64748b' }}>
+      <div style={{ ...glassPanel, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', minHeight: 200, color: 'var(--slate-500)' }}>
         <GitCompare size={32} style={{ opacity: 0.3 }} />
         <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>Need at least 2 completed runs to compare</p>
-        <p style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Run some research experiments first, then come back.</p>
+        <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>Run some research experiments first, then come back.</p>
       </div>
     );
   }
@@ -78,8 +78,8 @@ export const ExperimentComparison: React.FC = () => {
           <GitCompare size={20} color="#06b6d4" />
         </div>
         <div>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>Experiment Comparison</h3>
-          <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>Side-by-side diff of two research runs</p>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--slate-50)', margin: 0 }}>Experiment Comparison</h3>
+          <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)', margin: 0 }}>Side-by-side diff of two research runs</p>
         </div>
       </div>
 
@@ -87,19 +87,19 @@ export const ExperimentComparison: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '1rem', alignItems: 'center' }}>
         {/* Left selector */}
         <div>
-          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>Run A</label>
+          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>Run A</label>
           <div style={{ display: 'flex', gap: '0.3rem' }}>
             <select
               value={leftId}
               onChange={e => setLeftId(e.target.value)}
-              style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.75rem', outline: 'none' }}
+              style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'var(--slate-200)', fontSize: '0.75rem', outline: 'none' }}
             >
               <option value="">Select run...</option>
               {completedRuns.map(r => (
                 <option key={r.id} value={r.id}>{r.module} — {formatDate(r.startedAt)}</option>
               ))}
             </select>
-            <button onClick={() => selectRandom('left')} style={{ padding: '0.3rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'pointer' }}>Random</button>
+            <button onClick={() => selectRandom('left')} style={{ padding: '0.3rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'var(--slate-400)', cursor: 'pointer' }}>Random</button>
           </div>
         </div>
 
@@ -114,19 +114,19 @@ export const ExperimentComparison: React.FC = () => {
 
         {/* Right selector */}
         <div>
-          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>Run B</label>
+          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.3rem' }}>Run B</label>
           <div style={{ display: 'flex', gap: '0.3rem' }}>
             <select
               value={rightId}
               onChange={e => setRightId(e.target.value)}
-              style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#e2e8f0', fontSize: '0.75rem', outline: 'none' }}
+              style={{ flex: 1, padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'var(--slate-200)', fontSize: '0.75rem', outline: 'none' }}
             >
               <option value="">Select run...</option>
               {completedRuns.map(r => (
                 <option key={r.id} value={r.id}>{r.module} — {formatDate(r.startedAt)}</option>
               ))}
             </select>
-            <button onClick={() => selectRandom('right')} style={{ padding: '0.3rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#94a3b8', cursor: 'pointer' }}>Random</button>
+            <button onClick={() => selectRandom('right')} style={{ padding: '0.3rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'var(--slate-400)', cursor: 'pointer' }}>Random</button>
           </div>
         </div>
       </div>
@@ -136,11 +136,11 @@ export const ExperimentComparison: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           {/* Summary bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', fontSize: '0.7rem' }}>
-            <span style={{ color: '#94a3b8', fontWeight: 700 }}>Differences:</span>
-            <span style={{ color: '#10b981', fontWeight: 700 }}>{diffFields.filter(f => f.match).length} same</span>
-            <span style={{ color: '#f59e0b', fontWeight: 700 }}>{diffFields.filter(f => !f.match).length} different</span>
+            <span style={{ color: 'var(--slate-400)', fontWeight: 700 }}>Differences:</span>
+            <span style={{ color: 'var(--success)', fontWeight: 700 }}>{diffFields.filter(f => f.match).length} same</span>
+            <span style={{ color: 'var(--warning)', fontWeight: 700 }}>{diffFields.filter(f => !f.match).length} different</span>
             <div style={{ flex: 1 }} />
-            <span style={{ color: '#64748b', fontSize: '0.6rem' }}>Click field to expand</span>
+            <span style={{ color: 'var(--slate-500)', fontSize: '0.6rem' }}>Click field to expand</span>
           </div>
 
           {diffFields.map(f => {
@@ -161,7 +161,7 @@ export const ExperimentComparison: React.FC = () => {
                   {/* Label + indicator */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', order: 0 }}>
                     <Icon size={12} color={color} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#e2e8f0' }}>{f.label}</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--slate-200)' }}>{f.label}</span>
                   </div>
 
                   {/* Chevron */}
@@ -181,12 +181,12 @@ export const ExperimentComparison: React.FC = () => {
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', padding: '0.5rem 0.75rem 0.75rem 0.75rem' }}>
                         <div style={{ padding: '0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Run A — {left.module}</div>
-                          <pre style={{ fontSize: '0.6rem', color: '#cbd5e1', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 150, overflow: 'auto' }}>{f.leftVal}</pre>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Run A — {left.module}</div>
+                          <pre style={{ fontSize: '0.6rem', color: 'var(--slate-300)', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 150, overflow: 'auto' }}>{f.leftVal}</pre>
                         </div>
                         <div style={{ padding: '0.5rem', borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Run B — {right.module}</div>
-                          <pre style={{ fontSize: '0.6rem', color: '#cbd5e1', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 150, overflow: 'auto' }}>{f.rightVal}</pre>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Run B — {right.module}</div>
+                          <pre style={{ fontSize: '0.6rem', color: 'var(--slate-300)', fontFamily: 'monospace', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 150, overflow: 'auto' }}>{f.rightVal}</pre>
                         </div>
                       </div>
                     </motion.div>

@@ -57,11 +57,11 @@ const CrystalCard: React.FC<CrystalCardProps> = ({
                 }}
                 onClick={() => setExpanded((e) => !e)}
             >
-                <span style={{ marginTop: 1, color: '#64748b' }}>
+                <span style={{ marginTop: 1, color: 'var(--slate-500)' }}>
                     {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#e2e8f0' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate-200)' }}>
                         {crystal.content.statement}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -79,14 +79,14 @@ const CrystalCard: React.FC<CrystalCardProps> = ({
                         >
                             {crystal.provenance.originKind}
                         </span>
-                        <span style={{ fontSize: '0.62rem', color: '#475569' }}>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--slate-600)' }}>
                             v{crystal.version}
                         </span>
                         {crystal.linkedLensIds.length > 0 && (
                             <span
                                 style={{
                                     fontSize: '0.62rem',
-                                    color: '#8b5cf6',
+                                    color: 'var(--purple)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 3,
@@ -112,7 +112,7 @@ const CrystalCard: React.FC<CrystalCardProps> = ({
                         <div
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 marginBottom: '0.5rem',
                             }}
                         >
@@ -150,10 +150,10 @@ const CrystalCard: React.FC<CrystalCardProps> = ({
 
                     {crystal.validation.debateId && (
                         <DetailRow label={t('lenses_crystal.debate')}>
-                            <span style={{ fontSize: '0.72rem', color: '#a78bfa' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--purple-muted)' }}>
                                 {crystal.validation.debateId}
                             </span>
-                            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                                 {crystal.validation.proArguments.length} pro /{' '}
                                 {crystal.validation.conArguments.length} con
                             </span>
@@ -214,7 +214,7 @@ const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ lab
                 fontSize: '0.62rem',
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 marginBottom: 3,
             }}
         >
@@ -228,7 +228,7 @@ const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ lab
 
 const chipStyle: React.CSSProperties = {
     fontSize: '0.7rem',
-    color: '#94a3b8',
+    color: 'var(--slate-400)',
     background: 'rgba(255,255,255,0.05)',
     borderRadius: 4,
     padding: '2px 6px',

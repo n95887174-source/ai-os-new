@@ -13,8 +13,8 @@ const DefaultModelStep: React.FC<DefaultModelStepProps> = ({
     onSkip,
 }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-            Key for <strong style={{ color: '#e2e8f0' }}>{provider}</strong> verified successfully.
+        <div style={{ fontSize: '0.85rem', color: 'var(--slate-400)' }}>
+            Key for <strong style={{ color: 'var(--slate-200)' }}>{provider}</strong> verified successfully.
             {availableModels.length > 0
                 ? ' Choose a default model for new conversations:'
                 : ' No models were fetched — you can set a default model later.'}

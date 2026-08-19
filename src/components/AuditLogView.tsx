@@ -102,11 +102,11 @@ const AuditLogView: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Terminal size={20} color="#3b82f6" />
                     <h2
-                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}
+                        style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-50)' }}
                     >
                         Request Audit Log
                     </h2>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                         ({entries.length} entries)
                     </span>
                 </div>
@@ -119,7 +119,7 @@ const AuditLogView: React.FC = () => {
                                 left: 10,
                                 top: '50%',
                                 transform: 'translateY(-50%)',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                             }}
                         />
                         <input
@@ -234,7 +234,7 @@ const AuditLogView: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.05)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -253,7 +253,7 @@ const AuditLogView: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.05)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -297,7 +297,7 @@ const AuditLogView: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     fontFamily: 'monospace',
                                     flexShrink: 0,
                                     width: 108,
@@ -317,7 +317,7 @@ const AuditLogView: React.FC = () => {
                                     fontSize: '0.6rem',
                                     fontWeight: 700,
                                     background: 'rgba(255,255,255,0.05)',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                     flexShrink: 0,
                                 }}
@@ -327,20 +327,20 @@ const AuditLogView: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     fontWeight: 600,
                                     flexShrink: 0,
                                 }}
                             >
                                 {e.actor}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b', flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', flexShrink: 0 }}>
                                 →
                             </span>
                             <span
                                 style={{
                                     fontSize: '0.75rem',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontWeight: 600,
                                     flexShrink: 0,
                                 }}
@@ -350,7 +350,7 @@ const AuditLogView: React.FC = () => {
                             <span
                                 style={{
                                     fontSize: '0.7rem',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     flex: 1,
                                     minWidth: 0,
                                     overflow: 'hidden',
@@ -363,7 +363,7 @@ const AuditLogView: React.FC = () => {
                         </div>
                     ))
                 ) : (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--slate-500)' }}>
                         <Activity size={32} style={{ opacity: 0.3, marginBottom: '1rem' }} />
                         <div>No audit entries</div>
                     </div>

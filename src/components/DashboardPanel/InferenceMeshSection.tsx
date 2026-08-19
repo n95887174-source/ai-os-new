@@ -64,14 +64,14 @@ export const InferenceMeshSection: React.FC<InferenceMeshSectionProps> = ({ keys
                                     style={{
                                         fontWeight: 800,
                                         fontSize: '0.9rem',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                     }}
                                 >
                                     {key.label}
                                 </div>
                                 <div
                                     style={{
-                                        color: '#64748b',
+                                        color: 'var(--slate-500)',
                                         fontSize: '0.7rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -88,7 +88,7 @@ export const InferenceMeshSection: React.FC<InferenceMeshSectionProps> = ({ keys
                         <div
                             style={{
                                 fontSize: '0.8rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 4,
@@ -99,7 +99,7 @@ export const InferenceMeshSection: React.FC<InferenceMeshSectionProps> = ({ keys
                                 ? `${key.latency}${t('chat.latency_ms')}`
                                 : t('dashboard.dash')}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
                             {key.stats?.extended?.usageToday ? (
                                 <QuotaDisplay
                                     used={key.stats.extended.usageToday.requests}
@@ -110,7 +110,7 @@ export const InferenceMeshSection: React.FC<InferenceMeshSectionProps> = ({ keys
                             )}
                         </div>
                         <div
-                            style={{ fontSize: '0.8rem', color: '#94a3b8' }}
+                            style={{ fontSize: '0.8rem', color: 'var(--slate-400)' }}
                         >{`${key.stats?.successCount || 0} ${t('dashboard.reqs_unit')}`}</div>
                         <button
                             onClick={() => onNavigate('keys')}
@@ -119,7 +119,7 @@ export const InferenceMeshSection: React.FC<InferenceMeshSectionProps> = ({ keys
                                 borderRadius: 8,
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                                 cursor: 'pointer',
                                 fontSize: '0.7rem',
                                 fontWeight: 700,

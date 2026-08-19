@@ -90,21 +90,21 @@ function buildItems(t: (key: TranslationKey) => string): PaletteItem[] {
             labelKey: 'palette.action.newScenario',
             path: 'director',
             icon: <Plus size={16} />,
-            color: '#10b981',
+            color: 'var(--success)',
         },
         {
             id: 'action-new-debate',
             labelKey: 'palette.action.newDebate',
             path: 'debate',
             icon: <MessageSquare size={16} />,
-            color: '#f59e0b',
+            color: 'var(--warning)',
         },
         {
             id: 'action-new-workflow',
             labelKey: 'palette.action.newWorkflow',
             path: 'builder',
             icon: <Workflow size={16} />,
-            color: '#38bdf8',
+            color: 'var(--info)',
         },
         {
             id: 'action-open-forum',
@@ -156,7 +156,7 @@ const SectionHeader: React.FC<{ label: string }> = ({ label }) => (
             fontWeight: 700,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            color: '#64748b',
+            color: 'var(--slate-500)',
         }}
     >
         {label}
@@ -185,7 +185,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, t
                 label: a.name,
                 path: `agents?agent=${encodeURIComponent(a.id)}`,
                 section: t('palette.section.agents'),
-                color: '#10b981',
+                color: 'var(--success)',
                 icon: <Users size={16} />,
             }));
         } catch {

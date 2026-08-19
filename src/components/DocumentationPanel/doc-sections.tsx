@@ -73,7 +73,7 @@ export const Architecture: React.FC = () => (
                     gridTemplateColumns: '1fr 1fr',
                     gap: '1rem',
                     fontSize: '0.85rem',
-                    color: '#cbd5e1',
+                    color: 'var(--slate-300)',
                     lineHeight: 1.6,
                 }}
             >
@@ -92,7 +92,7 @@ export const Architecture: React.FC = () => (
                 style={{
                     margin: '0 0 1rem',
                     fontSize: '0.9rem',
-                    color: '#cbd5e1',
+                    color: 'var(--slate-300)',
                     lineHeight: 1.6,
                 }}
             >
@@ -107,7 +107,7 @@ export const Architecture: React.FC = () => (
                     borderRadius: 8,
                     fontFamily: 'monospace',
                     fontSize: '0.85rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     lineHeight: 1.8,
                 }}
             >{`// UI → Kernel contracts only\nkernel.transaction(async (tx) => {\n  kernel.setSLAMode('ECONOMY', tx);\n  kernel.setBaseWeights({...}, tx);\n});`}</blockquote>
@@ -131,10 +131,10 @@ export const ApiReference: React.FC = () => (
             bgGradient="linear-gradient(145deg, rgba(139,92,246,0.05) 0%, transparent 100%)"
             border="rgba(139,92,246,0.2)"
         >
-            <div style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 2 }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--slate-300)', lineHeight: 2 }}>
                 {EVENTS_REF.map((ev) => (
                     <React.Fragment key={ev}>
-                        <code style={{ color: '#3b82f6' }}>{ev}</code>
+                        <code style={{ color: 'var(--accent)' }}>{ev}</code>
                         <br />
                     </React.Fragment>
                 ))}
@@ -161,7 +161,7 @@ export const Safety: React.FC = () => (
 export const FAQ: React.FC = () => (
     <div style={flexColGap6}>
         <h1 style={docPageTitle}>F.A.Q.</h1>
-        <p style={{ fontSize: '1.1rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1rem' }}>
+        <p style={{ fontSize: '1.1rem', color: 'var(--slate-400)', lineHeight: 1.6, marginBottom: '1rem' }}>
             Common questions and troubleshooting steps for the Super-Agents ecosystem.
         </p>
         <div style={flexColGap5}>

@@ -209,7 +209,7 @@ const AgentJournalPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <Loader2 size={20} className="animate-spin" />
@@ -248,12 +248,12 @@ const AgentJournalPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <BookOpen size={26} color="#8b5cf6" /> {t('agent_journal.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('agent_journal.subtitle', { count: totalEntries })}
                     </p>
                 </div>
@@ -264,7 +264,7 @@ const AgentJournalPanel: React.FC = () => {
                             padding: '0.4rem 0.8rem',
                             borderRadius: 6,
                             border: 'none',
-                            background: '#8b5cf6',
+                            background: 'var(--purple)',
                             color: '#fff',
                             cursor: 'pointer',
                             fontSize: '0.8rem',
@@ -349,7 +349,7 @@ const AgentJournalPanel: React.FC = () => {
                 <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
                     <Search
                         size={14}
-                        style={{ position: 'absolute', left: 8, top: 8, color: '#94a3b8' }}
+                        style={{ position: 'absolute', left: 8, top: 8, color: 'var(--slate-400)' }}
                     />
                     <input
                         value={search}
@@ -361,7 +361,7 @@ const AgentJournalPanel: React.FC = () => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(0,0,0,0.3)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                         }}
                     />
@@ -373,7 +373,7 @@ const AgentJournalPanel: React.FC = () => {
                             padding: '0.2rem 0.6rem',
                             borderRadius: 12,
                             border: '1px solid #ef4444',
-                            background: 'rgba(239,68,68,0.1)',
+                            background: 'var(--error-tint)',
                             color: '#fca5a5',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
@@ -419,7 +419,7 @@ const AgentJournalPanel: React.FC = () => {
                     />
                 ))}
                 {entries.length === 0 && (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                         <BookOpen size={48} color="#475569" />
                         <p style={{ marginTop: '1rem' }}>{t('agent_journal.empty')}</p>
                     </div>

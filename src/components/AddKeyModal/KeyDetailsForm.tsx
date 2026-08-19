@@ -85,7 +85,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                     style={{
                         background: 'none',
                         border: 'none',
-                        color: '#3b82f6',
+                        color: 'var(--accent)',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
                         display: 'flex',
@@ -160,7 +160,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                             href="#"
                             style={{
                                 fontSize: '0.75rem',
-                                color: '#3b82f6',
+                                color: 'var(--accent)',
                                 textDecoration: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -282,7 +282,7 @@ const KeyDetailsForm: React.FC<KeyDetailsFormProps> = ({
                     className="btn-secondary"
                     style={{
                         padding: '0.75rem 1.25rem',
-                        color: '#10b981',
+                        color: 'var(--success)',
                         borderColor: 'rgba(16,185,129,0.3)',
                     }}
                     disabled={loading}

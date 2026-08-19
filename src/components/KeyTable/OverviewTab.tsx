@@ -408,7 +408,7 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                             style={{
                                 width: `${Math.min(100, ((stats.usageToday?.tokens || 0) / (stats.rules?.quota?.tokensPerDay || 100000)) * 100)}%`,
                                 height: '100%',
-                                background: '#10b981',
+                                background: 'var(--success)',
                             }}
                         />
                     </div>
@@ -452,7 +452,7 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                             {t('overview.latency_history')}
                         </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>
                         {t('overview.latency_avg', {
                             value: formatMs(stats.fourSignals?.latency || 0),
                         })}
@@ -502,7 +502,7 @@ const OverviewTab: React.FC<Props> = ({ apiKey }) => {
                             style={{
                                 width: `${Math.min(100, ((stats.usageToday?.requests || 0) / (stats.rules?.quota?.requestsPerDay || 1000)) * 100)}%`,
                                 height: '100%',
-                                background: '#f59e0b',
+                                background: 'var(--warning)',
                             }}
                         />
                     </div>

@@ -25,7 +25,7 @@ const SummaryStatsGrid: React.FC<SummaryStatsGridProps> = ({
             label: t('analytics.metric.total_invocations'),
             value: totalRequests || 0,
             icon: <Zap size={20} />,
-            color: '#3b82f6',
+            color: 'var(--accent)',
             trend: '+12.5%',
         },
         {
@@ -39,14 +39,14 @@ const SummaryStatsGrid: React.FC<SummaryStatsGridProps> = ({
             label: t('analytics.metric.platform_spend'),
             value: formatCost(estimatedCost || 0),
             icon: <Coins size={20} />,
-            color: '#10b981',
+            color: 'var(--success)',
             trend: 'Stable',
         },
         {
             label: t('analytics.metric.fleet_latency'),
             value: `${avgLatency || 0}ms`,
             icon: <Clock size={20} />,
-            color: '#f59e0b',
+            color: 'var(--warning)',
             trend: '-2.4%',
         },
     ];
@@ -120,14 +120,14 @@ const SummaryStatsGrid: React.FC<SummaryStatsGridProps> = ({
                         style={{
                             fontSize: '2rem',
                             fontWeight: 800,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             letterSpacing: '-0.02em',
                             marginBottom: '0.25rem',
                         }}
                     >
                         {s.value}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-400)', fontWeight: 600 }}>
                         {s.label}
                     </div>
                 </motion.div>

@@ -17,7 +17,7 @@ const StrategyDistribution: React.FC<Props> = ({ strategyCounts, agentsCount }) 
             style={{
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 marginBottom: '0.35rem',
                 display: 'flex',
                 alignItems: 'center',

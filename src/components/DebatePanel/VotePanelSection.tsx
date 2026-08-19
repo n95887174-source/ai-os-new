@@ -7,8 +7,8 @@ import {
     debateVoteStatusText,
     debateVoteChoices,
     debateVoteStatusRow,
-    debateVoteDismissBtn,
 } from '../../styles/common';
+import { Button } from '../Common';
 import { resolveAgentIdentity } from '../../kernel/services/agent-identity';
 
 interface Props {
@@ -112,9 +112,14 @@ const VotePanelSection: React.FC<Props> = ({
                         Vote recorded — {humanVotes.filter((v) => v.round === showVotePanel).length}{' '}
                         agent(s) marked as best
                     </span>
-                    <button onClick={() => setShowVotePanel(null)} style={debateVoteDismissBtn}>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowVotePanel(null)}
+                        style={{ marginLeft: 'auto' }}
+                    >
                         Dismiss
-                    </button>
+                    </Button>
                 </div>
             )}
         </div>

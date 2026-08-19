@@ -11,7 +11,7 @@ interface DomainPickerProps extends TeamState {
 
 const DomainPicker: React.FC<DomainPickerProps> = ({ selectedDomain, onSelectDomain, setTeam }) => (
     <div>
-        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 12 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginBottom: 12 }}>
             Choose your team's domain to filter relevant templates. You can also start from scratch.
         </div>
         <div
@@ -56,7 +56,7 @@ const DomainPicker: React.FC<DomainPickerProps> = ({ selectedDomain, onSelectDom
                     <div
                         style={{
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             textTransform: 'capitalize',
                         }}
@@ -66,7 +66,7 @@ const DomainPicker: React.FC<DomainPickerProps> = ({ selectedDomain, onSelectDom
                     <div
                         style={{
                             fontSize: '0.65rem',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             marginTop: 4,
                             lineHeight: 1.3,
                         }}

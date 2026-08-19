@@ -53,10 +53,10 @@ const PromptAudit: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <BookOpen size={20} color="#3b82f6" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Prompt Audit
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: '#10b981' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--success)' }}>
                         {report.strategyCount} strategies
                     </span>
                 </div>
@@ -87,14 +87,14 @@ const PromptAudit: React.FC = () => {
                     style={{
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         marginBottom: '0.35rem',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 5,
                     }}
                 >
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--slate-500)' }}>
                         Most Used Tools
                     </span>
                 </div>
@@ -122,7 +122,7 @@ const PromptAudit: React.FC = () => {
                                 }}
                             >
                                 {tool}{' '}
-                                <span style={{ color: '#64748b', fontSize: '0.6rem' }}>
+                                <span style={{ color: 'var(--slate-500)', fontSize: '0.6rem' }}>
                                     {count}x
                                 </span>
                             </span>
@@ -171,7 +171,7 @@ const PromptAudit: React.FC = () => {
                             background: 'none',
                             border: 'none',
                             outline: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.75rem',
                         }}
                     />
@@ -181,7 +181,7 @@ const PromptAudit: React.FC = () => {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 0,
                             }}
@@ -198,7 +198,7 @@ const PromptAudit: React.FC = () => {
                         borderRadius: 5,
                         background: 'rgba(0,0,0,0.3)',
                         border: '1px solid rgba(255,255,255,0.06)',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         fontSize: '0.7rem',
                         outline: 'none',
                     }}
@@ -228,7 +228,7 @@ const PromptAudit: React.FC = () => {
                         style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                             marginBottom: '0.3rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -244,7 +244,7 @@ const PromptAudit: React.FC = () => {
                             }
                             style={{
                                 marginLeft: 'auto',
-                                background: 'rgba(139,92,246,0.1)',
+                                background: 'var(--purple-tint)',
                                 border: '1px solid rgba(139,92,246,0.2)',
                                 color: '#a855f7',
                                 cursor: 'pointer',

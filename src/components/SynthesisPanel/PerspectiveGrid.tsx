@@ -8,7 +8,7 @@ import type { Perspective } from '../../kernel/types/synthesis-types';
 const PerspectiveGrid: React.FC<{ perspectives: Perspective[] }> = ({ perspectives }) => {
     const { t } = useTranslation();
     if (perspectives.length === 0) {
-        return <div style={{ fontSize: '0.72rem', color: '#64748b' }}>—</div>;
+        return <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>—</div>;
     }
     const cols = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(perspectives.length))));
 
@@ -39,20 +39,20 @@ const PerspectiveGrid: React.FC<{ perspectives: Perspective[] }> = ({ perspectiv
                             marginBottom: 4,
                         }}
                     >
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {p.roleName}
                         </span>
-                        <span style={{ fontSize: '0.66rem', color: '#f59e0b' }}>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--warning)' }}>
                             {(p.confidence * 100).toFixed(0)}%
                         </span>
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: '#8b5cf6', marginBottom: 4 }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--purple)', marginBottom: 4 }}>
                         {p.lensName}
                     </div>
                     <div
                         style={{
                             fontSize: '0.68rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             lineHeight: 1.35,
                             maxHeight: 96,
                             overflow: 'hidden',
@@ -62,7 +62,7 @@ const PerspectiveGrid: React.FC<{ perspectives: Perspective[] }> = ({ perspectiv
                     </div>
                     {p.concessions.length > 0 && (
                         <div style={{ marginTop: 4 }}>
-                            <span style={{ fontSize: '0.62rem', color: '#10b981' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--success)' }}>
                                 {t('synthesis.concessions')}: {p.concessions.join('; ')}
                             </span>
                         </div>

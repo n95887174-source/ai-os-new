@@ -60,7 +60,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                     >
                         <Network size={20} color="#8b5cf6" /> Agent-to-Agent Protocol
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--slate-400)' }}>
                         Inter-agent communication layer — messaging, capabilities, and discovery
                     </p>
                 </div>
@@ -88,7 +88,7 @@ const AgentProtocolPanelContent: React.FC = () => {
             {showForm && (
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--slate-800)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                         padding: 16,
@@ -105,8 +105,8 @@ const AgentProtocolPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -120,8 +120,8 @@ const AgentProtocolPanelContent: React.FC = () => {
                                 padding: '8px 10px',
                                 borderRadius: 6,
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                background: '#0f172a',
-                                color: '#e2e8f0',
+                                background: 'var(--slate-900)',
+                                color: 'var(--slate-200)',
                                 fontSize: 13,
                                 outline: 'none',
                             }}
@@ -139,7 +139,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                             border: 'none',
                             cursor: 'pointer',
                             background: 'rgba(139,92,246,0.2)',
-                            color: '#8b5cf6',
+                            color: 'var(--purple)',
                             fontSize: 13,
                             fontWeight: 600,
                             opacity: agentId.trim() && agentName.trim() ? 1 : 0.5,
@@ -157,7 +157,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Registered Agents ({agents.length})
@@ -196,7 +196,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                         <WifiOff size={14} color="#64748b" />
                                     )}
                                     <span
-                                        style={{ fontWeight: 600, fontSize: 13, color: '#e2e8f0' }}
+                                        style={{ fontWeight: 600, fontSize: 13, color: 'var(--slate-200)' }}
                                     >
                                         {a.agentName}
                                     </span>
@@ -204,7 +204,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                         style={{
                                             marginLeft: 'auto',
                                             fontSize: 10,
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'capitalize',
                                         }}
                                     >
@@ -214,7 +214,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                 <div
                                     style={{
                                         fontSize: 11,
-                                        color: '#475569',
+                                        color: 'var(--slate-600)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                     }}
@@ -236,7 +236,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                     margin: '0 0 6px',
                                     fontSize: 12,
                                     fontWeight: 600,
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                 }}
                             >
                                 Capabilities
@@ -252,7 +252,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                             padding: '6px 10px',
                                             borderRadius: 6,
                                             fontSize: 12,
-                                            background: '#0f172a',
+                                            background: 'var(--slate-900)',
                                             color: c.enabled ? '#e2e8f0' : '#475569',
                                         }}
                                     >
@@ -273,7 +273,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                             style={{
                                                 marginLeft: 'auto',
                                                 fontSize: 10,
-                                                color: '#64748b',
+                                                color: 'var(--slate-500)',
                                             }}
                                         >
                                             v{c.version}
@@ -291,7 +291,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                             margin: '0 0 8px',
                             fontSize: 13,
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                         }}
                     >
                         Message Log ({messages.length})
@@ -304,7 +304,7 @@ const AgentProtocolPanelContent: React.FC = () => {
                                     padding: '8px 10px',
                                     borderRadius: 6,
                                     fontSize: 11,
-                                    background: '#0f172a',
+                                    background: 'var(--slate-900)',
                                     border: '1px solid rgba(255,255,255,0.04)',
                                     borderLeft: `3px solid ${CAPABILITY_COLORS[msg.capability] || '#64748b'}`,
                                 }}
@@ -316,16 +316,16 @@ const AgentProtocolPanelContent: React.FC = () => {
                                         marginBottom: 2,
                                     }}
                                 >
-                                    <span style={{ color: '#94a3b8', fontWeight: 600 }}>
+                                    <span style={{ color: 'var(--slate-400)', fontWeight: 600 }}>
                                         {msg.sourceAgentId}
                                     </span>
-                                    <span style={{ color: '#64748b' }}>{msg.type}</span>
+                                    <span style={{ color: 'var(--slate-500)' }}>{msg.type}</span>
                                 </div>
-                                <div style={{ color: '#64748b' }}>
+                                <div style={{ color: 'var(--slate-500)' }}>
                                     {msg.targetAgentId && <span>→ {msg.targetAgentId} · </span>}
                                     {msg.capability}
                                 </div>
-                                <div style={{ marginTop: 2, color: '#475569' }}>
+                                <div style={{ marginTop: 2, color: 'var(--slate-600)' }}>
                                     {new Date(msg.timestamp).toLocaleTimeString()} · trace:{' '}
                                     {msg.traceId}
                                 </div>

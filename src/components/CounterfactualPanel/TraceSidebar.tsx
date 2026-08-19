@@ -16,7 +16,7 @@ const TraceSidebar: React.FC<Props> = ({ traces, selectedId, activePreset, onRun
                     ...CARD,
                     textAlign: 'center',
                     padding: 24,
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     fontSize: '0.8rem',
                 }}
             >
@@ -50,11 +50,11 @@ const TraceSidebar: React.FC<Props> = ({ traces, selectedId, activePreset, onRun
                                 fontSize: '0.75rem',
                             }}
                         >
-                            <div style={{ fontWeight: 600, color: '#e2e8f0' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--slate-200)' }}>
                                 {String(t.decision.selected) || '(none)'} ←{' '}
                                 {String(t.decision.strategy) || '?'}
                             </div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                                 {t.causalId}
                             </div>
                         </button>

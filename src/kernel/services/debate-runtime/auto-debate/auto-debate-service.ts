@@ -7,12 +7,12 @@ import type {
     TournamentResult,
     TournamentMatch,
 } from '../../../contracts/auto-debate';
+import type { IEventBus } from '../../../types/interfaces';
 import { rootLogger } from '../../logger-service';
 import { logMemoryStats } from '../../../utils/memory-tracker';
 import type { DebateRole } from '../../../contracts/debate-types';
 import { DEBATE_MODEL_PRIORITY } from '../debate-query-engine';
 
-import { eventBus } from '../../../events/event-bus';
 import { getAllSettings } from '../quality-settings-store';
 import { SeededRng } from '../../../utils/seedable-rng';
 
@@ -163,6 +163,7 @@ export interface AutoDebateServiceDeps {
     activeDebateStore: import('../../../contracts/debate-store').IDebateSessionStore;
     debateLiveStore: import('../../../contracts/debate-store').IDebateLiveStore;
     onSessionChange: import('../../../contracts/debate-store').SessionStoreSubscriber;
+    eventBus?: IEventBus;
 }
 
 const MAX_AUTO_DEBATE_RESULTS = 100;
@@ -558,14 +559,14 @@ export class AutoDebateService implements IAutoDebateService {
                 liveState.agentAddressing.size +
                 liveState.memoryBubbles.size +
                 liveState.currentThinking.size;
-            const ebStats = eventBus.getSubscriptionStats();
+            const ebStats = this.deps.eventBus?.getSubscriptionStats();
             logMemoryStats(`TournamentMatch${m + 1}`, undefined, undefined, {
                 embeddingChunks: 0,
                 policyRules: 0,
                 policyFirings: 0,
                 modeVersions: 0,
                 strategyVersions: 0,
-                eventBusListeners: ebStats.totalCallbacks,
+                eventBusListeners: ebStats?.totalCallbacks ?? 0,
                 completedSessions: 0,
                 liveStoreAgentEvents: liveState.agentEvents.length,
                 liveStoreRoundEvents: liveState.roundEvents.length,

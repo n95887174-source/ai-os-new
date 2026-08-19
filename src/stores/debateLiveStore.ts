@@ -1,5 +1,5 @@
-/**
- * Live debate streaming state — real-time debate session UI state
+﻿/**
+ * Live debate streaming state вЂ” real-time debate session UI state
  * (emotion tracking, live arguments, active round).
  * Separate from activeDebateStore (session metadata) and debate-session-store (DB persistence).
  */
@@ -151,8 +151,84 @@ function computeEmotion(
 }
 
 export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
+    // FA-06: the metrics (30s) and countdown (1s) intervals are NOT always-on.
+    // They start lazily when a live debate event arrives and stop once the store
+    // holds no live data (clearSession/clearAll), so the module singleton leaks
+    // no timers while idle (previously they ran forever for the whole app lifetime).
+    let metricsInterval: ReturnType<typeof setInterval> | null = null;
+    let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+    const hasLiveData = (): boolean =>
+        get().agentEvents.length > 0 ||
+        get().roundEvents.length > 0 ||
+        get().agentCountdowns.size > 0;
+
+    const stopIntervals = (): void => {
+        if (metricsInterval !== null) {
+            clearInterval(metricsInterval);
+            metricsInterval = null;
+        }
+        if (countdownInterval !== null) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    };
+
+    const startIntervals = (): void => {
+        if (metricsInterval !== null || countdownInterval !== null) return;
+        metricsInterval = setInterval(() => {
+            const s = get();
+            // skip when no data вЂ” no component is observing a live debate
+            if (s.agentEvents.length === 0 && s.roundEvents.length === 0) return;
+            const errorCount = s.agentEvents.filter((e) => e.status === 'error').length;
+            const timeoutCount = s.agentEvents.filter((e) => e.status === 'timeout').length;
+            const fallbackCount = s.agentEvents.filter((e) => e.status === 'fallback').length;
+            eventBus.emit(EVENTS.DEBATE_UPDATED, {
+                sessionId: '',
+                type: 'store_metrics',
+                agentEventCount: s.agentEvents.length,
+                errorCount,
+                timeoutCount,
+                fallbackCount,
+                roundCount: s.roundEvents.length,
+            });
+        }, METRICS_INTERVAL_MS);
+
+        countdownInterval = setInterval(() => {
+            const s = get();
+            if (
+                s.agentCountdowns.size === 0 &&
+                s.agentEvents.length === 0 &&
+                s.roundEvents.length === 0
+            ) {
+                return;
+            }
+            set((st) => {
+                const cd = new Map(st.agentCountdowns);
+                let changed = false;
+                for (const [k, v] of cd) {
+                    if (v.secondsLeft <= 0) {
+                        cd.delete(k);
+                        changed = true;
+                    } else {
+                        cd.set(k, { ...v, secondsLeft: v.secondsLeft - 1 });
+                        changed = true;
+                    }
+                }
+                return changed ? { agentCountdowns: cd } : {};
+            });
+        }, 1000);
+    };
+
+    // Subscribe wrapper that boots the lazy intervals on the first live event.
+    const on = <T>(event: string, cb: (d: T) => void): (() => void) =>
+        eventBus.onSafe<T>(event, (d) => {
+            startIntervals();
+            cb(d);
+        });
+
     const subs = [
-        eventBus.onSafe<{ sessionId: string; agentId: string; chunk: string }>(
+        on<{ sessionId: string; agentId: string; chunk: string }>(
             EVENTS.DEBATE_AGENT_CHUNK,
             (d) => {
                 const key = `${d.sessionId}:${d.agentId}`;
@@ -170,43 +246,40 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 });
             },
         ),
-        eventBus.onSafe<{ sessionId: string; agentId: string }>(
-            EVENTS.DEBATE_AGENT_THINKING,
-            (d) => {
-                const event: DebateAgentEvent = {
-                    sessionId: d.sessionId,
-                    agentId: d.agentId,
-                    status: 'thinking',
-                    timestamp: Date.now(),
-                };
-                set((s) => {
-                    const m = new Map(s.currentThinking);
-                    if (m.size >= 50) {
-                        const oldest = m.keys().next().value;
-                        if (oldest) m.delete(oldest);
-                    }
-                    const ek = `${d.sessionId}:${d.agentId}`;
-                    m.set(ek, d.agentId);
-                    const em = setEmotion(
-                        s.emotions,
-                        ek,
-                        computeEmotion(ek, 'thinking', s.agentEvents),
-                    );
-                    const cd = new Map(s.agentCountdowns);
-                    cd.set(ek, {
-                        secondsLeft: get().agentTimeoutSeconds,
-                        secondsTotal: get().agentTimeoutSeconds,
-                    });
-                    return {
-                        agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
-                        currentThinking: m,
-                        emotions: em,
-                        agentCountdowns: cd,
-                    };
+        on<{ sessionId: string; agentId: string }>(EVENTS.DEBATE_AGENT_THINKING, (d) => {
+            const event: DebateAgentEvent = {
+                sessionId: d.sessionId,
+                agentId: d.agentId,
+                status: 'thinking',
+                timestamp: Date.now(),
+            };
+            set((s) => {
+                const m = new Map(s.currentThinking);
+                if (m.size >= 50) {
+                    const oldest = m.keys().next().value;
+                    if (oldest) m.delete(oldest);
+                }
+                const ek = `${d.sessionId}:${d.agentId}`;
+                m.set(ek, d.agentId);
+                const em = setEmotion(
+                    s.emotions,
+                    ek,
+                    computeEmotion(ek, 'thinking', s.agentEvents),
+                );
+                const cd = new Map(s.agentCountdowns);
+                cd.set(ek, {
+                    secondsLeft: get().agentTimeoutSeconds,
+                    secondsTotal: get().agentTimeoutSeconds,
                 });
-            },
-        ),
-        eventBus.onSafe<{ sessionId: string; agentId: string; content: string }>(
+                return {
+                    agentEvents: [...s.agentEvents, event].slice(-MAX_AGENT_EVENTS),
+                    currentThinking: m,
+                    emotions: em,
+                    agentCountdowns: cd,
+                };
+            });
+        }),
+        on<{ sessionId: string; agentId: string; content: string }>(
             EVENTS.DEBATE_AGENT_RESPONDED,
             (d) => {
                 const event: DebateAgentEvent = {
@@ -214,7 +287,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     agentId: d.agentId,
                     status: 'responded',
                     timestamp: Date.now(),
-                    // Cap stored content — agentEvents[].content is not rendered anywhere
+                    // Cap stored content вЂ” agentEvents[].content is not rendered anywhere
                     // (DebateLivePanel only reads the array length), and full LLM responses
                     // retained in up to MAX_AGENT_EVENTS events would waste memory during
                     // long multi-round debates.
@@ -243,7 +316,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 });
             },
         ),
-        eventBus.onSafe<{ sessionId: string; agentId: string; error: string }>(
+        on<{ sessionId: string; agentId: string; error: string }>(
             EVENTS.DEBATE_AGENT_ERROR,
             (d) => {
                 const event: DebateAgentEvent = {
@@ -276,7 +349,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 });
             },
         ),
-        eventBus.onSafe<{ sessionId: string; agentId: string; timeoutMs: number }>(
+        on<{ sessionId: string; agentId: string; timeoutMs: number }>(
             EVENTS.DEBATE_AGENT_TIMEOUT,
             (d) => {
                 const event: DebateAgentEvent = {
@@ -309,7 +382,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 });
             },
         ),
-        eventBus.onSafe<{
+        on<{
             sessionId: string;
             agentId: string;
             fromProvider: string;
@@ -345,7 +418,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 };
             });
         }),
-        eventBus.onSafe<{ sessionId: string; round: number; nodes: string[] }>(
+        on<{ sessionId: string; round: number; nodes: string[] }>(
             EVENTS.DEBATE_ROUND_STARTED,
             (d) => {
                 set((s) => ({
@@ -361,7 +434,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 }));
             },
         ),
-        eventBus.onSafe<{ sessionId: string; round: number }>(EVENTS.DEBATE_ROUND_ENDED, (d) => {
+        on<{ sessionId: string; round: number }>(EVENTS.DEBATE_ROUND_ENDED, (d) => {
             set((s) => ({
                 roundEvents: [
                     ...s.roundEvents,
@@ -369,7 +442,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 ].slice(-MAX_ROUND_EVENTS),
             }));
         }),
-        eventBus.onSafe<{ sessionId: string; agentId: string; claim: string }>(
+        on<{ sessionId: string; agentId: string; claim: string }>(
             EVENTS.DEBATE_MEMORY_CLAIM,
             (d) => {
                 set((s) => {
@@ -387,7 +460,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 });
             },
         ),
-        eventBus.onSafe<{
+        on<{
             sessionId: string;
             confidence: number;
             agreements: number;
@@ -402,7 +475,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
             });
         }),
         // Quality impact live events
-        eventBus.onSafe<{
+        on<{
             sessionId: string;
             techniqueId: string;
             eventType: string;
@@ -423,7 +496,7 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 return { agentQualityActivations: aqa, recentQualityEvents: rqe };
             });
         }),
-        eventBus.onSafe<{
+        on<{
             sessionId: string;
             techniqueCount: number;
             techniqueDelta?: number;
@@ -443,49 +516,10 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         }),
     ];
 
-    // D-H-12: Transient UI state — no persist needed (zustand middleware not used; data is live-only)
-    const metricsInterval = setInterval(() => {
-        const s = get();
-        // audit1#9: skip when no data to prevent unnecessary work when no component is mounted
-        if (s.agentEvents.length === 0 && s.roundEvents.length === 0) return;
-        const errorCount = s.agentEvents.filter((e) => e.status === 'error').length;
-        const timeoutCount = s.agentEvents.filter((e) => e.status === 'timeout').length;
-        const fallbackCount = s.agentEvents.filter((e) => e.status === 'fallback').length;
-        eventBus.emit(EVENTS.DEBATE_UPDATED, {
-            sessionId: '',
-            type: 'store_metrics',
-            agentEventCount: s.agentEvents.length,
-            errorCount,
-            timeoutCount,
-            fallbackCount,
-            roundCount: s.roundEvents.length,
-        });
-    }, METRICS_INTERVAL_MS);
-
-    const countdownInterval = setInterval(() => {
-        const s = get();
-        if (
-            s.agentCountdowns.size === 0 &&
-            s.agentEvents.length === 0 &&
-            s.roundEvents.length === 0
-        ) {
-            return;
-        }
-        set((st) => {
-            const cd = new Map(st.agentCountdowns);
-            let changed = false;
-            for (const [k, v] of cd) {
-                if (v.secondsLeft <= 0) {
-                    cd.delete(k);
-                    changed = true;
-                } else {
-                    cd.set(k, { ...v, secondsLeft: v.secondsLeft - 1 });
-                    changed = true;
-                }
-            }
-            return changed ? { agentCountdowns: cd } : {};
-        });
-    }, 1000);
+    // D-H-12: Transient UI state — no persist needed (zustand middleware not used;
+    // data is live-only). The metrics/countdown intervals are created lazily by
+    // `startIntervals()` on the first live event and cleared by `stopIntervals()`
+    // (see clearSession/clearAll/destroy) — they are NOT always-on (FA-06).
 
     return {
         agentEvents: [],
@@ -541,6 +575,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                     agentQualityActivations: aqa,
                 };
             });
+            // FA-06: no other session has live data left → stop the lazy intervals.
+            if (!hasLiveData()) stopIntervals();
         },
         clearAll: () => {
             set({
@@ -556,6 +592,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
                 agentQualityActivations: new Map(),
                 recentQualityEvents: [],
             });
+            // FA-06: store is empty → stop the lazy intervals.
+            stopIntervals();
         },
         setAgentAddressing: (key, targetId) => {
             set((s) => {
@@ -578,8 +616,8 @@ export const useDebateLiveStore = create<DebateLiveState>((set, get) => {
         // B10-114: Cleanup all event subscriptions to prevent memory leaks
         destroy: () => {
             subs.forEach((u) => u());
-            clearInterval(metricsInterval);
-            clearInterval(countdownInterval);
+            // FA-06: also stop the lazy intervals (guards against HMR re-init leaks)
+            stopIntervals();
         },
     };
 });

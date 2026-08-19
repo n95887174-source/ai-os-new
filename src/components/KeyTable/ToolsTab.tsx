@@ -91,14 +91,14 @@ const ToolsTab: React.FC<ToolsTabProps> = ({ keyId }) => {
       <div style={{ background: 'rgba(239,68,68,0.05)', borderRadius: 12, padding: '1.25rem', border: '1px solid rgba(239,68,68,0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <AlertCircle size={14} color="#ef4444" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>DANGER ZONE</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--error)' }}>DANGER ZONE</span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Reset all metrics and history for this provider. This action is irreversible.</p>
         <button 
           onClick={handleReset}
           disabled={actionStates['reset'] === 'loading'}
           className="btn-secondary" 
-          style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', opacity: actionStates['reset'] === 'loading' ? 0.6 : 1 }}
+          style={{ color: 'var(--error)', borderColor: 'rgba(239,68,68,0.2)', opacity: actionStates['reset'] === 'loading' ? 0.6 : 1 }}
         >
           {actionStates['reset'] === 'loading' ? 'Resetting...' : 'Reset Statistics'}
         </button>

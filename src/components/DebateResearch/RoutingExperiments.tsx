@@ -175,11 +175,11 @@ const RoutingExperiments: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Route size={20} color="#f59e0b" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Routing Experiments
                     </span>
                     {history.length > 0 && (
-                        <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--slate-500)' }}>
                             {history.length} saved
                         </span>
                     )}
@@ -191,7 +191,7 @@ const RoutingExperiments: React.FC = () => {
                         borderRadius: 6,
                         border: '1px solid rgba(255,255,255,0.08)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontWeight: 600,
                         fontSize: '0.7rem',
@@ -233,7 +233,7 @@ const RoutingExperiments: React.FC = () => {
                             style={{
                                 fontSize: '0.65rem',
                                 fontWeight: 700,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.3rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
@@ -260,7 +260,7 @@ const RoutingExperiments: React.FC = () => {
                             style={{
                                 fontSize: '0.65rem',
                                 fontWeight: 700,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.3rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
@@ -287,7 +287,7 @@ const RoutingExperiments: React.FC = () => {
                             style={{
                                 fontSize: '0.65rem',
                                 fontWeight: 700,
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 marginBottom: '0.3rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.04em',
@@ -317,7 +317,7 @@ const RoutingExperiments: React.FC = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Runs/cell:</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>Runs/cell:</span>
                         <input
                             type="number"
                             min={1}
@@ -332,13 +332,13 @@ const RoutingExperiments: React.FC = () => {
                                 borderRadius: 5,
                                 background: 'rgba(0,0,0,0.3)',
                                 border: '1px solid rgba(255,255,255,0.06)',
-                                color: '#e2e8f0',
+                                color: 'var(--slate-200)',
                                 fontSize: '0.75rem',
                                 textAlign: 'center',
                             }}
                         />
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                         {totalRuns} runs, ~${estimatedCost.toFixed(2)} est.
                     </span>
                     <label
@@ -367,8 +367,8 @@ const RoutingExperiments: React.FC = () => {
                             padding: '0.5rem 1.1rem',
                             borderRadius: 7,
                             border: 'none',
-                            background: '#f59e0b',
-                            color: '#1e293b',
+                            background: 'var(--warning)',
+                            color: 'var(--slate-800)',
                             cursor: 'pointer',
                             fontWeight: 700,
                             fontSize: '0.8rem',
@@ -411,7 +411,7 @@ const RoutingExperiments: React.FC = () => {
                             borderRadius: 7,
                             border: '1px solid rgba(255,255,255,0.08)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.75rem',

@@ -65,7 +65,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ session, onClose }) => (
                                 style={{
                                     fontSize: '1.5rem',
                                     fontWeight: 800,
-                                    color: '#f8fafc',
+                                    color: 'var(--slate-50)',
                                     margin: 0,
                                 }}
                             >
@@ -76,7 +76,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ session, onClose }) => (
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#94a3b8',
+                                    color: 'var(--slate-400)',
                                     cursor: 'pointer',
                                     fontSize: '1.5rem',
                                 }}
@@ -98,7 +98,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ session, onClose }) => (
                                     <div
                                         style={{
                                             fontWeight: 700,
-                                            color: '#3b82f6',
+                                            color: 'var(--accent)',
                                             marginBottom: '0.75rem',
                                             fontSize: '0.9rem',
                                         }}
@@ -107,7 +107,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ session, onClose }) => (
                                     </div>
                                     <div
                                         style={{
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             marginBottom: '1rem',
                                             fontSize: '1rem',
                                         }}
@@ -127,14 +127,14 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ session, onClose }) => (
                                             <div
                                                 style={{
                                                     fontWeight: 700,
-                                                    color: '#10b981',
+                                                    color: 'var(--success)',
                                                     marginBottom: '0.5rem',
                                                     fontSize: '0.85rem',
                                                 }}
                                             >
                                                 Response ({res.provider}):
                                             </div>
-                                            <div style={{ color: '#e2e8f0', fontSize: '1rem' }}>
+                                            <div style={{ color: 'var(--slate-200)', fontSize: '1rem' }}>
                                                 {res.content}
                                             </div>
                                         </div>

@@ -44,7 +44,7 @@ const MicroscopeTimeline: React.FC<Props> = ({
             <div
                 style={{
                     fontSize: '0.7rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     textTransform: 'uppercase',
                     marginBottom: '0.5rem',
                 }}
@@ -56,7 +56,7 @@ const MicroscopeTimeline: React.FC<Props> = ({
                     fontSize: '1rem',
                     fontWeight: 800,
                     fontFamily: 'monospace',
-                    color: '#f8fafc',
+                    color: 'var(--slate-50)',
                 }}
             >
                 {trace.traceId}
@@ -95,7 +95,7 @@ const MicroscopeTimeline: React.FC<Props> = ({
                                     top: 0,
                                     bottom: 0,
                                     width: 3,
-                                    background: '#3b82f6',
+                                    background: 'var(--accent)',
                                 }}
                             />
                         )}
@@ -161,8 +161,8 @@ const MicroscopeTimeline: React.FC<Props> = ({
             <div
                 style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}
             >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Semantic Confidence</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>Semantic Confidence</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--success)' }}>
                     {Math.round(trace.semanticConfidence * 100)}%
                 </span>
             </div>
@@ -171,7 +171,7 @@ const MicroscopeTimeline: React.FC<Props> = ({
                     style={{
                         height: '100%',
                         width: `${trace.semanticConfidence * 100}%`,
-                        background: '#10b981',
+                        background: 'var(--success)',
                         borderRadius: 2,
                         transition: 'width 0.5s ease-out',
                     }}

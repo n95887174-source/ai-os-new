@@ -32,7 +32,7 @@ export const FormatPanel: React.FC<FormatPanelProps> = ({
                 style={{
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    color: '#f1f5f9',
+                    color: 'var(--slate-100)',
                     margin: '0 0 0.75rem',
                 }}
             >
@@ -73,7 +73,7 @@ export const FormatPanel: React.FC<FormatPanelProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         cursor: 'pointer',
                     }}
                 >
@@ -89,7 +89,7 @@ export const FormatPanel: React.FC<FormatPanelProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        color: '#cbd5e1',
+                        color: 'var(--slate-300)',
                         cursor: 'pointer',
                     }}
                 >

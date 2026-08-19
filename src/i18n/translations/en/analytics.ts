@@ -352,6 +352,8 @@ const analytics: Record<string, string> = {
     'forum.consensus_contested': 'Contested',
     'forum.moderation': 'Moderation',
     'forum.moderate_warn': 'warn',
+    'forum.moderate.hide': 'Hide post',
+    'forum.moderate.remove': 'Remove post',
     'forum.heatmap_title': 'Activity by category',
     'forum.no_activity': 'No activity yet',
 
@@ -395,6 +397,7 @@ const analytics: Record<string, string> = {
     'room.clear': 'Clear',
     'room.clearView': 'Clear view',
     'room.clearHistory': 'Clear history',
+    'room.error.generic': 'Invocation failed. Check the console for details.',
     'experimental.title': 'Experimental',
     'experimental.subtitle':
         'Planned debate sub-capabilities, collapsed from individual stubs into one hub.',
@@ -483,6 +486,14 @@ const analytics: Record<string, string> = {
     'director.run.overrideParticipant': 'Participant',
     'director.run.overrideObjective': 'Instruction',
     'director.run.overrideSubmit': 'Inject',
+    'director.run.overrideType': 'Objective type',
+    'director.run.overrideType.INTRODUCE': 'Introduce',
+    'director.run.overrideType.CRITIQUE': 'Critique',
+    'director.run.overrideType.RESPOND': 'Respond',
+    'director.run.overrideType.ANALYZE': 'Analyze',
+    'director.run.overrideType.SUMMARIZE': 'Summarize',
+    'director.run.overrideType.CHALLENGE': 'Challenge',
+    'director.run.overrideType.CUSTOM': 'Custom',
     'director.run.log': 'Turn log',
     'director.run.logEmpty': 'No turns executed yet.',
     'director.run.turnStatus.running': 'running',
@@ -505,6 +516,65 @@ const analytics: Record<string, string> = {
     'director.objective.summarize': 'Summarize',
     'director.objective.challenge': 'Challenge',
     'director.objective.custom': 'Custom',
+
+    // forum (FX-01)
+    'forum.you': 'You',
+    'forum.moderation_reason': 'Moderation',
+
+    // synthesis roles (FX-01)
+    'synthesis.role.arch': 'Architect',
+    'synthesis.role.llm': 'LLM Engineer',
+    'synthesis.role.economist': 'Economist',
+    'synthesis.role.security': 'Security Analyst',
+    'synthesis.role.governance': 'Governance Specialist',
+    'synthesis.role.philosopher': 'Philosopher',
+    'synthesis.role.engineer': 'Engineer',
+    'synthesis.role.product': 'Product Manager',
+    'synthesis.custom_role_placeholder': 'custom role id…',
+
+    // junction (FX-01)
+    'junction.filter.all': 'All',
+    'junction.filter.pending': 'Pending',
+    'junction.filter.validated': 'Validated',
+    'junction.filter.rejected': 'Rejected',
+    'junction.empty': 'No junctions — run detection first',
+    'junction.counterargument_placeholder': 'Counterargument / check…',
+    'junction.verify': 'Verify',
+    'junction.bridge': 'Bridge',
+    'junction.bridge_hint': 'Select a junction to view its cross-domain bridge.',
+
+    // guardians mottos (FX-01)
+    'guardians.motto_speed': 'Instantly — that is the only speed',
+    'guardians.motto_security': 'Trust, but verify',
+    'guardians.motto_power': 'No task that cannot be solved',
+    'guardians.motto_routing': 'All roads lead to an answer',
+    'guardians.motto_cost': 'Wisdom comes at a price',
+    'guardians.motto_local': 'The best server is your own',
+    'guardians.motto_creativity': 'Inspiration is an exact science',
+    'guardians.no_providers': 'No bound providers — watches all',
+
+    // scheduler (FX-01)
+    'scheduler.active': 'Active',
+    'scheduler.disabled': 'Disabled',
+    'scheduler.how_it_works': 'How it works',
+    'scheduler.card.create_title': 'Create schedule',
+    'scheduler.card.create_desc':
+        'A task is created with name, agentId, frequency (daily/weekly/hourly/custom) and cronExpression.',
+    'scheduler.card.engine_title': 'Cron engine',
+    'scheduler.card.engine_desc':
+        'Every minute due schedules are checked. On a match the task is launched via trigger().',
+    'scheduler.card.manage_title': 'Management',
+    'scheduler.card.manage_desc':
+        'Schedules can be enabled/disabled, edited, deleted. Run history is tracked.',
+    'scheduler.demo_title': 'Demo: schedules',
+    'scheduler.active_count': 'active',
+    'scheduler.disabled_badge': 'DISABLED',
+    'scheduler.type_label': 'Type',
+    'scheduler.agent_label': 'Agent',
+    'scheduler.next_run_label': 'Next run',
+    'scheduler.system': 'system',
+    'scheduler.footer':
+        'Scheduler — core service. Uses Dexie for schedule persistence. The cron parser supports standard 5-field expressions.',
 };
 
 export { analytics };

@@ -49,20 +49,20 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(139,92,246,0.1)',
+                                background: 'var(--purple-tint)',
                                 border: '1px solid rgba(139,92,246,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Entities
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--purple-muted)' }}>
                                 {data.entities.length}
                             </div>
                         </div>
@@ -71,14 +71,14 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(59,130,246,0.1)',
+                                background: 'var(--accent-tint)',
                                 border: '1px solid rgba(59,130,246,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -93,14 +93,14 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(16,185,129,0.1)',
+                                background: 'var(--success-tint)',
                                 border: '1px solid rgba(16,185,129,0.2)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -115,7 +115,7 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                         style={{
                             fontSize: '0.85rem',
                             fontWeight: 600,
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             marginTop: 8,
                         }}
                     >
@@ -129,13 +129,13 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                     padding: '4px 10px',
                                     borderRadius: 6,
                                     fontSize: '0.72rem',
-                                    background: 'rgba(139,92,246,0.1)',
+                                    background: 'var(--purple-tint)',
                                     color: '#c4b5fd',
                                     border: '1px solid rgba(139,92,246,0.2)',
                                 }}
                             >
                                 {e.name}
-                                <span style={{ color: '#64748b', marginLeft: 4 }}>
+                                <span style={{ color: 'var(--slate-500)', marginLeft: 4 }}>
                                     ({e.mentions})
                                 </span>
                             </span>
@@ -147,7 +147,7 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                 style={{
                                     fontSize: '0.85rem',
                                     fontWeight: 600,
-                                    color: '#cbd5e1',
+                                    color: 'var(--slate-300)',
                                     marginTop: 8,
                                 }}
                             >
@@ -175,7 +175,7 @@ export const KnowledgeGraphTab: React.FC<Props> = ({ engine, session }) => {
                                     <div
                                         style={{
                                             fontSize: '0.65rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             marginTop: 2,
                                         }}
                                     >

@@ -1,23 +1,10 @@
 import React from 'react';
 import { ChevronRight, Play, Loader2 } from 'lucide-react';
 import type { SystematicReview } from '../../kernel/contracts/research-engine';
+import { StatusBadge as CommonStatusBadge } from '../Common/status-vocabulary';
 
 export const StatusBadge: React.FC<{ label: string; color: string }> = ({ label, color }) => (
-    <span
-        style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '2px 8px',
-            borderRadius: 6,
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            background: `${color}20`,
-            color,
-        }}
-    >
-        {label}
-    </span>
+    <CommonStatusBadge status={label} color={color} label={label} />
 );
 
 export const EmptyState: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({
@@ -25,7 +12,7 @@ export const EmptyState: React.FC<{ icon: React.ReactNode; title: string; desc: 
     title,
     desc,
 }) => (
-    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--slate-500)' }}>
         <div style={{ opacity: 0.3, marginBottom: 8 }}>{icon}</div>
         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{title}</div>
         <div style={{ fontSize: '0.75rem', marginTop: 4 }}>{desc}</div>
@@ -44,7 +31,7 @@ export const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }
             marginBottom: 12,
         }}
     >
-        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0' }}>{title}</div>
+        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--slate-200)' }}>{title}</div>
         {action}
     </div>
 );
@@ -80,11 +67,11 @@ export const ActionButton: React.FC<{
 
 export const PrismaFlowVisual: React.FC<{ flow: SystematicReview['prismaFlow'] }> = ({ flow }) => {
     const steps = [
-        { label: 'Identified', count: flow.identification, color: '#3b82f6' },
+        { label: 'Identified', count: flow.identification, color: 'var(--accent)' },
         { label: 'After Dedup', count: flow.afterDedup, color: '#6366f1' },
-        { label: 'Screened', count: flow.screened, color: '#8b5cf6' },
+        { label: 'Screened', count: flow.screened, color: 'var(--purple)' },
         { label: 'Full Text', count: flow.fullTextAssessed, color: '#a855f7' },
-        { label: 'Included', count: flow.included, color: '#22c55e' },
+        { label: 'Included', count: flow.included, color: 'var(--success)' },
     ];
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -104,7 +91,7 @@ export const PrismaFlowVisual: React.FC<{ flow: SystematicReview['prismaFlow'] }
                         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: s.color }}>
                             {s.count}
                         </div>
-                        <div style={{ fontSize: '0.6rem', color: '#64748b', marginTop: 2 }}>
+                        <div style={{ fontSize: '0.6rem', color: 'var(--slate-500)', marginTop: 2 }}>
                             {s.label}
                         </div>
                     </div>

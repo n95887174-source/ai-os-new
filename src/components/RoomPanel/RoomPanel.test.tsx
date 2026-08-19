@@ -40,13 +40,16 @@ const mockStoreState = {
     feed: [],
     log: [],
     loadHistory: vi.fn(),
+    loadCosts: vi.fn(),
     clear: vi.fn(),
 };
 
 vi.mock('../../stores/invocationStore', () => ({
-    useInvocationStore: Object.assign(() => mockStoreState, {
-        getState: () => mockStoreState,
-    }),
+    useInvocationStore: Object.assign(
+        (selector?: (s: typeof mockStoreState) => unknown) =>
+            selector ? selector(mockStoreState) : mockStoreState,
+        { getState: () => mockStoreState },
+    ),
 }));
 
 vi.mock('../../i18n/useTranslation', () => ({

@@ -17,6 +17,10 @@ import { registerServices } from './service-registration/index';
 import { GroupManagerService } from './services/group-manager';
 import type { ApiKey } from './types/metrics-types';
 import { MemoryWatchdog } from './utils/memory-watchdog';
+import { setConfigEventBus } from './services/config-mutations';
+import { setBucketStorageEventBus } from './services/storage-adapter';
+import { setDexieStorageEventBus } from './services/storage/dexie-storage';
+import { setMessageIndexEventBus } from './services/message-index-service';
 // eslint-disable-next-line no-restricted-imports
 import { LLMHttpClient } from '../llm/http/llm-http-client';
 import { clearBootstrapSnapshot } from './bootstrap-state';
@@ -69,12 +73,22 @@ export class SystemBootstrap implements IBootstrap {
 
         this.phase = 'kernel';
 
-        this.memoryWatchdog = new MemoryWatchdog({
-            intervalMs: 5000,
-            thresholdMB: 100,
-            absoluteThresholdMB: 1500,
-        });
+        this.memoryWatchdog = new MemoryWatchdog(
+            {
+                intervalMs: 5000,
+                thresholdMB: 100,
+                absoluteThresholdMB: 1500,
+            },
+            this.eventBus,
+        );
         this.memoryWatchdog.start();
+
+        // B-04: inject the event bus into module-singleton kernel services so
+        // they no longer reach for the global `eventBus` singleton.
+        setConfigEventBus(this.eventBus);
+        setBucketStorageEventBus(this.eventBus);
+        setDexieStorageEventBus(this.eventBus);
+        setMessageIndexEventBus(this.eventBus);
 
         try {
             this.registerMigratedServices();

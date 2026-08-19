@@ -3,8 +3,20 @@ import type { DebateSession } from './debate-types';
 export interface IDebateSessionStore {
     readonly session: DebateSession | null;
     readonly governorState: unknown;
+    /** Upsert a session and make it the active (viewed) one. */
     setSession(session: DebateSession | null): void;
+    /** Upsert a value without stealing focus from another running debate. */
+    upsertSession(session: DebateSession | null, makeActive?: boolean): void;
+    /** Set governor state for the active (viewed) session. */
     setGovernorState(state: unknown): void;
+    /** Set governor state for a specific session id (per-session projection). */
+    setGovernorStateFor(sessionId: string, state: unknown): void;
+    /** Switch the viewed session. */
+    setActiveSessionId(id: string): void;
+    /** Read a specific session by id. */
+    getSession(id: string): DebateSession | null;
+    /** Drop a single session from the projection. */
+    clearSession(id: string): void;
     clearAll(): void;
 }
 

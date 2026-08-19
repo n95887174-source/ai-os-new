@@ -55,7 +55,7 @@ export const TemperatureSlider: React.FC<TemperatureSliderProps> = ({ value, onC
                 display: 'flex',
                 justifyContent: 'space-between',
                 fontSize: 11,
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 marginTop: 2,
             }}
         >
@@ -141,7 +141,7 @@ export const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                 className="debate-badge"
                 style={{
                     color: '#a855f7',
-                    background: 'rgba(168,85,247,0.1)',
+                    background: 'var(--purple-tint)',
                     border: '1px solid rgba(168,85,247,0.2)',
                 }}
             >
@@ -170,7 +170,7 @@ export const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                 style={{
                     fontSize: '0.75rem',
                     padding: '0.25rem 0.75rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 6,
                     cursor: 'pointer',
@@ -267,8 +267,8 @@ export const ConstraintsSection: React.FC<ConstraintsSectionProps> = ({
                     className="debate-badge"
                     style={{
                         marginLeft: 8,
-                        color: '#f59e0b',
-                        background: 'rgba(245,158,11,0.1)',
+                        color: 'var(--warning)',
+                        background: 'var(--warning-tint)',
                         border: '1px solid rgba(245,158,11,0.2)',
                         fontSize: '0.65rem',
                     }}
@@ -296,7 +296,7 @@ export const ConstraintsSection: React.FC<ConstraintsSectionProps> = ({
                                 fontSize: '0.78rem',
                             }}
                         >
-                            <span style={{ color: '#e2e8f0', minWidth: 140, fontWeight: 600 }}>
+                            <span style={{ color: 'var(--slate-200)', minWidth: 140, fontWeight: 600 }}>
                                 {node?.label || id}
                             </span>
                             <select
@@ -307,7 +307,7 @@ export const ConstraintsSection: React.FC<ConstraintsSectionProps> = ({
                                     borderRadius: 4,
                                     border: '1px solid rgba(245,158,11,0.3)',
                                     background: 'rgba(15,15,30,0.6)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.7rem',
                                     outline: 'none',
                                     flex: 1,

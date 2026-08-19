@@ -28,7 +28,7 @@ const ExperimentHistoryPanel: React.FC<Props> = ({
             style={{
                 fontSize: '0.7rem',
                 fontWeight: 700,
-                color: '#64748b',
+                color: 'var(--slate-500)',
                 marginBottom: '0.4rem',
             }}
         >
@@ -55,12 +55,12 @@ const ExperimentHistoryPanel: React.FC<Props> = ({
                 tabIndex={0}
             >
                 <BarChart3 size={12} color="#f59e0b" />
-                <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--slate-400)' }}>
                     {new Date(h.timestamp).toLocaleString()}
                 </span>
-                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>{h.totalRuns} runs</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>{h.totalRuns} runs</span>
                 {h.realMode && <Cpu size={10} color="#a855f7" />}
-                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>
                     ${h.estimatedCost.toFixed(2)}
                 </span>
                 <button
@@ -72,7 +72,7 @@ const ExperimentHistoryPanel: React.FC<Props> = ({
                         marginLeft: 'auto',
                         background: 'none',
                         border: 'none',
-                        color: '#ef4444',
+                        color: 'var(--error)',
                         cursor: 'pointer',
                         padding: 2,
                     }}

@@ -80,7 +80,7 @@ const GovStressTest: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Shield size={20} color="#10b981" />
-                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         Governance Stress Test
                     </span>
                 </div>
@@ -141,7 +141,7 @@ const GovStressTest: React.FC = () => {
                                 : '1px solid transparent',
                         background:
                             categoryFilter === 'all' ? 'rgba(255,255,255,0.04)' : 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         fontSize: '0.68rem',
                         fontWeight: 600,
@@ -152,7 +152,7 @@ const GovStressTest: React.FC = () => {
                 >
                     <Filter size={10} /> All{' '}
                     {results.length > 0 && (
-                        <span style={{ color: '#64748b', fontSize: '0.6rem' }}>
+                        <span style={{ color: 'var(--slate-500)', fontSize: '0.6rem' }}>
                             ({results.length})
                         </span>
                     )}
@@ -171,7 +171,7 @@ const GovStressTest: React.FC = () => {
                                         ? `1px solid ${color}40`
                                         : '1px solid transparent',
                                 background: categoryFilter === cat ? `${color}12` : 'transparent',
-                                color: categoryFilter === cat ? color : '#64748b',
+                                color: categoryFilter === cat ? color : 'var(--slate-500)',
                                 cursor: 'pointer',
                                 fontSize: '0.68rem',
                                 fontWeight: 600,
@@ -205,7 +205,7 @@ const GovStressTest: React.FC = () => {
                         padding: '0.45rem 1rem',
                         borderRadius: 7,
                         border: 'none',
-                        background: '#10b981',
+                        background: 'var(--success)',
                         color: '#fff',
                         cursor: 'pointer',
                         fontWeight: 700,
@@ -226,7 +226,7 @@ const GovStressTest: React.FC = () => {
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.08)',
                             background: 'transparent',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                             display: 'flex',
@@ -259,7 +259,7 @@ const GovStressTest: React.FC = () => {
                             background: 'none',
                             border: 'none',
                             outline: 'none',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.72rem',
                         }}
                     />
@@ -269,7 +269,7 @@ const GovStressTest: React.FC = () => {
                             style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 cursor: 'pointer',
                                 padding: 0,
                             }}
@@ -286,7 +286,7 @@ const GovStressTest: React.FC = () => {
                         style={{
                             textAlign: 'center',
                             padding: '3rem',
-                            color: '#475569',
+                            color: 'var(--slate-600)',
                             fontSize: '0.85rem',
                         }}
                     >

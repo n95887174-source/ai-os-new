@@ -163,7 +163,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                         borderRadius: 8,
                         border: '1px solid rgba(16,185,129,0.3)',
                         background: showPersonae ? 'rgba(16,185,129,0.12)' : 'rgba(30,30,50,0.4)',
-                        color: '#10b981',
+                        color: 'var(--success)',
                         fontWeight: 600,
                         fontSize: '0.82rem',
                         cursor: 'pointer',
@@ -192,7 +192,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                             style={{
                                 fontSize: '0.72rem',
                                 fontWeight: 700,
-                                color: '#10b981',
+                                color: 'var(--success)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                                 marginBottom: 8,
@@ -236,7 +236,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                             style={{
                                 fontSize: '0.72rem',
                                 fontWeight: 700,
-                                color: '#f59e0b',
+                                color: 'var(--warning)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                                 marginBottom: 8,
@@ -286,7 +286,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                         className="debate-badge"
                         style={{
                             color: '#a855f7',
-                            background: 'rgba(168,85,247,0.1)',
+                            background: 'var(--purple-tint)',
                             border: '1px solid rgba(168,85,247,0.2)',
                         }}
                     >
@@ -315,7 +315,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                         style={{
                             fontSize: '0.75rem',
                             padding: '0.25rem 0.75rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 6,
                             cursor: 'pointer',
@@ -435,8 +435,8 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                             className="debate-badge"
                             style={{
                                 marginLeft: 8,
-                                color: '#f59e0b',
-                                background: 'rgba(245,158,11,0.1)',
+                                color: 'var(--warning)',
+                                background: 'var(--warning-tint)',
                                 border: '1px solid rgba(245,158,11,0.2)',
                                 fontSize: '0.65rem',
                             }}
@@ -465,7 +465,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                                     }}
                                 >
                                     <span
-                                        style={{ color: '#e2e8f0', minWidth: 140, fontWeight: 600 }}
+                                        style={{ color: 'var(--slate-200)', minWidth: 140, fontWeight: 600 }}
                                     >
                                         {node?.label || id}
                                     </span>
@@ -477,7 +477,7 @@ const AgеntsStep: React.FC<AgentsStepProps> = ({
                                             borderRadius: 4,
                                             border: '1px solid rgba(245,158,11,0.3)',
                                             background: 'rgba(15,15,30,0.6)',
-                                            color: '#e2e8f0',
+                                            color: 'var(--slate-200)',
                                             fontSize: '0.7rem',
                                             outline: 'none',
                                             flex: 1,

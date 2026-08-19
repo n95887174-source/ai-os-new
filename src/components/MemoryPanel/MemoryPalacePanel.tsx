@@ -48,7 +48,7 @@ const MemoryPalacePanel: React.FC = () => {
     if (loading) {
         return (
             <div style={{ padding: 24, maxWidth: 900 }}>
-                <div style={{ color: '#64748b', fontSize: '0.9rem' }}>{t('common.loading')}</div>
+                <div style={{ color: 'var(--slate-500)', fontSize: '0.9rem' }}>{t('common.loading')}</div>
             </div>
         );
     }
@@ -56,7 +56,7 @@ const MemoryPalacePanel: React.FC = () => {
     if (error) {
         return (
             <div style={{ padding: 24, maxWidth: 900 }}>
-                <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>{error}</div>
+                <div style={{ color: 'var(--error)', fontSize: '0.9rem' }}>{error}</div>
             </div>
         );
     }
@@ -64,37 +64,37 @@ const MemoryPalacePanel: React.FC = () => {
     return (
         <div style={{ padding: 24, maxWidth: 900 }}>
             <h2
-                style={{ margin: '0 0 4px', fontSize: '1.4rem', fontWeight: 700, color: '#e2e8f0' }}
+                style={{ margin: '0 0 4px', fontSize: '1.4rem', fontWeight: 700, color: 'var(--slate-200)' }}
             >
                 {t('memory_palace.title')}
             </h2>
-            <p style={{ margin: '0 0 20px', fontSize: '0.85rem', color: '#64748b' }}>
+            <p style={{ margin: '0 0 20px', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                 {t('memory_palace.subtitle')}
             </p>
 
             {state && (
                 <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
                     <div style={{ ...card, flex: 1, borderLeft: '3px solid #3b82f6' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                             {t('memory_palace.total_entries')}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {state.totalEntries.toLocaleString()}
                         </div>
                     </div>
                     <div style={{ ...card, flex: 1, borderLeft: '3px solid #10b981' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                             {t('memory_palace.memory_usage')}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {(state.totalMemoryUsage / 1024).toFixed(1)} KB
                         </div>
                     </div>
                     <div style={{ ...card, flex: 1, borderLeft: '3px solid #a855f7' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                             {t('memory_palace.rooms')}
                         </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#e2e8f0' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--slate-200)' }}>
                             {state.rooms.length}/7
                         </div>
                     </div>
@@ -112,11 +112,11 @@ const MemoryPalacePanel: React.FC = () => {
                     <div key={room.id} style={{ ...card, borderTop: `3px solid ${room.color}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: '1.2rem' }}>{room.icon}</span>
-                            <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.95rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--slate-200)', fontSize: '0.95rem' }}>
                                 {room.name}
                             </div>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', lineHeight: 1.4 }}>
                             {room.description}
                         </div>
                         <div style={{ fontSize: '0.85rem', color: room.color, fontWeight: 600 }}>

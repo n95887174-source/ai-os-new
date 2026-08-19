@@ -72,10 +72,11 @@ class InvocationExecutionDelegate implements IExecutionDelegate {
         context: InvocationContext,
         mode: ExecutionMode,
         invocationId?: string,
-    ): Promise<ExecutionTarget> {
+    ): Promise<{ target: ExecutionTarget; completed: Promise<void> }> {
         const participants = agents.map((a) => ({ id: a.id, role: a.role ?? a.id }));
 
         if (mode === 'debate') {
+            const owner = `invocation:${invocationId ?? agents.map((a) => a.id).join(',')}`;
             const session = await this.debate.startDebate(
                 context.ref || 'Invocation-triggered debate',
                 agents.map<DebateParticipant>((a) => ({
@@ -85,8 +86,14 @@ class InvocationExecutionDelegate implements IExecutionDelegate {
                 })),
                 'round_robin',
                 5,
+                undefined,
+                undefined,
+                owner,
             );
-            return { kind: 'debate', ref: session.id };
+            // B-16: await the real end of the debate run (not just startDebate's
+            // return) so the Invocation lifecycle `executing -> done` is genuine.
+            const completed = this.debate.getRunCompletion(session.id) ?? Promise.resolve();
+            return { target: { kind: 'debate', ref: session.id }, completed };
         }
 
         // chat / director-scenario → ConversationDirector scenario (ConversationCore).
@@ -107,8 +114,10 @@ class InvocationExecutionDelegate implements IExecutionDelegate {
             turns,
         });
         await this.director.loadScenario(scenario.id, invocationId);
-        await this.director.run();
-        return { kind: 'conversation', ref: scenario.id };
+        // Fire the run without awaiting here; the engine awaits `completed`
+        // (the same promise) so executing is genuinely in-flight (B-17).
+        const completed = this.director.run();
+        return { target: { kind: 'conversation', ref: scenario.id }, completed };
     }
 }
 

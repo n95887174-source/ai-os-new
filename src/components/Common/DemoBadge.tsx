@@ -31,7 +31,7 @@ export const DemoBadge: React.FC<DemoBadgeProps> = ({ title, body }) => {
                     'linear-gradient(90deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.03) 100%)',
                 marginBottom: '1rem',
                 fontSize: '0.8rem',
-                color: '#fbbf24',
+                color: 'var(--warning)',
                 lineHeight: 1.45,
             }}
         >
@@ -42,7 +42,7 @@ export const DemoBadge: React.FC<DemoBadgeProps> = ({ title, body }) => {
                 style={{ flexShrink: 0, marginTop: 2 }}
             />
             <div>
-                <span style={{ fontWeight: 800, color: '#fbbf24' }}>
+                <span style={{ fontWeight: 800, color: 'var(--warning)' }}>
                     {title ?? 'Demo mode — simulated backend'}:
                 </span>{' '}
                 {body ??

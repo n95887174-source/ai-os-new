@@ -84,7 +84,7 @@ const DebateReplayTimeline: React.FC<Props> = ({ visibleEvents, currentIndex, ev
                                 style={{
                                     fontSize: '0.65rem',
                                     fontWeight: 600,
-                                    color: '#ef4444',
+                                    color: 'var(--error)',
                                     marginBottom: '0.2rem',
                                 }}
                             >

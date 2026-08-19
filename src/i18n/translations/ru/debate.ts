@@ -134,6 +134,14 @@ const debate: Record<string, string> = {
     'debate.debates': 'дебаты',
     'debate.template.adr': 'ADR',
     'debate.template.adr_desc': 'описание ADR',
+    'debate.template.code-review': 'Дебаты по ревью кода',
+    'debate.template.code-review_desc':
+        'Компромиссы между корректностью, производительностью и поддерживаемостью',
+    'debate.template.post-mortem': 'Постмортем',
+    'debate.template.post-mortem_desc': 'Анализ инцидента без обвинений',
+    'debate.template.prompt-optimization': 'Оптимизация промпта',
+    'debate.template.prompt-optimization_desc':
+        'Сравнение вариантов промпта по ясности и безопасности',
     'debate.verdict.title': 'Вердикт',
     'debate.verdict.for': 'За',
     'debate.verdict.against': 'Против',
@@ -212,6 +220,8 @@ const debate: Record<string, string> = {
     'debate_runtime.create_session': 'Создать сессию',
     'debate_runtime.creating': 'Создание…',
     'debate_runtime.creating_desc': 'Идёт создание…',
+    'debate_runtime.cancelling': 'Отмена…',
+    'debate_runtime.cancelling_desc': 'Идёт отмена дебатов…',
     'debate_runtime.debate_quality': 'Качество дебатов',
     'debate_runtime.error_agents_required': 'Укажите хотя бы одного агента',
     'debate_runtime.error_topic_required': 'Укажите тему',

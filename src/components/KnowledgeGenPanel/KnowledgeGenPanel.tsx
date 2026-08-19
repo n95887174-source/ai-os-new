@@ -60,10 +60,10 @@ const KnowledgeGenPanel: React.FC = () => {
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Lightbulb size={18} color="#22c55e" />
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--slate-50)' }}>
                         {t('generator.title')}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                         {jobs.length} {t('generator.jobs_active')}
                     </span>
                 </div>
@@ -75,7 +75,7 @@ const KnowledgeGenPanel: React.FC = () => {
                         borderRadius: 7,
                         border: '1px solid rgba(255,255,255,0.1)',
                         background: 'transparent',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -109,7 +109,7 @@ const KnowledgeGenPanel: React.FC = () => {
                 <TriggerConfig onTrigger={(tg) => void handleTrigger(tg)} running={running} />
 
                 {message && (
-                    <div style={{ fontSize: '0.72rem', color: '#22c55e', marginBottom: 8 }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--success)', marginBottom: 8 }}>
                         {message}
                     </div>
                 )}

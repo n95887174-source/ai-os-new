@@ -55,7 +55,7 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
@@ -70,21 +70,21 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(139,92,246,0.1)',
+                                background: 'var(--purple-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Score
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--purple-muted)' }}>
                                 {data.scores.overall}
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>/100</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>/100</span>
                             </div>
                         </div>
                         <div
@@ -92,19 +92,19 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                                 flex: 1,
                                 padding: '12px',
                                 borderRadius: 8,
-                                background: 'rgba(34,197,94,0.1)',
+                                background: 'var(--success-tint)',
                             }}
                         >
                             <div
                                 style={{
                                     fontSize: '0.6rem',
-                                    color: '#64748b',
+                                    color: 'var(--slate-500)',
                                     textTransform: 'uppercase',
                                 }}
                             >
                                 Decision
                             </div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22c55e' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)' }}>
                                 {data.recommendation.replace(/_/g, ' ')}
                             </div>
                         </div>
@@ -125,7 +125,7 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                                     <div
                                         style={{
                                             fontSize: '0.55rem',
-                                            color: '#64748b',
+                                            color: 'var(--slate-500)',
                                             textTransform: 'uppercase',
                                         }}
                                     >
@@ -135,7 +135,7 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                                         style={{
                                             fontSize: '1rem',
                                             fontWeight: 700,
-                                            color: '#cbd5e1',
+                                            color: 'var(--slate-300)',
                                         }}
                                     >
                                         {data.scores[key]}
@@ -148,7 +148,7 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                         style={{
                             fontSize: '0.85rem',
                             fontWeight: 600,
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             marginTop: 4,
                         }}
                     >
@@ -205,14 +205,14 @@ export const PeerReviewTab: React.FC<Props> = ({ engine, session }) => {
                                                       : '#22c55e'
                                         }
                                     />
-                                    <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--slate-500)' }}>
                                         {c.section}
                                     </span>
                                 </div>
                                 <div
                                     style={{
                                         fontSize: '0.7rem',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         lineHeight: 1.4,
                                     }}
                                 >

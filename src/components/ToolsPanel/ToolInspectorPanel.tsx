@@ -66,7 +66,7 @@ export const ToolInspectorPanel: React.FC<ToolInspectorPanelProps> = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     gap: '1.5rem',
                     padding: '2rem',
                     textAlign: 'center',
@@ -87,7 +87,7 @@ export const ToolInspectorPanel: React.FC<ToolInspectorPanelProps> = ({
                         style={{
                             fontSize: '1.25rem',
                             fontWeight: 800,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                             marginBottom: '0.5rem',
                         }}
                     >
@@ -144,7 +144,7 @@ export const ToolInspectorPanel: React.FC<ToolInspectorPanelProps> = ({
                                 margin: 0,
                                 fontSize: '1.5rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                             }}
                         >
                             {tool.name}
@@ -152,7 +152,7 @@ export const ToolInspectorPanel: React.FC<ToolInspectorPanelProps> = ({
                         <div
                             style={{
                                 fontSize: '0.8rem',
-                                color: '#64748b',
+                                color: 'var(--slate-500)',
                                 fontFamily: 'monospace',
                                 marginTop: '0.3rem',
                             }}

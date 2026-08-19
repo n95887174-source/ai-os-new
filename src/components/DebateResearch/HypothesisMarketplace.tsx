@@ -223,13 +223,13 @@ export const HypothesisMarketplace: React.FC = () => {
                             style={{
                                 fontSize: '0.95rem',
                                 fontWeight: 800,
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                                 margin: 0,
                             }}
                         >
                             Hypothesis Marketplace
                         </h3>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--slate-400)', margin: 0 }}>
                             {hypotheses.length} hypotheses • {sorted.length} shown
                         </p>
                     </div>
@@ -285,7 +285,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.8rem',
                                         outline: 'none',
                                     }}
@@ -300,7 +300,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                         borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(0,0,0,0.3)',
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontSize: '0.8rem',
                                         outline: 'none',
                                     }}
@@ -323,7 +323,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                     borderRadius: 8,
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     background: 'rgba(0,0,0,0.3)',
-                                    color: '#e2e8f0',
+                                    color: 'var(--slate-200)',
                                     fontSize: '0.8rem',
                                     outline: 'none',
                                     resize: 'vertical',
@@ -343,7 +343,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                         borderRadius: 6,
                                         border: '1px solid rgba(255,255,255,0.08)',
                                         background: 'rgba(0,0,0,0.2)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontSize: '0.7rem',
                                         outline: 'none',
                                     }}
@@ -353,7 +353,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                     style={{
                                         padding: '0.4rem 1rem',
                                         borderRadius: 6,
-                                        background: '#f59e0b',
+                                        background: 'var(--warning)',
                                         border: 'none',
                                         color: 'white',
                                         fontWeight: 700,
@@ -370,7 +370,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                         borderRadius: 6,
                                         background: 'rgba(255,255,255,0.05)',
                                         border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#94a3b8',
+                                        color: 'var(--slate-400)',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                     }}
@@ -432,7 +432,7 @@ export const HypothesisMarketplace: React.FC = () => {
                     style={{
                         width: 1,
                         height: 16,
-                        background: 'rgba(255,255,255,0.1)',
+                        background: 'var(--border-default)',
                         margin: '0 0.2rem',
                     }}
                 />
@@ -490,7 +490,7 @@ export const HypothesisMarketplace: React.FC = () => {
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                             gap: '0.5rem',
                         }}
                     >
@@ -605,7 +605,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                             style={{
                                                 fontSize: '0.85rem',
                                                 fontWeight: 700,
-                                                color: '#f8fafc',
+                                                color: 'var(--slate-50)',
                                             }}
                                         >
                                             {h.title}
@@ -646,14 +646,14 @@ export const HypothesisMarketplace: React.FC = () => {
                                         >
                                             <StatusIcon size={8} /> {h.status}
                                         </span>
-                                        <span style={{ fontSize: '0.55rem', color: '#64748b' }}>
+                                        <span style={{ fontSize: '0.55rem', color: 'var(--slate-500)' }}>
                                             {formatDate(h.createdAt)}
                                         </span>
                                     </div>
                                     <p
                                         style={{
                                             fontSize: '0.7rem',
-                                            color: '#94a3b8',
+                                            color: 'var(--slate-400)',
                                             margin: 0,
                                             lineHeight: 1.4,
                                         }}
@@ -679,12 +679,12 @@ export const HypothesisMarketplace: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontSize: '0.6rem',
-                                                        color: '#64748b',
+                                                        color: 'var(--slate-500)',
                                                         fontFamily: 'monospace',
                                                     }}
                                                 >
                                                     Source:{' '}
-                                                    <span style={{ color: '#94a3b8' }}>
+                                                    <span style={{ color: 'var(--slate-400)' }}>
                                                         {h.sourceFile}
                                                     </span>
                                                 </div>
@@ -693,7 +693,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                                 <div
                                                     style={{
                                                         fontSize: '0.65rem',
-                                                        color: '#10b981',
+                                                        color: 'var(--success)',
                                                         background: 'rgba(16,185,129,0.08)',
                                                         padding: '0.3rem 0.5rem',
                                                         borderRadius: 6,
@@ -704,7 +704,7 @@ export const HypothesisMarketplace: React.FC = () => {
                                             )}
                                             {h.evidenceRefs.length > 0 && (
                                                 <div
-                                                    style={{ fontSize: '0.6rem', color: '#94a3b8' }}
+                                                    style={{ fontSize: '0.6rem', color: 'var(--slate-400)' }}
                                                 >
                                                     Evidence: {h.evidenceRefs.join(', ')}
                                                 </div>
@@ -761,8 +761,8 @@ export const HypothesisMarketplace: React.FC = () => {
                                                         fontWeight: 700,
                                                         borderRadius: 4,
                                                         border: '1px solid rgba(239,68,68,0.3)',
-                                                        background: 'rgba(239,68,68,0.1)',
-                                                        color: '#ef4444',
+                                                        background: 'var(--error-tint)',
+                                                        color: 'var(--error)',
                                                         cursor: 'pointer',
                                                         marginLeft: 'auto',
                                                     }}

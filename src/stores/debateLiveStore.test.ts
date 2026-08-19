@@ -347,6 +347,27 @@ describe('debateLiveStore', () => {
         expect(s.agentTimeoutSeconds).toBe(45);
     });
 
+    it('FA-06: intervals start lazily on a live event and stop on clearAll (no always-on leak)', () => {
+        const setSpy = vi.spyOn(globalThis, 'setInterval');
+        const clearSpy = vi.spyOn(globalThis, 'clearInterval');
+        setSpy.mockClear();
+        clearSpy.mockClear();
+
+        // No live debate yet → no timers should be running.
+        expect(setSpy).not.toHaveBeenCalled();
+
+        emit(EVENTS.DEBATE_AGENT_THINKING, { sessionId: 's1', agentId: 'a1' });
+        // metrics (30s) + countdown (1s) intervals are created on the first event.
+        expect(setSpy).toHaveBeenCalledTimes(2);
+
+        useDebateLiveStore.getState().clearAll();
+        // Emptying the store stops both intervals.
+        expect(clearSpy).toHaveBeenCalledTimes(2);
+
+        setSpy.mockRestore();
+        clearSpy.mockRestore();
+    });
+
     it('destroy unsubscribes handlers', () => {
         useDebateLiveStore.getState().destroy();
         emit(EVENTS.DEBATE_AGENT_THINKING, { sessionId: 's1', agentId: 'a1' });

@@ -13,6 +13,7 @@ const { controlsStub } = vi.hoisted(() => ({
         override: vi.fn(),
         abort: vi.fn(),
         reset: vi.fn(),
+        loadHistory: vi.fn(),
         getSession: vi.fn(() => undefined),
         checkpoint: vi.fn(() => 'cp1'),
         getCheckpoints: vi.fn(() => []),
@@ -181,7 +182,8 @@ describe('RunTab (B5.4c Run UI)', () => {
             useDirectorStore.setState({ status: 'running' });
         });
         fireEvent.click(screen.getByText('Override'));
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'architect' } });
+        // [0] = participant select, [1] = objective-type select (FM-05)
+        fireEvent.change(screen.getAllByRole('combobox')[0]!, { target: { value: 'architect' } });
         fireEvent.change(screen.getByPlaceholderText('Instruction'), {
             target: { value: 'injected challenge' },
         });
@@ -189,6 +191,26 @@ describe('RunTab (B5.4c Run UI)', () => {
         expect(controlsStub.override).toHaveBeenCalledWith({
             participantId: 'architect',
             objective: { type: 'CHALLENGE', description: 'injected challenge', constraints: [] },
+        });
+    });
+
+    it('Override type select changes the emitted objective type (FM-05)', async () => {
+        const RunTab = (await import('./RunTab')).default;
+        render(<RunTab scenario={scenario} />);
+        act(() => {
+            useDirectorStore.setState({ status: 'running' });
+        });
+        fireEvent.click(screen.getByText('Override'));
+        const combos = screen.getAllByRole('combobox');
+        fireEvent.change(combos[0]!, { target: { value: 'auditor' } });
+        fireEvent.change(combos[1]!, { target: { value: 'CRITIQUE' } });
+        fireEvent.change(screen.getByPlaceholderText('Instruction'), {
+            target: { value: 'review the plan' },
+        });
+        fireEvent.click(screen.getByText('Inject'));
+        expect(controlsStub.override).toHaveBeenCalledWith({
+            participantId: 'auditor',
+            objective: { type: 'CRITIQUE', description: 'review the plan', constraints: [] },
         });
     });
 

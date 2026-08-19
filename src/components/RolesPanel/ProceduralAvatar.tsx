@@ -125,7 +125,7 @@ export const ProceduralAvatar: React.FC<ProceduralAvatarProps> = ({
                 height: size,
                 borderRadius: shape === 'circle' ? '50%' : shape === 'square' ? 0 : '20%',
                 objectFit: 'cover',
-                background: '#1e293b',
+                background: 'var(--slate-800)',
             }}
         />
     );

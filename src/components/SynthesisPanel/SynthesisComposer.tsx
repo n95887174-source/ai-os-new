@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../i18n/useTranslation';
 import { lensEngine } from '../../kernel/instances';
+import { Button } from '../../components/Common';
 import type { Lens } from '../../kernel/types/lens-types';
 import type { SynthesisDepth, SynthesisInput } from '../../kernel/types/synthesis-types';
 
@@ -11,15 +12,15 @@ interface SynthesisComposerProps {
 
 const DEPTHS: SynthesisDepth[] = ['quick', 'standard', 'deep'];
 
-const ROLE_SUGGESTIONS: Array<{ id: string; name: string }> = [
-    { id: 'arch', name: 'Архитектор' },
-    { id: 'llm', name: 'LLM-инженер' },
-    { id: 'economist', name: 'Экономист' },
-    { id: 'security', name: 'Аналитик безопасности' },
-    { id: 'governance', name: 'Специалист по управлению' },
-    { id: 'philosopher', name: 'Философ' },
-    { id: 'engineer', name: 'Инженер' },
-    { id: 'product', name: 'Продакт-менеджер' },
+const ROLE_SUGGESTIONS: string[] = [
+    'arch',
+    'llm',
+    'economist',
+    'security',
+    'governance',
+    'philosopher',
+    'engineer',
+    'product',
 ];
 
 /**
@@ -80,10 +81,10 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                 rows={2}
                 style={{
                     width: '100%',
-                    background: '#0f172a',
+                    background: 'var(--slate-900)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.8rem',
                     padding: '0.55rem 0.7rem',
                     resize: 'none',
@@ -91,27 +92,27 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
             />
 
             <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 4 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginBottom: 4 }}>
                     {t('synthesis.roles')}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
-                    {ROLE_SUGGESTIONS.map((r) => (
+                    {ROLE_SUGGESTIONS.map((rId) => (
                         <button
-                            key={r.id}
-                            onClick={() => toggleRole(r.id)}
+                            key={rId}
+                            onClick={() => toggleRole(rId)}
                             style={{
                                 padding: '0.25rem 0.6rem',
                                 borderRadius: 6,
-                                border: roleIds.includes(r.id)
+                                border: roleIds.includes(rId)
                                     ? '1px solid #8b5cf6'
                                     : '1px solid rgba(255,255,255,0.12)',
-                                background: roleIds.includes(r.id) ? '#8b5cf622' : 'transparent',
-                                color: roleIds.includes(r.id) ? '#c4b5fd' : '#94a3b8',
+                                background: roleIds.includes(rId) ? '#8b5cf622' : 'transparent',
+                                color: roleIds.includes(rId) ? '#c4b5fd' : '#94a3b8',
                                 cursor: 'pointer',
                                 fontSize: '0.7rem',
                             }}
                         >
-                            {r.name}
+                            {t(`synthesis.role.${rId}`)}
                         </button>
                     ))}
                 </div>
@@ -125,13 +126,13 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                                 addRoleInput();
                             }
                         }}
-                        placeholder="custom role id…"
+                        placeholder={t('synthesis.custom_role_placeholder')}
                         style={{
                             flex: 1,
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 6,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.7rem',
                             padding: '0.3rem 0.6rem',
                         }}
@@ -143,7 +144,7 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.15)',
                             background: 'transparent',
-                            color: '#cbd5e1',
+                            color: 'var(--slate-300)',
                             cursor: 'pointer',
                             fontSize: '0.7rem',
                         }}
@@ -154,7 +155,7 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
             </div>
 
             <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: 4 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)', marginBottom: 4 }}>
                     {t('synthesis.lenses')}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -195,7 +196,7 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                         alignItems: 'center',
                         gap: 6,
                         fontSize: '0.7rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     {t('synthesis.depth')}
@@ -203,10 +204,10 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                         value={depth}
                         onChange={(e) => setDepth(e.target.value as SynthesisDepth)}
                         style={{
-                            background: '#0f172a',
+                            background: 'var(--slate-900)',
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: 6,
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.7rem',
                             padding: '0.25rem 0.5rem',
                         }}
@@ -224,7 +225,7 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                         alignItems: 'center',
                         gap: 6,
                         fontSize: '0.7rem',
-                        color: '#94a3b8',
+                        color: 'var(--slate-400)',
                     }}
                 >
                     <input
@@ -234,7 +235,8 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                     />
                     {t('synthesis.preserve_dissent')}
                 </label>
-                <button
+                <Button
+                    variant="accent"
                     onClick={submit}
                     disabled={
                         synthesizing ||
@@ -242,21 +244,9 @@ const SynthesisComposer: React.FC<SynthesisComposerProps> = ({ synthesizing, onS
                         roleIds.length === 0 ||
                         lensIds.length === 0
                     }
-                    style={{
-                        marginLeft: 'auto',
-                        padding: '0.45rem 1rem',
-                        borderRadius: 7,
-                        border: 'none',
-                        background: '#f59e0b',
-                        color: '#0b1220',
-                        cursor: synthesizing ? 'wait' : 'pointer',
-                        fontWeight: 700,
-                        fontSize: '0.78rem',
-                        opacity: synthesizing ? 0.7 : 1,
-                    }}
                 >
                     {synthesizing ? t('synthesis.synthesizing') : t('synthesis.synthesize')}
-                </button>
+                </Button>
             </div>
         </div>
     );

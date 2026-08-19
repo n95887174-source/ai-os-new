@@ -186,7 +186,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                         background: showTemplates ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)',
                         border: '1px solid rgba(139,92,246,0.3)',
                         borderRadius: 8,
-                        color: '#a78bfa',
+                        color: 'var(--purple-muted)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -224,7 +224,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                         background: showLint ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
                         border: '1px solid rgba(245,158,11,0.3)',
                         borderRadius: 8,
-                        color: '#fbbf24',
+                        color: 'var(--warning)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -250,7 +250,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                         style={{
                             fontSize: '0.65rem',
                             fontWeight: 800,
-                            color: '#a78bfa',
+                            color: 'var(--purple-muted)',
                             marginBottom: '0.5rem',
                             textTransform: 'uppercase',
                         }}
@@ -266,7 +266,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                                     padding: '0.25rem 0.6rem',
                                     fontSize: '0.65rem',
                                     fontWeight: 600,
-                                    background: 'rgba(139,92,246,0.1)',
+                                    background: 'var(--purple-tint)',
                                     border: '1px solid rgba(139,92,246,0.2)',
                                     borderRadius: 6,
                                     color: '#c4b5fd',
@@ -373,7 +373,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                                 alignItems: 'flex-start',
                                 padding: '0.3rem 0',
                                 fontSize: '0.7rem',
-                                color: '#a78bfa',
+                                color: 'var(--purple-muted)',
                                 borderBottom:
                                     i < suggestions.length - 1
                                         ? '1px solid rgba(255,255,255,0.03)'
@@ -391,8 +391,8 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                                         fontSize: '0.6rem',
                                         borderRadius: 4,
                                         border: '1px solid rgba(139,92,246,0.3)',
-                                        background: 'rgba(139,92,246,0.1)',
-                                        color: '#a78bfa',
+                                        background: 'var(--purple-tint)',
+                                        color: 'var(--purple-muted)',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -409,10 +409,10 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                 style={{
                     width: '100%',
                     padding: '1.25rem',
-                    background: '#020617',
+                    background: 'var(--slate-950)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 12,
-                    color: '#e2e8f0',
+                    color: 'var(--slate-200)',
                     fontSize: '0.95rem',
                     lineHeight: 1.6,
                     resize: 'vertical',
@@ -440,7 +440,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                     border: '1px solid rgba(255,255,255,0.03)',
                 }}
             >
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem', color: '#64748b' }}>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem', color: 'var(--slate-500)' }}>
                     <span>
                         Tokens:{' '}
                         <strong
@@ -457,7 +457,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                         </strong>
                     </span>
                     <span>
-                        Chars: <strong style={{ color: '#e2e8f0' }}>{charCount}</strong>
+                        Chars: <strong style={{ color: 'var(--slate-200)' }}>{charCount}</strong>
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -469,7 +469,7 @@ export const PromptStudio: React.FC<PromptStudioProps> = ({ value, onChange }) =
                             borderRadius: 6,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.03)',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

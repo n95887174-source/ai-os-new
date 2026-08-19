@@ -16,7 +16,7 @@ export function inlineMarkdown(text: string): React.ReactNode {
                 <code
                     key={`c-${idx++}`}
                     style={{
-                        background: 'rgba(255,255,255,0.08)',
+                        background: 'var(--border-subtle)',
                         padding: '2px 6px',
                         borderRadius: 4,
                         fontSize: '0.85em',

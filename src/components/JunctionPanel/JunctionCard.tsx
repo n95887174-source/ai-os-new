@@ -59,7 +59,7 @@ const JunctionCard: React.FC<Props> = ({ junction }) => {
                     <span
                         style={{
                             fontSize: '0.72rem',
-                            color: '#94a3b8',
+                            color: 'var(--slate-400)',
                             background: 'rgba(255,255,255,0.05)',
                             padding: '2px 7px',
                             borderRadius: 5,
@@ -81,7 +81,7 @@ const JunctionCard: React.FC<Props> = ({ junction }) => {
                         <span
                             style={{
                                 fontSize: '0.7rem',
-                                color: '#cbd5e1',
+                                color: 'var(--slate-300)',
                                 background: 'rgba(139,92,246,0.12)',
                                 padding: '2px 8px',
                                 borderRadius: 5,
@@ -94,12 +94,12 @@ const JunctionCard: React.FC<Props> = ({ junction }) => {
                 ))}
             </div>
 
-            <p style={{ fontSize: '0.78rem', color: '#e2e8f0', margin: '0 0 0.4rem' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--slate-200)', margin: '0 0 0.4rem' }}>
                 {junction.content}
             </p>
 
-            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                <span style={{ color: '#8b5cf6', fontWeight: 700 }}>Cognitive debt:</span>{' '}
+            <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
+                <span style={{ color: 'var(--purple)', fontWeight: 700 }}>Cognitive debt:</span>{' '}
                 {junction.cognitiveDebt}
             </div>
         </div>

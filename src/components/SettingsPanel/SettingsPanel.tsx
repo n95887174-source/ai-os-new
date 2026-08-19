@@ -430,7 +430,7 @@ const SettingsPanel: React.FC = () => {
                             borderRadius: 10,
                             background: 'rgba(0,0,0,0.3)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                             outline: 'none',
                             marginBottom: '0.5rem',
@@ -540,7 +540,7 @@ const SettingsPanel: React.FC = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                color: '#f8fafc',
+                                color: 'var(--slate-50)',
                             }}
                         >
                             <Info size={16} color="#3b82f6" aria-hidden="true" />{' '}
@@ -552,14 +552,14 @@ const SettingsPanel: React.FC = () => {
                                 flexDirection: 'column',
                                 gap: '0.4rem',
                                 fontSize: '0.75rem',
-                                color: '#94a3b8',
+                                color: 'var(--slate-400)',
                             }}
                         >
                             <div style={flexJustifyBetween}>
                                 <span>{t('settings.version_label')}</span>{' '}
                                 <span
                                     style={{
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 600,
                                         fontFamily: 'monospace',
                                     }}
@@ -571,7 +571,7 @@ const SettingsPanel: React.FC = () => {
                                 <span>{t('settings.build_id')}</span>{' '}
                                 <span
                                     style={{
-                                        color: '#e2e8f0',
+                                        color: 'var(--slate-200)',
                                         fontWeight: 600,
                                         fontFamily: 'monospace',
                                     }}

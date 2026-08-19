@@ -63,6 +63,13 @@ const quality: Record<string, string> = {
     'quality_impact.export_sessions_desc': 'Все сессии дебатов с данными о качестве',
     'quality_impact.export_baselines': 'Базовые сессии',
     'quality_impact.export_baselines_desc': 'Базовые сессии без включенных техник',
+
+    // category labels + impact metrics (FX-01)
+    'quality.category.P0': 'P0 — Базовые',
+    'quality.category.P1': 'P1 — Продвинутые',
+    'quality.category.P2': 'P2 — Экспериментальные',
+    'quality.sessions_label': 'сессий',
+    'quality.no_impact_data': 'Нет данных о влиянии',
 };
 
 export { quality };

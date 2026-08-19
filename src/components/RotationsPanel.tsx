@@ -8,7 +8,8 @@ import type { ApiKey } from '../kernel/types/metrics-types';
 import type { RotationEvent } from '../kernel/types/metrics-types';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAutoClearError } from '../hooks/useAutoClearError';
-import { errorContainer, dismissBtnRed, textMutedXs, buttonSm, input } from '../styles/common';
+import { errorContainer, dismissBtnRed, textMutedXs, input } from '../styles/common';
+import { Button } from './Common';
 
 const RotationsPanel: React.FC = () => {
     const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -113,7 +114,7 @@ const RotationsPanel: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                 }}
             >
                 <motion.div
@@ -149,12 +150,12 @@ const RotationsPanel: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            color: '#f8fafc',
+                            color: 'var(--slate-50)',
                         }}
                     >
                         <RefreshCw size={28} color="#3b82f6" /> {t('rotations.title')}
                     </h2>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem' }}>
+                    <p style={{ color: 'var(--slate-400)', margin: 0, fontSize: '0.85rem' }}>
                         {t('rotations.subtitle')}
                     </p>
                 </div>
@@ -181,7 +182,7 @@ const RotationsPanel: React.FC = () => {
                     style={{
                         textAlign: 'center',
                         padding: '4rem 2rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         fontSize: '0.9rem',
                         fontStyle: 'italic',
                         border: '1px dashed rgba(255,255,255,0.1)',
@@ -189,7 +190,7 @@ const RotationsPanel: React.FC = () => {
                     }}
                 >
                     <Clock size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--slate-400)' }}>
                         {t('rotations.empty')}
                     </div>
                     <div>{t('rotations.empty_desc')}</div>
@@ -241,7 +242,7 @@ const RotationsPanel: React.FC = () => {
                                         <div
                                             style={{
                                                 fontWeight: 600,
-                                                color: '#f1f5f9',
+                                                color: 'var(--slate-100)',
                                                 fontSize: '0.9rem',
                                             }}
                                         >
@@ -274,7 +275,7 @@ const RotationsPanel: React.FC = () => {
                                             <span
                                                 style={{
                                                     fontSize: '0.75rem',
-                                                    color: '#f59e0b',
+                                                    color: 'var(--warning)',
                                                     fontWeight: 600,
                                                 }}
                                             >
@@ -314,36 +315,28 @@ const RotationsPanel: React.FC = () => {
                                             }}
                                             min={1}
                                         />
-                                        <button
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
                                             onClick={() => handleSetTTL(key.id)}
-                                            style={{ ...buttonSm, background: '#3b82f6' }}
                                         >
                                             {t('rotations.set_ttl')}
-                                        </button>
+                                        </Button>
                                     </div>
                                     {status.active && (
-                                        <button
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => handleCancelRotation(key.id)}
-                                            style={{
-                                                ...buttonSm,
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                background: 'transparent',
-                                                color: '#94a3b8',
-                                            }}
                                         >
                                             {t('rotations.cancel')}
-                                        </button>
+                                        </Button>
                                     )}
-                                    <button
+                                    <Button
+                                        variant="warning"
+                                        size="sm"
                                         onClick={() => handleRotateNow(key.id)}
                                         disabled={rotating === key.id}
-                                        style={{
-                                            ...buttonSm,
-                                            background: '#f59e0b',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                        }}
                                     >
                                         {rotating === key.id ? (
                                             <Loader2 size={14} />
@@ -351,23 +344,16 @@ const RotationsPanel: React.FC = () => {
                                             <RotateCcw size={14} />
                                         )}
                                         {t('rotations.rotate_now')}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => toggleHistory(key.id)}
-                                        style={{
-                                            ...buttonSm,
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            background: 'transparent',
-                                            color: '#94a3b8',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                        }}
                                     >
                                         {isExpanded ? <EyeOff size={14} /> : <Eye size={14} />}
                                         {t('rotations.history')} ({key.rotationHistory?.length || 0}
                                         )
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 <AnimatePresence>
@@ -409,7 +395,7 @@ const RotationsPanel: React.FC = () => {
                                                                     '1px solid rgba(255,255,255,0.03)',
                                                             }}
                                                         >
-                                                            <span style={{ color: '#94a3b8' }}>
+                                                            <span style={{ color: 'var(--slate-400)' }}>
                                                                 {new Date(
                                                                     evt.timestamp,
                                                                 ).toLocaleString()}
@@ -431,7 +417,7 @@ const RotationsPanel: React.FC = () => {
                                                             >
                                                                 {evt.type}
                                                             </span>
-                                                            <span style={{ color: '#64748b' }}>
+                                                            <span style={{ color: 'var(--slate-500)' }}>
                                                                 {evt.fromStatus} → {evt.toStatus}
                                                             </span>
                                                         </div>
@@ -450,7 +436,7 @@ const RotationsPanel: React.FC = () => {
             <div
                 style={{
                     fontSize: '0.75rem',
-                    color: '#64748b',
+                    color: 'var(--slate-500)',
                     padding: '0.5rem',
                     borderTop: '1px solid rgba(255,255,255,0.05)',
                 }}

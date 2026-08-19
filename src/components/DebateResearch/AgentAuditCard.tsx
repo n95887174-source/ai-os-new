@@ -41,13 +41,13 @@ const AgentAuditCard: React.FC<Props> = ({ agent }) => {
                         background: GROUP_COLORS[agent.group] || '#64748b',
                     }}
                 />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#e2e8f0' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--slate-200)' }}>
                     {agent.name}
                 </span>
                 <span
                     style={{
                         fontSize: '0.62rem',
-                        color: '#64748b',
+                        color: 'var(--slate-500)',
                         padding: '0.1rem 0.35rem',
                         borderRadius: 3,
                         background: 'rgba(255,255,255,0.04)',
@@ -58,7 +58,7 @@ const AgentAuditCard: React.FC<Props> = ({ agent }) => {
                 <span style={{ fontSize: '0.62rem', color: tempColor, fontWeight: 600 }}>
                     T:{agent.temperature}
                 </span>
-                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>{agent.wordCount}w</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--slate-500)' }}>{agent.wordCount}w</span>
                 {agent.hasTools && (
                     <span
                         style={{
@@ -66,7 +66,7 @@ const AgentAuditCard: React.FC<Props> = ({ agent }) => {
                             padding: '0.1rem 0.3rem',
                             borderRadius: 3,
                             background: 'rgba(16,185,129,0.12)',
-                            color: '#10b981',
+                            color: 'var(--success)',
                         }}
                     >
                         {agent.tools.length}t
@@ -79,7 +79,7 @@ const AgentAuditCard: React.FC<Props> = ({ agent }) => {
                             padding: '0.1rem 0.3rem',
                             borderRadius: 3,
                             background: 'rgba(245,158,11,0.12)',
-                            color: '#f59e0b',
+                            color: 'var(--warning)',
                         }}
                     >
                         C
@@ -90,7 +90,7 @@ const AgentAuditCard: React.FC<Props> = ({ agent }) => {
                 style={{
                     margin: 0,
                     fontSize: '0.72rem',
-                    color: '#94a3b8',
+                    color: 'var(--slate-400)',
                     lineHeight: 1.4,
                 }}
             >

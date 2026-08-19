@@ -114,11 +114,11 @@ const RolesConsortiaPanel: React.FC = () => {
             >
                 <div>
                     <h2
-                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#e2e8f0' }}
+                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--slate-200)' }}
                     >
                         {t('roles_consortia.title') || 'Roles & Consortia'}
                     </h2>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--slate-500)' }}>
                         {t('roles_consortia.subtitle') ||
                             'Unified role registry — 500+ roles, 50+ consilia, 100+ group templates'}
                     </p>
@@ -169,7 +169,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             left: 10,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            color: '#64748b',
+                            color: 'var(--slate-500)',
                         }}
                     />
                     <input
@@ -182,7 +182,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.85rem',
                             outline: 'none',
                         }}
@@ -197,7 +197,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                             outline: 'none',
                         }}
@@ -219,7 +219,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                             outline: 'none',
                         }}
@@ -241,7 +241,7 @@ const RolesConsortiaPanel: React.FC = () => {
                             borderRadius: 8,
                             border: '1px solid rgba(255,255,255,0.1)',
                             background: 'rgba(255,255,255,0.05)',
-                            color: '#e2e8f0',
+                            color: 'var(--slate-200)',
                             fontSize: '0.8rem',
                             outline: 'none',
                         }}
